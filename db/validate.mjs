@@ -329,6 +329,66 @@ if (!failed) {
             FROM ee.projects LIMIT 1 RETURNING 'inserted' AS v`,
       expectError: true,
     },
+    {
+      name: "scheduler: auto-pilot system account seeded (L1)",
+      sql: `SELECT access_level::TEXT AS v FROM public.users
+            WHERE id = '00000000-0000-4000-8000-0000000000a0'`,
+      ok: (v) => v === "L1",
+    },
+    {
+      name: "scheduler: three jobs registered and enabled",
+      sql: `SELECT (COUNT(*) = 3)::TEXT AS v FROM portal.scheduled_jobs
+            WHERE enabled AND name IN ('notifications-dispatch','wio-clock','keka-sync')`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "scheduler: L1 permitted to read the scheduler resource",
+      sql: `SELECT allowed::TEXT AS v FROM public.permissions
+            WHERE access_level='L1' AND resource_type='scheduler'
+              AND action_code='read' AND department_id IS NULL`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "scheduler: job_runs UNIQUE(job,slot) prevents double-fire",
+      setupSql: `INSERT INTO portal.job_runs (job_id, job_name, scheduled_for)
+                 SELECT id, name, '2026-07-08T07:00:00Z'
+                 FROM portal.scheduled_jobs WHERE name='wio-clock'`,
+      sql: `INSERT INTO portal.job_runs (job_id, job_name, scheduled_for)
+            SELECT id, name, '2026-07-08T07:00:00Z'
+            FROM portal.scheduled_jobs WHERE name='wio-clock' RETURNING 'x' AS v`,
+      expectError: true,
+    },
+    {
+      name: "scheduler: failed slot re-claims via ON CONFLICT (retry, attempt++)",
+      setupSql: `INSERT INTO portal.job_runs
+                   (job_id, job_name, scheduled_for, status, attempt, next_attempt_at)
+                 SELECT id, name, '2026-07-08T00:00:00Z', 'failed', 1, NOW() - INTERVAL '1 minute'
+                 FROM portal.scheduled_jobs WHERE name='notifications-dispatch'`,
+      sql: `INSERT INTO portal.job_runs (job_id, job_name, scheduled_for, status, attempt, started_at)
+            SELECT id, name, '2026-07-08T00:00:00Z', 'running', 1, NOW()
+            FROM portal.scheduled_jobs WHERE name='notifications-dispatch'
+            ON CONFLICT (job_id, scheduled_for) DO UPDATE
+              SET status='running', attempt = portal.job_runs.attempt + 1
+              WHERE portal.job_runs.status='failed' AND portal.job_runs.attempt < 3
+            RETURNING attempt::TEXT AS v`,
+      ok: (v) => v === "2",
+    },
+    {
+      name: "scheduler: succeeded slot is NOT re-claimed",
+      setupSql: `INSERT INTO portal.job_runs (job_id, job_name, scheduled_for, status, attempt)
+                 SELECT id, name, '2026-07-08T01:00:00Z', 'succeeded', 1
+                 FROM portal.scheduled_jobs WHERE name='keka-sync';
+                 INSERT INTO portal.job_runs (job_id, job_name, scheduled_for, status, attempt, started_at)
+                 SELECT id, name, '2026-07-08T01:00:00Z', 'running', 1, NOW()
+                 FROM portal.scheduled_jobs WHERE name='keka-sync'
+                 ON CONFLICT (job_id, scheduled_for) DO UPDATE
+                   SET status='running'
+                   WHERE portal.job_runs.status='failed'`,
+      sql: `SELECT status AS v FROM portal.job_runs
+            WHERE scheduled_for='2026-07-08T01:00:00Z'
+              AND job_id=(SELECT id FROM portal.scheduled_jobs WHERE name='keka-sync')`,
+      ok: (v) => v === "succeeded",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

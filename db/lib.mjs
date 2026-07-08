@@ -22,6 +22,7 @@ export const DEFAULT_FILES = [
   "008_auth_identity.sql",
   "009_keka_integration.sql",
   "010_notification_framework.sql",
+  "011_scheduler_framework.sql",
   "900_dev_fixtures.sql",
 ];
 

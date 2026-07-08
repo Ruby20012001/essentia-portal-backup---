@@ -212,7 +212,7 @@ flowchart TB
   GUC --> ROWS["only in-scope rows returned"]
   subgraph Levels["Access levels"]
     direction LR
-    L0["L0 external"] --> L1a["L1 staff"] --> L2a["L2 lead / HOD"] --> L3a["L3 founder / admin"]
+    L0["L0 founders"] --> L1a["L1 senior leadership"] --> L2a["L2 HOD / TL"] --> L3a["L3 team member"]
   end
   subgraph Approval["Approval authority (identity, separate)"]
     A1["Khushpreet"] --> A2["Deepak Ji"] --> A3["Hardesh"]

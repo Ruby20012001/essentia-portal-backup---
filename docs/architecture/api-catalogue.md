@@ -1,6 +1,6 @@
 # API Catalogue
 
-**32 routes**, all Next.js App Router handlers (`app/api/**/route.ts`),
+**35 routes**, all Next.js App Router handlers (`app/api/**/route.ts`),
 `dynamic = "force-dynamic"`. JSON in/out. Every route resolves the session
 via `getCurrentUser()` (401 if none) unless noted; mutating business routes
 additionally call `requirePermission()` and/or RLS via `withUserContext`.
@@ -60,13 +60,20 @@ additionally call `requirePermission()` and/or RLS via `withUserContext`.
 | `POST /api/integrations/keka/sync` | hr_access (L0/L1) | Manual org sync |
 | `GET /api/integrations/keka/status` | hr_access | Recent sync runs |
 
-## Jobs (scheduler-driven; auto-pilot cadence pending, A-14)
+## Jobs & scheduler (auto-pilot; migration `011`)
 
-| Method · Path | Purpose |
-|---|---|
-| `POST /api/jobs/wio-clock` | §30 day-12/lapse escalation sweep (event-deduped) |
-| `POST /api/jobs/keka-sync` | Scheduled org sync (honors `keka.sync_enabled`) |
-| `POST /api/jobs/notifications/dispatch` | Delivery retry processor (backoff → dead-letter) |
+| Method · Path | Gate | Purpose |
+|---|---|---|
+| `POST /api/jobs/tick` | `SCHEDULER_TICK_SECRET` (prod) / session (dev) | Auto-pilot tick — run all due jobs (single-fire locked) |
+| `POST /api/jobs/wio-clock` | session | §30 day-12/lapse escalation sweep (event-deduped) |
+| `POST /api/jobs/keka-sync` | session | Scheduled org sync (honors `keka.sync_enabled`) |
+| `POST /api/jobs/notifications/dispatch` | session | Delivery retry processor (backoff → dead-letter) |
+| `GET /api/scheduler/jobs` | read `scheduler` (L0/L1/L2) | Registered jobs + recent runs |
+| `POST /api/scheduler/jobs/[name]/run` | escalate `scheduler` (L0/L1) | Manually run one job now (`trigger='manual'`) |
+
+The auto-pilot cadence (A-14 / IG-06) is now implemented — the per-job routes remain
+the manual/per-job trigger surface; the tick is the scheduled entry point. See
+[scheduler.md](../scheduler.md).
 
 ## Versioning strategy (recommendation)
 
