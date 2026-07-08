@@ -1,0 +1,18 @@
+{
+  "name": "essentia-db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Schema validation harness — loads the full schema + seeds into embedded Postgres (PGlite, real PG semantics incl. pgvector) with zero local install.",
+  "scripts": {
+    "validate": "node validate.mjs",
+    "dev-db": "node dev-db.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.4"
+  },
+  "dependencies": {
+    "@electric-sql/pglite-pgvector": "^0.0.5",
+    "@electric-sql/pglite-socket": "^0.2.7"
+  }
+}

@@ -1,6 +1,7 @@
 -- =====================================================================
 -- ESSENTIA GROUP PORTAL — COMPLETE DATABASE SCHEMA
--- Version 1.0 · June 2026
+-- Version 1.1 · July 2026 — v1.0 contained three statements PostgreSQL
+--   rejects outright; fixed so the file loads end-to-end (see db/CHANGELOG.md)
 -- Built from Portal Brief Sections 1-39 (916 KB, 39 sections)
 -- Every client returns.
 -- =====================================================================
@@ -299,6 +300,9 @@ FROM ee.wio w
 JOIN ee.projects p ON p.id = w.project_id
 JOIN public.families f ON f.id = p.family_id
 WHERE w.status NOT IN ('converted_to_pio','cancelled');
+-- Views default to owner privileges, which would silently bypass the L0-L3
+-- RLS fencing on the tables beneath. security_invoker keeps fencing intact.
+ALTER VIEW ee.wio_clock SET (security_invoker = TRUE);
 
 CREATE TABLE ee.pio (
   id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -330,7 +334,7 @@ SELECT
   p.*,
   pr.project_code,
   pr.project_name,
-  (p.boq_approved AND p.design_3d_approved AND p.gfc_signed_by_client AND p.bom_shared) AS triangle_complete,
+  (p.final_boq_signed AND p.final_3d_signed AND p.gfc_signed_by_client AND p.bom_shared) AS triangle_complete,
   (p.target_complete - CURRENT_DATE)::INTEGER AS days_remaining,
   CASE
     WHEN (p.target_complete - CURRENT_DATE) <= 5  THEN 'red'
@@ -339,9 +343,8 @@ SELECT
   END AS clock_rag
 FROM ee.pio p
 JOIN ee.projects pr ON pr.id = p.project_id
-WHERE p.status NOT IN ('installed')
-  RENAME COLUMN final_boq_signed TO boq_approved,
-  RENAME COLUMN final_3d_signed  TO design_3d_approved;
+WHERE p.status NOT IN ('installed');
+ALTER VIEW ee.pio_factory_clock SET (security_invoker = TRUE);
 
 -- =====================================================================
 -- VISIONCAM (The Billing Trigger — Most Valuable Feature)
@@ -419,9 +422,9 @@ CREATE TABLE ee.billing_milestones (
   amount_paid      DECIMAL(12,2) DEFAULT 0,
   payment_date     DATE,
   payment_ref      VARCHAR(100),
-  is_overdue       BOOLEAN GENERATED ALWAYS AS (
-    invoice_raised AND amount_paid < amount AND due_date < CURRENT_DATE
-  ) STORED,
+  -- NOTE: overdue depends on CURRENT_DATE, which Postgres forbids inside a
+  -- stored generated column (generation expressions must be immutable).
+  -- Overdue is computed live in the ee.billing_status view below.
 
   -- For contractor running bills (VisionCAM-triggered)
   is_running_bill  BOOLEAN DEFAULT FALSE,
@@ -431,6 +434,14 @@ CREATE TABLE ee.billing_milestones (
   created_at       TIMESTAMPTZ DEFAULT NOW(),
   updated_at       TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Live overdue computation (replaces the illegal generated column)
+CREATE VIEW ee.billing_status AS
+SELECT
+  b.*,
+  (b.invoice_raised AND b.amount_paid < b.amount AND b.due_date < CURRENT_DATE) AS is_overdue
+FROM ee.billing_milestones b;
+ALTER VIEW ee.billing_status SET (security_invoker = TRUE);
 
 -- =====================================================================
 -- PROCUREMENT: VENDORS (VRN) · WORK ORDERS · POs · GRNs
@@ -520,7 +531,7 @@ CREATE TABLE proc.wo_line_items (
   rate         DECIMAL(10,2),
   amount       DECIMAL(12,2) GENERATED ALWAYS AS (ROUND(quantity * rate, 2)) STORED,
   remarks      TEXT,
-  PRIMARY KEY (wo_id, serial_no)
+  UNIQUE (wo_id, serial_no)
 );
 
 CREATE TABLE proc.purchase_orders (
@@ -852,7 +863,8 @@ CREATE INDEX idx_photos_billing   ON ee.visioncam_photos(billing_triggered)
   WHERE billing_triggered = FALSE;
 
 CREATE INDEX idx_billing_project  ON ee.billing_milestones(project_id);
-CREATE INDEX idx_billing_overdue  ON ee.billing_milestones(is_overdue) WHERE is_overdue = TRUE;
+CREATE INDEX idx_billing_unpaid   ON ee.billing_milestones(due_date)
+  WHERE invoice_raised AND amount_paid < amount;
 
 CREATE INDEX idx_vendors_vrn      ON proc.vendors(vrn_number);
 CREATE INDEX idx_vendors_active   ON proc.vendors(vrn_status) WHERE vrn_status = 'active';
@@ -931,18 +943,46 @@ ALTER TABLE eh.sales           ENABLE ROW LEVEL SECURITY;
 -- L3: see only projects assigned to them
 CREATE POLICY proj_access ON ee.projects
   USING (
-    current_setting('app.user_access_level')::access_level IN ('L0','L1')
+    current_setting('app.user_access_level', TRUE)::access_level IN ('L0','L1')
     OR (
-      current_setting('app.user_access_level')::access_level = 'L2'
-      AND (crmtl_id = current_setting('app.user_id')::UUID
-        OR pmc_id = current_setting('app.user_id')::UUID
-        OR designer_id = current_setting('app.user_id')::UUID)
+      current_setting('app.user_access_level', TRUE)::access_level = 'L2'
+      AND (crmtl_id = current_setting('app.user_id', TRUE)::UUID
+        OR pmc_id = current_setting('app.user_id', TRUE)::UUID
+        OR designer_id = current_setting('app.user_id', TRUE)::UUID)
     )
     OR (
-      current_setting('app.user_access_level')::access_level = 'L3'
-      AND (crmtl_id = current_setting('app.user_id')::UUID
-        OR pmc_id = current_setting('app.user_id')::UUID
-        OR site_supervisor_id = current_setting('app.user_id')::UUID)
+      current_setting('app.user_access_level', TRUE)::access_level = 'L3'
+      AND (crmtl_id = current_setting('app.user_id', TRUE)::UUID
+        OR pmc_id = current_setting('app.user_id', TRUE)::UUID
+        OR site_supervisor_id = current_setting('app.user_id', TRUE)::UUID)
+    )
+  );
+
+-- Explicit policies for the remaining RLS-enabled tables. RLS with no policy
+-- means default-deny — the app role could never read these at all. L0/L1 see
+-- everything per the fencing model; L2/L3 policies land with the auth module
+-- once department-project mapping is wired.
+CREATE POLICY families_l0l1 ON public.families
+  USING (current_setting('app.user_access_level', TRUE) IN ('L0','L1'));
+CREATE POLICY billing_l0l1 ON ee.billing_milestones
+  USING (current_setting('app.user_access_level', TRUE) IN ('L0','L1'));
+CREATE POLICY eh_sales_l0l1 ON eh.sales
+  USING (current_setting('app.user_access_level', TRUE) IN ('L0','L1'));
+
+-- L2/L3 read the family attached to a project they serve (fencing: you see
+-- the whole person only for relationships you own). Without this, wio_clock's
+-- families join returns zero rows for the CRM TL — the screen's own persona.
+CREATE POLICY families_project_team ON public.families
+  USING (
+    EXISTS (
+      SELECT 1 FROM ee.projects pr
+      WHERE pr.family_id = families.id
+        AND (
+          pr.crmtl_id              = current_setting('app.user_id', TRUE)::UUID
+          OR pr.pmc_id             = current_setting('app.user_id', TRUE)::UUID
+          OR pr.designer_id        = current_setting('app.user_id', TRUE)::UUID
+          OR pr.site_supervisor_id = current_setting('app.user_id', TRUE)::UUID
+        )
     )
   );
 
