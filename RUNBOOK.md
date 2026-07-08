@@ -76,8 +76,8 @@ Requires the `vector` extension (RDS: enable `pgvector`); `uuid-ossp`/`pgcrypto`
 core contrib. After provisioning, grant and configure the `essentia_app` role per
 `007` so the app connects as a non-owner (RLS is skipped for owners/superusers).
 
-> **Doc fix pending:** `db/README.md`'s provisioning list is stale — it names
-> `003_seed_roles.sql` (does not exist) and omits `004`–`010`. Use the sequence above.
+> `db/README.md` mirrors this sequence. There is no `003` — it is a numbering gap;
+> roles/permissions are seeded in `004_foundation.sql`.
 
 ## 4. Running locally
 
