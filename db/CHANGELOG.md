@@ -1,5 +1,24 @@
 # Database Schema Changelog
 
+## 011 — 2026-07-08 (Scheduler / Job Framework — auto-pilot)
+
+- `portal.scheduled_jobs`: the job registry — cadence as data
+  (`interval` seconds | `daily` HH:MM), enable flag, `max_attempts`, backoff.
+- `portal.job_runs`: one row per `(job, scheduled_for)` slot;
+  `UNIQUE(job_id, scheduled_for)` is the single-fire lock (two ticks / two app
+  instances cannot both claim a slot). Retry re-claims a `failed` slot via
+  `ON CONFLICT DO UPDATE` with exponential backoff; dead-letters at `max_attempts`.
+- System service account `autopilot@essentia.in` (L1, no credential) — the
+  identity the scheduler acts as so cross-department sweeps see every record.
+- `scheduler` resource + permissions (L0/L1 full, L2 read); config
+  `scheduler.enabled` + `scheduler.catchup_grace_seconds`; grants to `essentia_app`.
+- Seeds the three existing job routes (notifications-dispatch, wio-clock,
+  keka-sync) as registered jobs. Resolves A-14 / IG-06. See `docs/scheduler.md`.
+
+  **App-layer note:** the scheduler holds no business logic — `lib/services/scheduler.ts`
+  maps job names to the same service functions the `/api/jobs/*` routes call, and is
+  triggered by `POST /api/jobs/tick` (external cron, `SCHEDULER_TICK_SECRET`).
+
 ## 010 — 2026-07-07 (Platform Phase 3 — Notification Framework)
 
 - `portal.events`: immutable domain-event store; partial unique index on
