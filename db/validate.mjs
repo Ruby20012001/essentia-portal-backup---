@@ -389,6 +389,21 @@ if (!failed) {
               AND job_id=(SELECT id FROM portal.scheduled_jobs WHERE name='keka-sync')`,
       ok: (v) => v === "succeeded",
     },
+    {
+      name: "dead-letter: scheduler.job_dead routes to platform_admins",
+      sql: `SELECT recipient_strategy AS v FROM portal.event_routes
+            WHERE event_type = 'scheduler.job_dead'`,
+      ok: (v) => v === "platform_admins",
+    },
+    {
+      name: "dead-letter: platform_admins resolves founders + COO",
+      sql: `SELECT (COUNT(*) >= 2)::TEXT AS v FROM public.users
+            WHERE is_active AND (access_level::text = ANY(ARRAY['L0'])
+              OR job_title ILIKE '%COO%' OR job_title ILIKE '%Chief Operating%'
+              OR job_title ILIKE '%CTO%'  OR job_title ILIKE '%Chief Technology%'
+              OR job_title ILIKE '%Platform Admin%')`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

@@ -1,5 +1,18 @@
 # Database Schema Changelog
 
+## 012 — 2026-07-08 (Scheduler dead-letter alert policy)
+
+- `portal.event_routes`: `scheduler.job_dead` → `system_alert`, recipient
+  strategy `platform_admins`, in-app + email, urgent.
+- Config `notifications.admin_alert_levels` (`["L0"]`) and
+  `notifications.admin_alert_title_patterns` (COO / CTO / Platform Admin
+  substrings) — the recipient set is **data**, so adding a future Operations
+  role is a config change, not code.
+
+  **App-layer note:** new `platform_admins` recipient strategy
+  (`lib/notifications/engine/recipients.ts`) resolves L0 + job-title matches;
+  the scheduler publishes `scheduler.job_dead` on dead-letter (best-effort).
+
 ## 011 — 2026-07-08 (Scheduler / Job Framework — auto-pilot)
 
 - `portal.scheduled_jobs`: the job registry — cadence as data

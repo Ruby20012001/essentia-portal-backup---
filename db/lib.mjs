@@ -23,6 +23,7 @@ export const DEFAULT_FILES = [
   "009_keka_integration.sql",
   "010_notification_framework.sql",
   "011_scheduler_framework.sql",
+  "012_scheduler_alerts.sql",
   "900_dev_fixtures.sql",
 ];
 

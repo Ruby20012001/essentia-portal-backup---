@@ -95,6 +95,28 @@ long-running process — that keeps it stateless and serverless-friendly):
 Without the secret set (dev), the tick requires an authenticated session instead, so it
 can never be triggered anonymously.
 
+## Dead-letter alerting (config-driven, migration `012`)
+
+When a job exhausts its retries and dead-letters, the scheduler publishes a
+`scheduler.job_dead` event (urgent, category `system`, deduped per run). It routes
+via the notification framework to the **platform operators** — no recipient is
+hard-coded:
+
+- **Recipients (default):** Founders (**L0**), the **COO**, and a **CTO / Platform
+  Administrator** if one exists.
+- **Config-driven (PAS ADR-001):** membership is data, not code —
+  `notifications.admin_alert_levels` (access levels, default `["L0"]`) and
+  `notifications.admin_alert_title_patterns` (job-title substrings, default
+  `["COO","Chief Operating","CTO","Chief Technology","Platform Admin"]`). The
+  `platform_admins` recipient strategy resolves the union. **To add a future
+  Operations role, append its title to the config — no code change.**
+- **Channels:** in-app + email (urgent), subject to each recipient's preferences.
+- **Route:** `event_routes('scheduler.job_dead') → notification_type system_alert,
+  recipient_strategy platform_admins`.
+
+The alert is best-effort: the dead-letter is already recorded in `job_runs` and the
+audit trail, so a publish failure never masks the job failure.
+
 ## PAS §6 conformance
 
 Job lifecycle (run log) ✓ · cron-as-data ✓ · locking / single-fire ✓ · distributed

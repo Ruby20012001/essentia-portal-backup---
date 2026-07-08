@@ -1,4 +1,5 @@
 import { query } from "@/lib/db";
+import { getConfig } from "@/lib/services/config";
 import type { StoredEvent } from "@/lib/notifications/events/types";
 
 /**
@@ -10,7 +11,8 @@ export type RecipientStrategy =
   | "actor"
   | "project_tl"
   | "workflow_step_approver"
-  | "workflow_started_by";
+  | "workflow_started_by"
+  | "platform_admins";
 
 export async function resolveRecipients(
   strategy: RecipientStrategy,
@@ -55,6 +57,24 @@ export async function resolveRecipients(
         [instanceId],
       );
       return rows[0]?.started_by ? [rows[0].started_by] : [];
+    }
+    case "platform_admins": {
+      // Config-driven: alert the platform operators. Founders by access level,
+      // plus anyone whose job title matches a configured pattern (COO, CTO /
+      // Platform Administrator, and any future Operations role). Adding a role
+      // is a config change — no code edit.
+      const levels = await getConfig<string[]>("notifications.admin_alert_levels", ["L0"]);
+      const patterns = await getConfig<string[]>("notifications.admin_alert_title_patterns", []);
+      const likeParams = patterns.map((p) => `%${p}%`);
+      const likeClauses = patterns.map((_, i) => `job_title ILIKE $${i + 2}`);
+      const rows = await query<{ id: string }>(
+        `SELECT id FROM public.users
+         WHERE is_active
+           AND (access_level::text = ANY($1)
+                ${likeClauses.length ? `OR ${likeClauses.join(" OR ")}` : ""})`,
+        [levels, ...likeParams],
+      );
+      return rows.map((r) => r.id);
     }
     default:
       return [];

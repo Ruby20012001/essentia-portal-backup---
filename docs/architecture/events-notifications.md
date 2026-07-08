@@ -37,9 +37,10 @@ flowchart LR
 | `workflow.rejected` | approval | approval_rejected | workflow starter | in_app |
 | `ar.overdue` | project | escalation | explicit | in_app, email |
 | `system.alert` | system | system_alert | explicit | in_app |
+| `scheduler.job_dead` | system | system_alert | platform_admins (config) | in_app, email |
 
 - **Categories** (8): workflow, approval, user, project, department, system, ai, integration.
-- **Recipient strategies**: explicit · actor · project_tl · workflow_step_approver · workflow_started_by.
+- **Recipient strategies**: explicit · actor · project_tl · workflow_step_approver · workflow_started_by · **platform_admins** (config-driven: L0 + configured job-title patterns — used for scheduler dead-letters).
 - **Event fields**: id, event_type, category, entity_type/id/ref, actor_id, department_id, priority, payload, correlation_id, dedupe_key, created_at. (Retry count lives on the *delivery* — the event is immutable.)
 - **Publishers today**: `wio.ts` (created/converted/cancelled/clock), `workflows.ts` (step_pending/approved/rejected). **Subscriber**: the single notification engine (`dispatchEvent`) — a fan-in point every future module reuses.
 

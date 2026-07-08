@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/services/permissions";
 import { writeAudit } from "@/lib/services/audit";
 import { NotFoundError } from "@/lib/services/blocking";
 import type { SessionUser } from "@/lib/auth/session";
-import { processDueDeliveries } from "@/lib/notifications";
+import { processDueDeliveries, publishEvent } from "@/lib/notifications";
 import { sweepWioClock } from "@/lib/services/wio";
 import { runKekaSync } from "@/lib/integrations/keka/sync";
 
@@ -239,6 +239,22 @@ async function markFailed(
     action: "JOB_RUN", resourceType: "scheduler", resourceId: job.id,
     newValues: { job: job.name, status: dead ? "dead" : "failed", attempt, error: message },
   });
+  if (dead) {
+    // Alert the platform operators (config-driven recipients via the
+    // 'platform_admins' route). Best-effort — the dead-letter is already
+    // recorded and audited; a publish failure must not mask the job failure.
+    await publishEvent({
+      type: "scheduler.job_dead",
+      category: "system",
+      entityType: "scheduled_job",
+      entityId: job.id,
+      entityRef: job.name,
+      actorId: AUTOPILOT.id,
+      priority: "urgent",
+      payload: { job: job.name, attempts: attempt, error: message },
+      dedupeKey: `scheduler.job_dead:${runId}`,
+    }).catch(() => undefined);
+  }
   return dead;
 }
 
