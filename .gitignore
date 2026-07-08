@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Environment — real secrets never enter the repo
+.env
+.env.local
+.env*.local
+
+# Next.js generated types
+next-env.d.ts
+
+# Claude Code — local machine settings (shared launch.json is committed)
+.claude/settings.local.json
+
+# Misc
+*.tsbuildinfo
+.DS_Store
