@@ -476,6 +476,46 @@ if (!failed) {
             WHERE instance_id = '00000000-0000-4000-8000-0000000000f1' LIMIT 1`,
       ok: (v) => v === "pending",
     },
+    {
+      // PIO regression: the full 3-group chain (Khushpreet → Deepak → Hardesh)
+      // materialize-task → CAS-approve → advance, exactly as the engine emits,
+      // ends 'approved'. Mirrors the sequential single-approver PIO behaviour.
+      name: "wf-engine: full PIO chain group 1→2→3 ends approved",
+      setupSql: `
+        INSERT INTO public.users (email, full_name, access_level, is_active) VALUES
+          ('khushpreet.arora@essentia.in','Khushpreet Arora','L2',TRUE),
+          ('deepak.jain@essentia.in','Deepak Jain','L1',TRUE),
+          ('hardesh.chawla@essentia.in','Hardesh Chawla','L0',TRUE)
+          ON CONFLICT (email) DO NOTHING;
+        INSERT INTO portal.workflow_instances
+          (id, workflow_code, resource_type, resource_id, current_step, status)
+          VALUES ('00000000-0000-4000-8000-0000000000fa','pio_approval','pio',
+                  '00000000-0000-4000-8000-0000000000fb', 1, 'pending');
+        -- group 1 (Khushpreet)
+        INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id)
+          SELECT '00000000-0000-4000-8000-0000000000fa',1,id FROM public.users WHERE email='khushpreet.arora@essentia.in';
+        UPDATE portal.workflow_tasks SET status='approved', acted_at=NOW()
+          WHERE instance_id='00000000-0000-4000-8000-0000000000fa' AND group_no=1 AND status='pending';
+        UPDATE portal.workflow_instances SET current_step=2
+          WHERE id='00000000-0000-4000-8000-0000000000fa' AND status='pending' AND current_step=1;
+        -- group 2 (Deepak)
+        INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id)
+          SELECT '00000000-0000-4000-8000-0000000000fa',2,id FROM public.users WHERE email='deepak.jain@essentia.in';
+        UPDATE portal.workflow_tasks SET status='approved', acted_at=NOW()
+          WHERE instance_id='00000000-0000-4000-8000-0000000000fa' AND group_no=2 AND status='pending';
+        UPDATE portal.workflow_instances SET current_step=3
+          WHERE id='00000000-0000-4000-8000-0000000000fa' AND status='pending' AND current_step=2;
+        -- group 3 (Hardesh, final)
+        INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id)
+          SELECT '00000000-0000-4000-8000-0000000000fa',3,id FROM public.users WHERE email='hardesh.chawla@essentia.in';
+        UPDATE portal.workflow_tasks SET status='approved', acted_at=NOW()
+          WHERE instance_id='00000000-0000-4000-8000-0000000000fa' AND group_no=3 AND status='pending';
+        UPDATE portal.workflow_instances SET status='approved', completed_at=NOW()
+          WHERE id='00000000-0000-4000-8000-0000000000fa' AND status='pending' AND current_step=3`,
+      sql: `SELECT status AS v FROM portal.workflow_instances
+            WHERE id = '00000000-0000-4000-8000-0000000000fa'`,
+      ok: (v) => v === "approved",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

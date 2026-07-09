@@ -213,10 +213,13 @@ export async function actOnWorkflow(
     if (applied.length === 0) {
       throw new WorkflowError("This approval was already actioned", 409);
     }
+    // workflow_actions uses step_no (= group number during the transition); the
+    // task_id/group_no columns arrive in a later step when parallel groups need
+    // per-task audit. This matches the previous engine's action record exactly.
     await q(
-      `INSERT INTO portal.workflow_actions (instance_id, task_id, group_no, action, acted_by, comments)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [instanceId, taskId, group.group_no, action, user.id, comments ?? null],
+      `INSERT INTO portal.workflow_actions (instance_id, step_no, action, acted_by, comments)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [instanceId, group.group_no, action, user.id, comments ?? null],
     );
 
     // Rejection under fail_fast → instance rejected; open siblings skipped.
