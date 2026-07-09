@@ -10,6 +10,7 @@ const schema = z.object({
   workflowCode: z.string().min(1),
   resourceType: z.string().min(1),
   resourceId: z.string().uuid(),
+  context: z.record(z.unknown()).optional(),
 });
 
 /**
@@ -32,6 +33,7 @@ export async function POST(request: NextRequest) {
       parsed.data.workflowCode,
       parsed.data.resourceType,
       parsed.data.resourceId,
+      parsed.data.context ?? {},
     );
     return NextResponse.json({ instanceId });
   } catch (error) {

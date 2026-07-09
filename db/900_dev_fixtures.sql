@@ -139,3 +139,31 @@ WHERE NOT EXISTS (
   SELECT 1 FROM portal.workflow_group_approvers ga
   WHERE ga.group_id = g.id AND ga.approver_user_id = v.uid::uuid
 );
+
+-- ---------------------------------------------------------------------
+-- Conditional-routing demo (Phase 4 Step 5) — DEV ONLY. The middle group
+-- (Founder) runs only when context.amount > 50,000,000 (Rs 5 Cr); otherwise it
+-- is SKIPPED and the workflow advances straight to the final group.
+-- ---------------------------------------------------------------------
+INSERT INTO portal.workflow_definitions (code, name, resource_type) VALUES
+  ('conditional_demo', 'Conditional demo — founder gate over Rs 5 Cr', 'projects')
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO portal.workflow_groups (definition_code, group_no, name, quorum, condition) VALUES
+  ('conditional_demo', 1, 'Manager sign-off', 1, NULL),
+  ('conditional_demo', 2, 'Founder approval (> Rs 5 Cr)', 1,
+   '{"field":"amount","op":">","value":50000000}'::jsonb),
+  ('conditional_demo', 3, 'Final record', 1, NULL)
+ON CONFLICT (definition_code, group_no) DO NOTHING;
+
+INSERT INTO portal.workflow_group_approvers (group_id, approver_type, approver_user_id, approver_hint, sort_order)
+SELECT g.id, 'user', v.uid::uuid, v.hint, 1
+FROM (VALUES
+  (1, '00000000-0000-4000-8000-000000000003', 'Dev COO — Manager'),
+  (2, '00000000-0000-4000-8000-000000000002', 'Dev Founder'),
+  (3, '00000000-0000-4000-8000-000000000001', 'Dev CRM TL — Records')
+) AS v(gno, uid, hint)
+JOIN portal.workflow_groups g ON g.definition_code = 'conditional_demo' AND g.group_no = v.gno
+WHERE NOT EXISTS (
+  SELECT 1 FROM portal.workflow_group_approvers ga WHERE ga.group_id = g.id
+);

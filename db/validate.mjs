@@ -592,6 +592,31 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      name: "wf-conditional 016: instances carry a context column (default {})",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000000000ca'::uuid,'pio_approval','pio',
+                         '00000000-0000-4000-8000-0000000000cb', 1, 'pending')`,
+      sql: `SELECT (context = '{}'::jsonb)::TEXT AS v FROM portal.workflow_instances
+            WHERE id='00000000-0000-4000-8000-0000000000ca'::uuid`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-conditional: conditional_demo group 2 gates on amount > 5 Cr",
+      sql: `SELECT (
+              condition->>'field' = 'amount' AND condition->>'op' = '>'
+              AND (condition->>'value')::bigint = 50000000
+            )::TEXT AS v
+            FROM portal.workflow_groups WHERE definition_code='conditional_demo' AND group_no=2`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-conditional: conditional_demo groups 1 and 3 always run (null condition)",
+      sql: `SELECT (COUNT(*) = 2)::TEXT AS v FROM portal.workflow_groups
+            WHERE definition_code='conditional_demo' AND group_no IN (1,3) AND condition IS NULL`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

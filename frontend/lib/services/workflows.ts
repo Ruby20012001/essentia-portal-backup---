@@ -1,6 +1,7 @@
 import { query, withTransaction } from "@/lib/db";
 import { writeAudit } from "@/lib/services/audit";
 import { publishEvent } from "@/lib/notifications";
+import { evaluateCondition } from "@/lib/services/workflow-conditions";
 import type { SessionUser } from "@/lib/auth/session";
 
 /**
@@ -54,6 +55,7 @@ type GroupRow = {
   name: string;
   quorum: number;
   reject_policy: "fail_fast" | "continue";
+  condition: unknown; // restricted predicate (WES §7); null = always run
 };
 
 type ApproverRow = {
@@ -65,7 +67,7 @@ type ApproverRow = {
 };
 
 const GROUPS_SQL = `
-  SELECT group_no, name, quorum, reject_policy
+  SELECT group_no, name, quorum, reject_policy, condition
   FROM portal.workflow_groups
   WHERE definition_code = $1
   ORDER BY group_no`;
@@ -111,11 +113,48 @@ async function materializeGroupTasks(
   }
 }
 
+/**
+ * Pure: the next APPLICABLE group after `afterGroupNo` (its condition is true
+ * against `context`), plus the groups skipped to reach it. Groups arrive
+ * pre-ordered by group_no. A null condition always applies (WES §7).
+ */
+function planNext(
+  groups: GroupRow[],
+  context: Record<string, unknown>,
+  afterGroupNo: number,
+): { next: GroupRow | null; skipped: GroupRow[] } {
+  const skipped: GroupRow[] = [];
+  for (const g of groups) {
+    if (g.group_no <= afterGroupNo) continue;
+    if (evaluateCondition(context, g.condition)) return { next: g, skipped };
+    skipped.push(g);
+  }
+  return { next: null, skipped };
+}
+
+async function auditSkip(
+  user: SessionUser,
+  instanceId: string,
+  resourceType: string,
+  resourceId: string,
+  group: GroupRow,
+): Promise<void> {
+  await writeAudit({
+    userId: user.id,
+    role: user.accessLevel,
+    action: "WORKFLOW_SKIP_GROUP",
+    resourceType,
+    resourceId,
+    newValues: { instanceId, groupNo: group.group_no, groupName: group.name, reason: "condition false" },
+  });
+}
+
 export async function startWorkflow(
   user: SessionUser,
   workflowCode: string,
   resourceType: string,
   resourceId: string,
+  context: Record<string, unknown> = {},
 ): Promise<string> {
   const [definition] = await query<{ code: string; name: string }>(
     `SELECT code, name FROM portal.workflow_definitions WHERE code = $1 AND is_active`,
@@ -133,10 +172,10 @@ export async function startWorkflow(
   try {
     const [row] = await query<{ id: string }>(
       `INSERT INTO portal.workflow_instances
-         (workflow_code, resource_type, resource_id, started_by)
-       VALUES ($1, $2, $3, $4)
+         (workflow_code, resource_type, resource_id, started_by, context)
+       VALUES ($1, $2, $3, $4, $5::jsonb)
        RETURNING id`,
-      [workflowCode, resourceType, resourceId, user.id],
+      [workflowCode, resourceType, resourceId, user.id, JSON.stringify(context)],
     );
     instanceId = row!.id;
   } catch (error) {
@@ -158,9 +197,42 @@ export async function startWorkflow(
     newValues: { workflowCode, instanceId },
   });
 
-  // Activate the first group (instance starts at current_step = 1).
-  await materializeGroupTasks(instanceId, workflowCode, groups[0]!.group_no);
-  await publishStepPending(instanceId, definition.name, groups[0]!, resourceType, resourceId);
+  // Activate the first APPLICABLE group — groups whose condition is false
+  // against the context are skipped (conditional routing, WES §7).
+  const plan = planNext(groups, context, 0);
+  for (const s of plan.skipped) await auditSkip(user, instanceId, resourceType, resourceId, s);
+  if (!plan.next) {
+    // Every group was skipped → nothing to approve; the instance is approved.
+    await query(
+      `UPDATE portal.workflow_instances SET status = 'approved', completed_at = NOW() WHERE id = $1`,
+      [instanceId],
+    );
+    await publishEvent({
+      type: "workflow.approved",
+      category: "approval",
+      entityType: resourceType,
+      entityId: resourceId,
+      actorId: user.id,
+      payload: {
+        instanceId,
+        workflowName: definition.name,
+        resourceRef: `${resourceType} ${resourceId}`,
+        actor: user.name,
+        stepNo: 0,
+        commentsLine: "",
+        actionUrl: "/wio-pio",
+      },
+    });
+    return instanceId;
+  }
+  if (plan.next.group_no !== 1) {
+    await query(
+      `UPDATE portal.workflow_instances SET current_step = $2 WHERE id = $1`,
+      [instanceId, plan.next.group_no],
+    );
+  }
+  await materializeGroupTasks(instanceId, workflowCode, plan.next.group_no);
+  await publishStepPending(instanceId, definition.name, plan.next, resourceType, resourceId);
   return instanceId;
 }
 
@@ -177,8 +249,9 @@ export async function actOnWorkflow(
     resource_id: string;
     status: WorkflowStatus;
     current_step: number;
+    context: Record<string, unknown> | null;
   }>(
-    `SELECT id, workflow_code, resource_type, resource_id, status, current_step
+    `SELECT id, workflow_code, resource_type, resource_id, status, current_step, context
      FROM portal.workflow_instances WHERE id = $1`,
     [instanceId],
   );
@@ -198,8 +271,9 @@ export async function actOnWorkflow(
   // Resolve the acting user's pending task in the current group.
   const taskId = await resolveActingTask(user, instanceId, group, approvers);
 
-  const remaining = groups.filter((g) => g.group_no > group.group_no);
-  const nextGroup = remaining[0] ?? null;
+  // Next applicable group (skipping any whose condition is false, WES §7).
+  const plan = planNext(groups, instance.context ?? {}, group.group_no);
+  const nextGroup = plan.next;
 
   const outcome = await withTransaction(async (q) => {
     // CAS on the TASK — a concurrent decision on the same task matches zero rows.
@@ -291,6 +365,9 @@ export async function actOnWorkflow(
   const workflowName = definition?.name ?? instance.workflow_code;
 
   if (outcome.advanced && nextGroup) {
+    for (const s of plan.skipped) {
+      await auditSkip(user, instanceId, instance.resource_type, instance.resource_id, s);
+    }
     await materializeGroupTasks(instanceId, instance.workflow_code, nextGroup.group_no);
     await publishStepPending(
       instanceId,
