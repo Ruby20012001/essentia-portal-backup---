@@ -24,6 +24,14 @@ export const DEFAULT_FILES = [
   "010_notification_framework.sql",
   "011_scheduler_framework.sql",
   "012_scheduler_alerts.sql",
+  "013_workflow_engine_v1.sql",
+  "014_workflow_pio_groups.sql",
+  "015_workflow_actions_task.sql",
+  "016_workflow_context.sql",
+  "017_workflow_delegation.sql",
+  "018_workflow_sla.sql",
+  "019_workflow_notify.sql",
+  "020_workflow_advisory.sql",
   "900_dev_fixtures.sql",
 ];
 

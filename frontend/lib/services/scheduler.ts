@@ -7,6 +7,7 @@ import type { SessionUser } from "@/lib/auth/session";
 import { processDueDeliveries, publishEvent } from "@/lib/notifications";
 import { sweepWioClock } from "@/lib/services/wio";
 import { runKekaSync } from "@/lib/integrations/keka/sync";
+import { evaluateWorkflowTimers } from "@/lib/services/workflow-timers";
 
 /**
  * Auto-pilot scheduler (resolves A-14 / IG-06). Cadence lives as data in
@@ -43,6 +44,7 @@ const HANDLERS: Record<string, JobHandler> = {
     }
     return runKekaSync(actor, "scheduled");
   },
+  "workflow-timers": (actor) => evaluateWorkflowTimers(actor),
 };
 
 type JobRow = {

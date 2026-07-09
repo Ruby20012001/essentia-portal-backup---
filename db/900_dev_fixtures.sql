@@ -110,3 +110,88 @@ WHERE NOT EXISTS (
     AND project_id = '00000000-0000-4000-8000-00000000a001'
     AND sent_at >= date_trunc('week', CURRENT_DATE)
 );
+
+-- ---------------------------------------------------------------------
+-- Parallel-approval demo workflow (Phase 4 Step 4) — DEV ONLY. Group 1 is a
+-- 2-of-3 cross-functional quorum; group 2 is a single director sign-off. Uses
+-- the dev fixture users so it resolves without a Keka sync.
+-- ---------------------------------------------------------------------
+INSERT INTO portal.workflow_definitions (code, name, resource_type) VALUES
+  ('parallel_demo', 'Parallel demo — cross-functional (2 of 3) then director', 'projects')
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO portal.workflow_groups (definition_code, group_no, name, quorum, reject_policy) VALUES
+  ('parallel_demo', 1, 'Cross-functional review (2 of 3)', 2, 'fail_fast'),
+  ('parallel_demo', 2, 'Director sign-off', 1, 'fail_fast')
+ON CONFLICT (definition_code, group_no) DO NOTHING;
+
+INSERT INTO portal.workflow_group_approvers
+  (group_id, approver_type, approver_user_id, approver_hint, sort_order)
+SELECT g.id, 'user', v.uid::uuid, v.hint, v.so
+FROM (VALUES
+  (1, '00000000-0000-4000-8000-000000000003', 'Dev COO — Finance', 1),
+  (1, '00000000-0000-4000-8000-000000000001', 'Dev CRM TL — Legal', 2),
+  (1, '00000000-0000-4000-8000-000000000004', 'Dev Site — HR', 3),
+  (2, '00000000-0000-4000-8000-000000000002', 'Dev Founder — Director', 1)
+) AS v(gno, uid, hint, so)
+JOIN portal.workflow_groups g ON g.definition_code = 'parallel_demo' AND g.group_no = v.gno
+WHERE NOT EXISTS (
+  SELECT 1 FROM portal.workflow_group_approvers ga
+  WHERE ga.group_id = g.id AND ga.approver_user_id = v.uid::uuid
+);
+
+-- ---------------------------------------------------------------------
+-- Conditional-routing demo (Phase 4 Step 5) — DEV ONLY. The middle group
+-- (Founder) runs only when context.amount > 50,000,000 (Rs 5 Cr); otherwise it
+-- is SKIPPED and the workflow advances straight to the final group.
+-- ---------------------------------------------------------------------
+INSERT INTO portal.workflow_definitions (code, name, resource_type) VALUES
+  ('conditional_demo', 'Conditional demo — founder gate over Rs 5 Cr', 'projects')
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO portal.workflow_groups (definition_code, group_no, name, quorum, condition) VALUES
+  ('conditional_demo', 1, 'Manager sign-off', 1, NULL),
+  ('conditional_demo', 2, 'Founder approval (> Rs 5 Cr)', 1,
+   '{"field":"amount","op":">","value":50000000}'::jsonb),
+  ('conditional_demo', 3, 'Final record', 1, NULL)
+ON CONFLICT (definition_code, group_no) DO NOTHING;
+
+INSERT INTO portal.workflow_group_approvers (group_id, approver_type, approver_user_id, approver_hint, sort_order)
+SELECT g.id, 'user', v.uid::uuid, v.hint, 1
+FROM (VALUES
+  (1, '00000000-0000-4000-8000-000000000003', 'Dev COO — Manager'),
+  (2, '00000000-0000-4000-8000-000000000002', 'Dev Founder'),
+  (3, '00000000-0000-4000-8000-000000000001', 'Dev CRM TL — Records')
+) AS v(gno, uid, hint)
+JOIN portal.workflow_groups g ON g.definition_code = 'conditional_demo' AND g.group_no = v.gno
+WHERE NOT EXISTS (
+  SELECT 1 FROM portal.workflow_group_approvers ga WHERE ga.group_id = g.id
+);
+
+-- ---------------------------------------------------------------------
+-- SLA demo (Phase 4 Step 7) — DEV ONLY. Group 1 carries an SLA (24h warn 12h),
+-- a 48h auto-approve timeout, a 24h reminder cadence, and escalation to the
+-- Founder. Use /api/dev/age-workflow-timers to backdate a live instance's
+-- deadlines and watch the sweep fire.
+-- ---------------------------------------------------------------------
+INSERT INTO portal.workflow_definitions (code, name, resource_type) VALUES
+  ('sla_demo', 'SLA demo — 24h SLA, 48h auto-approve timeout', 'projects')
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO portal.workflow_groups
+  (definition_code, group_no, name, quorum, sla_hours, warn_hours, timeout_hours, timeout_action, reminder_hours) VALUES
+  ('sla_demo', 1, 'Manager review (SLA-gated)', 1, 24, 12, 48, 'auto_approve', 24),
+  ('sla_demo', 2, 'Final sign-off', 1, NULL, NULL, NULL, NULL, NULL)
+ON CONFLICT (definition_code, group_no) DO NOTHING;
+
+INSERT INTO portal.workflow_group_approvers
+  (group_id, approver_type, approver_user_id, approver_hint, escalation_type, escalation_ref, sort_order)
+SELECT g.id, 'user', v.uid::uuid, v.hint, v.etype, v.eref, 1
+FROM (VALUES
+  (1, '00000000-0000-4000-8000-000000000003', 'Dev COO — Manager', 'user', 'dev.founder@essentia.in'),
+  (2, '00000000-0000-4000-8000-000000000002', 'Dev Founder', NULL, NULL)
+) AS v(gno, uid, hint, etype, eref)
+JOIN portal.workflow_groups g ON g.definition_code = 'sla_demo' AND g.group_no = v.gno
+WHERE NOT EXISTS (
+  SELECT 1 FROM portal.workflow_group_approvers ga WHERE ga.group_id = g.id
+);

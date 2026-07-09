@@ -11,6 +11,7 @@ export type RecipientStrategy =
   | "actor"
   | "project_tl"
   | "workflow_step_approver"
+  | "workflow_task_assignee"
   | "workflow_started_by"
   | "platform_admins";
 
@@ -48,6 +49,21 @@ export async function resolveRecipients(
         [instanceId],
       );
       return rows[0]?.approver_user_id ? [rows[0].approver_user_id] : [];
+    }
+    case "workflow_task_assignee": {
+      // Every pending task in the instance's current group, resolved to its
+      // EFFECTIVE approver (the delegate if delegated, else the assignee). Works
+      // for any workflow and notifies all parallel approvers (WES §12).
+      const instanceId = payload.instanceId as string | undefined;
+      if (!instanceId) return [];
+      const rows = await query<{ uid: string | null }>(
+        `SELECT DISTINCT COALESCE(t.delegated_to_user_id, t.assignee_user_id) AS uid
+         FROM portal.workflow_tasks t
+         JOIN portal.workflow_instances i ON i.id = t.instance_id
+         WHERE t.instance_id = $1 AND t.group_no = i.current_step AND t.status = 'pending'`,
+        [instanceId],
+      );
+      return rows.map((r) => r.uid).filter((x): x is string => Boolean(x));
     }
     case "workflow_started_by": {
       const instanceId = payload.instanceId as string | undefined;

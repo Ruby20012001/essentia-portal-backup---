@@ -404,6 +404,332 @@ if (!failed) {
               OR job_title ILIKE '%Platform Admin%')`,
       ok: (v) => v === "true",
     },
+    {
+      name: "wf-engine 013: the four group/task tables exist",
+      sql: `SELECT (COUNT(*) = 4)::TEXT AS v FROM information_schema.tables
+            WHERE table_schema = 'portal'
+              AND table_name IN ('workflow_groups','workflow_group_approvers',
+                                 'workflow_tasks','workflow_delegations')`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-engine 013: workflow_groups UNIQUE(definition_code, group_no)",
+      sql: `INSERT INTO portal.workflow_groups (definition_code, group_no, name)
+            VALUES ('pio_approval', 1, 'dup') RETURNING 'x' AS v`,
+      expectError: true,
+    },
+    {
+      name: "wf-engine 014: pio_approval seeded as 3 groups",
+      sql: `SELECT (COUNT(*) = 3)::TEXT AS v FROM portal.workflow_groups
+            WHERE definition_code = 'pio_approval'`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-engine 014: pio groups mirror steps (quorum 1, fail_fast, emails)",
+      sql: `SELECT (
+              (SELECT bool_and(quorum=1 AND reject_policy='fail_fast')
+                 FROM portal.workflow_groups WHERE definition_code='pio_approval')
+              AND
+              (SELECT COUNT(*)=3 FROM portal.workflow_group_approvers ga
+                 JOIN portal.workflow_groups g ON g.id=ga.group_id
+                 WHERE g.definition_code='pio_approval' AND ga.approver_ref LIKE '%@essentia.in')
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-engine: task decision is single-fire (CAS)",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000000000f3','pio_approval','pio',
+                         '00000000-0000-4000-8000-0000000000f4', 1, 'pending');
+                 INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id)
+                 VALUES ('00000000-0000-4000-8000-0000000000f3', 1,
+                         (SELECT id FROM public.users WHERE email='dev.crmtl@essentia.in'));
+                 UPDATE portal.workflow_tasks SET status='approved', acted_at=NOW()
+                 WHERE instance_id='00000000-0000-4000-8000-0000000000f3'
+                   AND group_no=1 AND status='pending'`,
+      sql: `WITH cas AS (
+              UPDATE portal.workflow_tasks SET status='approved'
+              WHERE instance_id='00000000-0000-4000-8000-0000000000f3'
+                AND group_no=1 AND status='pending' RETURNING id)
+            SELECT (COUNT(*)=0)::TEXT AS v FROM cas`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-engine 013: workflow_tasks UNIQUE(instance, group, assignee)",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000000000f1','pio_approval','pio',
+                         '00000000-0000-4000-8000-0000000000f2', 1, 'pending');
+                 INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id)
+                 VALUES ('00000000-0000-4000-8000-0000000000f1', 1,
+                         (SELECT id FROM public.users WHERE email='dev.crmtl@essentia.in'))`,
+      sql: `INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id)
+            VALUES ('00000000-0000-4000-8000-0000000000f1', 1,
+                    (SELECT id FROM public.users WHERE email='dev.crmtl@essentia.in'))
+            RETURNING 'x' AS v`,
+      expectError: true,
+    },
+    {
+      name: "wf-engine 013: workflow_tasks status defaults to pending",
+      sql: `SELECT status AS v FROM portal.workflow_tasks
+            WHERE instance_id = '00000000-0000-4000-8000-0000000000f1' LIMIT 1`,
+      ok: (v) => v === "pending",
+    },
+    {
+      // PIO regression: the full 3-group chain (Khushpreet → Deepak → Hardesh)
+      // materialize-task → CAS-approve → advance, exactly as the engine emits,
+      // ends 'approved'. Mirrors the sequential single-approver PIO behaviour.
+      name: "wf-engine: full PIO chain group 1→2→3 ends approved",
+      setupSql: `
+        INSERT INTO public.users (email, full_name, access_level, is_active) VALUES
+          ('khushpreet.arora@essentia.in','Khushpreet Arora','L2',TRUE),
+          ('deepak.jain@essentia.in','Deepak Jain','L1',TRUE),
+          ('hardesh.chawla@essentia.in','Hardesh Chawla','L0',TRUE)
+          ON CONFLICT (email) DO NOTHING;
+        INSERT INTO portal.workflow_instances
+          (id, workflow_code, resource_type, resource_id, current_step, status)
+          VALUES ('00000000-0000-4000-8000-0000000000fa','pio_approval','pio',
+                  '00000000-0000-4000-8000-0000000000fb', 1, 'pending');
+        -- group 1 (Khushpreet)
+        INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id)
+          SELECT '00000000-0000-4000-8000-0000000000fa',1,id FROM public.users WHERE email='khushpreet.arora@essentia.in';
+        UPDATE portal.workflow_tasks SET status='approved', acted_at=NOW()
+          WHERE instance_id='00000000-0000-4000-8000-0000000000fa' AND group_no=1 AND status='pending';
+        UPDATE portal.workflow_instances SET current_step=2
+          WHERE id='00000000-0000-4000-8000-0000000000fa' AND status='pending' AND current_step=1;
+        -- group 2 (Deepak)
+        INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id)
+          SELECT '00000000-0000-4000-8000-0000000000fa',2,id FROM public.users WHERE email='deepak.jain@essentia.in';
+        UPDATE portal.workflow_tasks SET status='approved', acted_at=NOW()
+          WHERE instance_id='00000000-0000-4000-8000-0000000000fa' AND group_no=2 AND status='pending';
+        UPDATE portal.workflow_instances SET current_step=3
+          WHERE id='00000000-0000-4000-8000-0000000000fa' AND status='pending' AND current_step=2;
+        -- group 3 (Hardesh, final)
+        INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id)
+          SELECT '00000000-0000-4000-8000-0000000000fa',3,id FROM public.users WHERE email='hardesh.chawla@essentia.in';
+        UPDATE portal.workflow_tasks SET status='approved', acted_at=NOW()
+          WHERE instance_id='00000000-0000-4000-8000-0000000000fa' AND group_no=3 AND status='pending';
+        UPDATE portal.workflow_instances SET status='approved', completed_at=NOW()
+          WHERE id='00000000-0000-4000-8000-0000000000fa' AND status='pending' AND current_step=3`,
+      sql: `SELECT status AS v FROM portal.workflow_instances
+            WHERE id = '00000000-0000-4000-8000-0000000000fa'`,
+      ok: (v) => v === "approved",
+    },
+    {
+      name: "wf-parallel: parallel_demo group 1 is a 2-of-3 quorum",
+      sql: `SELECT (
+              (SELECT quorum FROM portal.workflow_groups
+                 WHERE definition_code='parallel_demo' AND group_no=1) = 2
+              AND
+              (SELECT COUNT(*) FROM portal.workflow_group_approvers ga
+                 JOIN portal.workflow_groups g ON g.id=ga.group_id
+                 WHERE g.definition_code='parallel_demo' AND g.group_no=1) = 3
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Parallel quorum: 2 of 3 approvals complete the group; the 3rd pending
+      // task is skipped and the instance advances to group 2 (director).
+      name: "wf-parallel: 2-of-3 approvals advance + skip the 3rd (task_id audited)",
+      setupSql: `
+        INSERT INTO portal.workflow_instances
+          (id, workflow_code, resource_type, resource_id, current_step, status)
+          VALUES ('00000000-0000-4000-8000-0000000000ba'::uuid,'parallel_demo','projects',
+                  '00000000-0000-4000-8000-0000000000bb', 1, 'pending');
+        -- materialize the 3 parallel tasks (COO, CRM TL, Site)
+        INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id) VALUES
+          ('00000000-0000-4000-8000-0000000000ba'::uuid, 1, '00000000-0000-4000-8000-000000000003'),
+          ('00000000-0000-4000-8000-0000000000ba'::uuid, 1, '00000000-0000-4000-8000-000000000001'),
+          ('00000000-0000-4000-8000-0000000000ba'::uuid, 1, '00000000-0000-4000-8000-000000000004');
+        -- COO approves (1/2) — with task-linked action row
+        WITH t AS (UPDATE portal.workflow_tasks SET status='approved', acted_by='00000000-0000-4000-8000-000000000003', acted_at=NOW()
+                   WHERE instance_id='00000000-0000-4000-8000-0000000000ba'::uuid AND assignee_user_id='00000000-0000-4000-8000-000000000003' RETURNING id)
+        INSERT INTO portal.workflow_actions (instance_id, task_id, step_no, group_no, action, acted_by)
+          SELECT '00000000-0000-4000-8000-0000000000ba'::uuid, id, 1, 1, 'approve', '00000000-0000-4000-8000-000000000003' FROM t;
+        -- CRM TL approves (2/2 -> quorum met)
+        UPDATE portal.workflow_tasks SET status='approved', acted_by='00000000-0000-4000-8000-000000000001', acted_at=NOW()
+          WHERE instance_id='00000000-0000-4000-8000-0000000000ba'::uuid AND assignee_user_id='00000000-0000-4000-8000-000000000001';
+        -- quorum reached: skip remaining pending sibling (Site) + advance to group 2
+        UPDATE portal.workflow_tasks SET status='skipped'
+          WHERE instance_id='00000000-0000-4000-8000-0000000000ba'::uuid AND group_no=1 AND status='pending';
+        UPDATE portal.workflow_instances SET current_step=2
+          WHERE id='00000000-0000-4000-8000-0000000000ba'::uuid AND status='pending' AND current_step=1`,
+      sql: `SELECT (
+              (SELECT current_step FROM portal.workflow_instances WHERE id='00000000-0000-4000-8000-0000000000ba'::uuid) = 2
+              AND
+              (SELECT status FROM portal.workflow_tasks
+                 WHERE instance_id='00000000-0000-4000-8000-0000000000ba'::uuid
+                   AND assignee_user_id='00000000-0000-4000-8000-000000000004') = 'skipped'
+              AND
+              (SELECT COUNT(*) FROM portal.workflow_actions
+                 WHERE instance_id='00000000-0000-4000-8000-0000000000ba'::uuid AND task_id IS NOT NULL) = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // fail_fast: one rejection in a parallel group rejects the instance and
+      // skips the still-pending siblings.
+      name: "wf-parallel: reject (fail_fast) rejects instance + skips siblings",
+      setupSql: `
+        INSERT INTO portal.workflow_instances
+          (id, workflow_code, resource_type, resource_id, current_step, status)
+          VALUES ('00000000-0000-4000-8000-0000000000bc'::uuid,'parallel_demo','projects',
+                  '00000000-0000-4000-8000-0000000000bd', 1, 'pending');
+        INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id) VALUES
+          ('00000000-0000-4000-8000-0000000000bc'::uuid, 1, '00000000-0000-4000-8000-000000000003'),
+          ('00000000-0000-4000-8000-0000000000bc'::uuid, 1, '00000000-0000-4000-8000-000000000001');
+        UPDATE portal.workflow_tasks SET status='rejected', acted_by='00000000-0000-4000-8000-000000000003', acted_at=NOW()
+          WHERE instance_id='00000000-0000-4000-8000-0000000000bc'::uuid AND assignee_user_id='00000000-0000-4000-8000-000000000003';
+        UPDATE portal.workflow_instances SET status='rejected', completed_at=NOW()
+          WHERE id='00000000-0000-4000-8000-0000000000bc'::uuid AND status='pending' AND current_step=1;
+        UPDATE portal.workflow_tasks SET status='skipped'
+          WHERE instance_id='00000000-0000-4000-8000-0000000000bc'::uuid AND group_no=1 AND status='pending'`,
+      sql: `SELECT (
+              (SELECT status FROM portal.workflow_instances WHERE id='00000000-0000-4000-8000-0000000000bc'::uuid) = 'rejected'
+              AND NOT EXISTS (SELECT 1 FROM portal.workflow_tasks
+                 WHERE instance_id='00000000-0000-4000-8000-0000000000bc'::uuid AND status='pending')
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-conditional 016: instances carry a context column (default {})",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000000000ca'::uuid,'pio_approval','pio',
+                         '00000000-0000-4000-8000-0000000000cb', 1, 'pending')`,
+      sql: `SELECT (context = '{}'::jsonb)::TEXT AS v FROM portal.workflow_instances
+            WHERE id='00000000-0000-4000-8000-0000000000ca'::uuid`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-conditional: conditional_demo group 2 gates on amount > 5 Cr",
+      sql: `SELECT (
+              condition->>'field' = 'amount' AND condition->>'op' = '>'
+              AND (condition->>'value')::bigint = 50000000
+            )::TEXT AS v
+            FROM portal.workflow_groups WHERE definition_code='conditional_demo' AND group_no=2`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-conditional: conditional_demo groups 1 and 3 always run (null condition)",
+      sql: `SELECT (COUNT(*) = 2)::TEXT AS v FROM portal.workflow_groups
+            WHERE definition_code='conditional_demo' AND group_no IN (1,3) AND condition IS NULL`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-delegation 017: reason column + 3 event routes seeded",
+      sql: `SELECT (
+              EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema='portal' AND table_name='workflow_delegations' AND column_name='reason')
+              AND (SELECT COUNT(*) FROM portal.event_routes
+                 WHERE event_type IN ('workflow.delegation_created','workflow.delegation_revoked','workflow.task_delegated')) = 3
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-delegation: active standing delegation resolves the delegate",
+      setupSql: `INSERT INTO portal.workflow_delegations (delegator_id, delegate_id, from_date, to_date)
+                 VALUES ('00000000-0000-4000-8000-000000000003',
+                         '00000000-0000-4000-8000-000000000001',
+                         CURRENT_DATE - 1, CURRENT_DATE + 1)`,
+      sql: `SELECT wd.delegate_id::text AS v
+            FROM portal.workflow_delegations wd
+            JOIN public.users u ON u.id = wd.delegate_id AND u.is_active
+            WHERE wd.delegator_id='00000000-0000-4000-8000-000000000003'
+              AND wd.revoked_at IS NULL AND wd.from_date <= CURRENT_DATE AND wd.to_date >= CURRENT_DATE
+            LIMIT 1`,
+      ok: (v) => v === "00000000-0000-4000-8000-000000000001",
+    },
+    {
+      name: "wf-delegation: expired window is not active",
+      setupSql: `INSERT INTO portal.workflow_delegations (delegator_id, delegate_id, from_date, to_date)
+                 VALUES ('00000000-0000-4000-8000-000000000004',
+                         '00000000-0000-4000-8000-000000000001',
+                         CURRENT_DATE - 10, CURRENT_DATE - 5)`,
+      sql: `SELECT (COUNT(*) = 0)::TEXT AS v FROM portal.workflow_delegations
+            WHERE delegator_id='00000000-0000-4000-8000-000000000004'
+              AND revoked_at IS NULL AND from_date <= CURRENT_DATE AND to_date >= CURRENT_DATE`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-delegation: self-delegation rejected by table CHECK",
+      sql: `INSERT INTO portal.workflow_delegations (delegator_id, delegate_id, from_date, to_date)
+            VALUES ('00000000-0000-4000-8000-000000000003',
+                    '00000000-0000-4000-8000-000000000003', CURRENT_DATE, CURRENT_DATE + 1)
+            RETURNING 'x' AS v`,
+      expectError: true,
+    },
+    {
+      name: "wf-sla 018: workflow-timers job + 5 SLA event routes seeded",
+      sql: `SELECT (
+              EXISTS (SELECT 1 FROM portal.scheduled_jobs WHERE name='workflow-timers')
+              AND (SELECT COUNT(*) FROM portal.event_routes WHERE event_type IN
+                 ('workflow.sla_warning','workflow.sla_breached','workflow.escalated',
+                  'workflow.task_reminded','workflow.timed_out')) = 5
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-sla: sla_demo group 1 has 24h SLA + 48h auto_approve timeout",
+      sql: `SELECT (sla_hours=24 AND warn_hours=12 AND timeout_hours=48
+                    AND timeout_action='auto_approve' AND reminder_hours=24)::TEXT AS v
+            FROM portal.workflow_groups WHERE definition_code='sla_demo' AND group_no=1`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-sla sweep: past-deadline pending task is detected (breach + auto_approve timeout)",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000000000da'::uuid,'sla_demo','projects',
+                         '00000000-0000-4000-8000-0000000000db', 1, 'pending');
+                 INSERT INTO portal.workflow_tasks
+                   (instance_id, group_no, assignee_user_id, sla_due_at, warn_at, timeout_at)
+                 SELECT '00000000-0000-4000-8000-0000000000da'::uuid, 1,
+                        '00000000-0000-4000-8000-000000000003',
+                        NOW() - INTERVAL '1 hour', NOW() - INTERVAL '2 hour', NOW() - INTERVAL '1 hour'`,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM portal.workflow_tasks
+                 WHERE status='pending' AND sla_due_at <= NOW()
+                   AND instance_id='00000000-0000-4000-8000-0000000000da'::uuid) = 1
+              AND
+              (SELECT COUNT(*) FROM portal.workflow_tasks t
+                 JOIN portal.workflow_instances i ON i.id=t.instance_id AND i.status='pending'
+                 JOIN portal.workflow_groups g ON g.definition_code=i.workflow_code AND g.group_no=t.group_no
+                 WHERE t.status='pending' AND t.timeout_at <= NOW() AND g.timeout_action='auto_approve'
+                   AND t.instance_id='00000000-0000-4000-8000-0000000000da'::uuid) = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-notify 019: step_pending routes to workflow_task_assignee",
+      sql: `SELECT recipient_strategy AS v FROM portal.event_routes
+            WHERE event_type='workflow.step_pending'`,
+      ok: (v) => v === "workflow_task_assignee",
+    },
+    {
+      name: "wf-notify: task_assignee resolves the DELEGATE for a delegated task",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000000000ea'::uuid,'pio_approval','pio',
+                         '00000000-0000-4000-8000-0000000000eb', 1, 'pending');
+                 INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id, delegated_to_user_id)
+                 VALUES ('00000000-0000-4000-8000-0000000000ea'::uuid, 1,
+                         '00000000-0000-4000-8000-000000000003',
+                         '00000000-0000-4000-8000-000000000001')`,
+      sql: `SELECT DISTINCT COALESCE(t.delegated_to_user_id, t.assignee_user_id)::text AS v
+            FROM portal.workflow_tasks t
+            JOIN portal.workflow_instances i ON i.id = t.instance_id
+            WHERE t.instance_id='00000000-0000-4000-8000-0000000000ea'::uuid
+              AND t.group_no = i.current_step AND t.status='pending'`,
+      ok: (v) => v === "00000000-0000-4000-8000-000000000001",
+    },
+    {
+      name: "wf-advisory 020: versioned workflow_advisory prompt seeded + active",
+      sql: `SELECT (is_active AND system_template <> '' AND user_template LIKE '%{{resourceRef}}%')::TEXT AS v
+            FROM portal.ai_prompts WHERE code='workflow_advisory'`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
