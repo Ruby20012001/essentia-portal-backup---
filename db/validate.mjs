@@ -414,16 +414,45 @@ if (!failed) {
     },
     {
       name: "wf-engine 013: workflow_groups UNIQUE(definition_code, group_no)",
-      setupSql: `INSERT INTO portal.workflow_groups (definition_code, group_no, name)
-                 VALUES ('pio_approval', 1, 'G1')`,
       sql: `INSERT INTO portal.workflow_groups (definition_code, group_no, name)
             VALUES ('pio_approval', 1, 'dup') RETURNING 'x' AS v`,
       expectError: true,
     },
     {
-      name: "wf-engine 013: workflow_groups quorum/reject_policy defaults",
-      sql: `SELECT (quorum = 1 AND reject_policy = 'fail_fast')::TEXT AS v
-            FROM portal.workflow_groups WHERE definition_code='pio_approval' AND group_no=1`,
+      name: "wf-engine 014: pio_approval seeded as 3 groups",
+      sql: `SELECT (COUNT(*) = 3)::TEXT AS v FROM portal.workflow_groups
+            WHERE definition_code = 'pio_approval'`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-engine 014: pio groups mirror steps (quorum 1, fail_fast, emails)",
+      sql: `SELECT (
+              (SELECT bool_and(quorum=1 AND reject_policy='fail_fast')
+                 FROM portal.workflow_groups WHERE definition_code='pio_approval')
+              AND
+              (SELECT COUNT(*)=3 FROM portal.workflow_group_approvers ga
+                 JOIN portal.workflow_groups g ON g.id=ga.group_id
+                 WHERE g.definition_code='pio_approval' AND ga.approver_ref LIKE '%@essentia.in')
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-engine: task decision is single-fire (CAS)",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000000000f3','pio_approval','pio',
+                         '00000000-0000-4000-8000-0000000000f4', 1, 'pending');
+                 INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id)
+                 VALUES ('00000000-0000-4000-8000-0000000000f3', 1,
+                         (SELECT id FROM public.users WHERE email='dev.crmtl@essentia.in'));
+                 UPDATE portal.workflow_tasks SET status='approved', acted_at=NOW()
+                 WHERE instance_id='00000000-0000-4000-8000-0000000000f3'
+                   AND group_no=1 AND status='pending'`,
+      sql: `WITH cas AS (
+              UPDATE portal.workflow_tasks SET status='approved'
+              WHERE instance_id='00000000-0000-4000-8000-0000000000f3'
+                AND group_no=1 AND status='pending' RETURNING id)
+            SELECT (COUNT(*)=0)::TEXT AS v FROM cas`,
       ok: (v) => v === "true",
     },
     {
