@@ -755,6 +755,14 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      name: "users search: active internal staff by name/email, excluding self",
+      sql: `SELECT (COUNT(*) >= 1)::TEXT AS v FROM public.users u
+            WHERE u.is_active AND NOT u.is_external
+              AND u.id <> '00000000-0000-4000-8000-000000000002'
+              AND (u.full_name ILIKE '%Dev%' OR u.email ILIKE '%dev%')`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
