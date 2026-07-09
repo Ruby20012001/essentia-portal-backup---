@@ -730,6 +730,31 @@ if (!failed) {
             FROM portal.ai_prompts WHERE code='workflow_advisory'`,
       ok: (v) => v === "true",
     },
+    {
+      name: "wf-inbox: my-approvals shows the task for the effective approver (delegate), not the original",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000000000fc'::uuid,'pio_approval','pio',
+                         '00000000-0000-4000-8000-0000000000fd', 1, 'pending');
+                 INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id, delegated_to_user_id)
+                 VALUES ('00000000-0000-4000-8000-0000000000fc'::uuid, 1,
+                         '00000000-0000-4000-8000-000000000003',
+                         '00000000-0000-4000-8000-000000000001')`,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM portal.workflow_tasks t
+                 JOIN portal.workflow_instances i ON i.id=t.instance_id AND i.status='pending'
+                 WHERE t.status='pending' AND t.group_no=i.current_step
+                   AND COALESCE(t.delegated_to_user_id,t.assignee_user_id)='00000000-0000-4000-8000-000000000001'
+                   AND t.instance_id='00000000-0000-4000-8000-0000000000fc'::uuid) = 1
+              AND
+              (SELECT COUNT(*) FROM portal.workflow_tasks t
+                 JOIN portal.workflow_instances i ON i.id=t.instance_id AND i.status='pending'
+                 WHERE t.status='pending' AND t.group_no=i.current_step
+                   AND COALESCE(t.delegated_to_user_id,t.assignee_user_id)='00000000-0000-4000-8000-000000000003'
+                   AND t.instance_id='00000000-0000-4000-8000-0000000000fc'::uuid) = 0
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
