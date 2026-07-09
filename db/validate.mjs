@@ -660,6 +660,47 @@ if (!failed) {
             RETURNING 'x' AS v`,
       expectError: true,
     },
+    {
+      name: "wf-sla 018: workflow-timers job + 5 SLA event routes seeded",
+      sql: `SELECT (
+              EXISTS (SELECT 1 FROM portal.scheduled_jobs WHERE name='workflow-timers')
+              AND (SELECT COUNT(*) FROM portal.event_routes WHERE event_type IN
+                 ('workflow.sla_warning','workflow.sla_breached','workflow.escalated',
+                  'workflow.task_reminded','workflow.timed_out')) = 5
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-sla: sla_demo group 1 has 24h SLA + 48h auto_approve timeout",
+      sql: `SELECT (sla_hours=24 AND warn_hours=12 AND timeout_hours=48
+                    AND timeout_action='auto_approve' AND reminder_hours=24)::TEXT AS v
+            FROM portal.workflow_groups WHERE definition_code='sla_demo' AND group_no=1`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-sla sweep: past-deadline pending task is detected (breach + auto_approve timeout)",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000000000da'::uuid,'sla_demo','projects',
+                         '00000000-0000-4000-8000-0000000000db', 1, 'pending');
+                 INSERT INTO portal.workflow_tasks
+                   (instance_id, group_no, assignee_user_id, sla_due_at, warn_at, timeout_at)
+                 SELECT '00000000-0000-4000-8000-0000000000da'::uuid, 1,
+                        '00000000-0000-4000-8000-000000000003',
+                        NOW() - INTERVAL '1 hour', NOW() - INTERVAL '2 hour', NOW() - INTERVAL '1 hour'`,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM portal.workflow_tasks
+                 WHERE status='pending' AND sla_due_at <= NOW()
+                   AND instance_id='00000000-0000-4000-8000-0000000000da'::uuid) = 1
+              AND
+              (SELECT COUNT(*) FROM portal.workflow_tasks t
+                 JOIN portal.workflow_instances i ON i.id=t.instance_id AND i.status='pending'
+                 JOIN portal.workflow_groups g ON g.definition_code=i.workflow_code AND g.group_no=t.group_no
+                 WHERE t.status='pending' AND t.timeout_at <= NOW() AND g.timeout_action='auto_approve'
+                   AND t.instance_id='00000000-0000-4000-8000-0000000000da'::uuid) = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

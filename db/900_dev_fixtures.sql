@@ -167,3 +167,31 @@ JOIN portal.workflow_groups g ON g.definition_code = 'conditional_demo' AND g.gr
 WHERE NOT EXISTS (
   SELECT 1 FROM portal.workflow_group_approvers ga WHERE ga.group_id = g.id
 );
+
+-- ---------------------------------------------------------------------
+-- SLA demo (Phase 4 Step 7) — DEV ONLY. Group 1 carries an SLA (24h warn 12h),
+-- a 48h auto-approve timeout, a 24h reminder cadence, and escalation to the
+-- Founder. Use /api/dev/age-workflow-timers to backdate a live instance's
+-- deadlines and watch the sweep fire.
+-- ---------------------------------------------------------------------
+INSERT INTO portal.workflow_definitions (code, name, resource_type) VALUES
+  ('sla_demo', 'SLA demo — 24h SLA, 48h auto-approve timeout', 'projects')
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO portal.workflow_groups
+  (definition_code, group_no, name, quorum, sla_hours, warn_hours, timeout_hours, timeout_action, reminder_hours) VALUES
+  ('sla_demo', 1, 'Manager review (SLA-gated)', 1, 24, 12, 48, 'auto_approve', 24),
+  ('sla_demo', 2, 'Final sign-off', 1, NULL, NULL, NULL, NULL, NULL)
+ON CONFLICT (definition_code, group_no) DO NOTHING;
+
+INSERT INTO portal.workflow_group_approvers
+  (group_id, approver_type, approver_user_id, approver_hint, escalation_type, escalation_ref, sort_order)
+SELECT g.id, 'user', v.uid::uuid, v.hint, v.etype, v.eref, 1
+FROM (VALUES
+  (1, '00000000-0000-4000-8000-000000000003', 'Dev COO — Manager', 'user', 'dev.founder@essentia.in'),
+  (2, '00000000-0000-4000-8000-000000000002', 'Dev Founder', NULL, NULL)
+) AS v(gno, uid, hint, etype, eref)
+JOIN portal.workflow_groups g ON g.definition_code = 'sla_demo' AND g.group_no = v.gno
+WHERE NOT EXISTS (
+  SELECT 1 FROM portal.workflow_group_approvers ga WHERE ga.group_id = g.id
+);

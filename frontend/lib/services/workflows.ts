@@ -57,6 +57,11 @@ type GroupRow = {
   quorum: number;
   reject_policy: "fail_fast" | "continue";
   condition: unknown; // restricted predicate (WES §7); null = always run
+  sla_hours: number | null;
+  warn_hours: number | null;
+  timeout_hours: number | null;
+  timeout_action: "auto_approve" | "auto_reject" | "escalate" | null;
+  reminder_hours: number | null;
 };
 
 type ApproverRow = {
@@ -68,7 +73,8 @@ type ApproverRow = {
 };
 
 const GROUPS_SQL = `
-  SELECT group_no, name, quorum, reject_policy, condition
+  SELECT group_no, name, quorum, reject_policy, condition,
+         sla_hours, warn_hours, timeout_hours, timeout_action, reminder_hours
   FROM portal.workflow_groups
   WHERE definition_code = $1
   ORDER BY group_no`;
@@ -94,13 +100,20 @@ async function resolveUserApprover(a: ApproverRow): Promise<string | null> {
   return null;
 }
 
-/** Materialize the resolvable 'user' tasks for a group (idempotent). */
+/**
+ * Materialize the resolvable 'user' tasks for a group (idempotent), setting the
+ * SLA / warning / timeout deadlines from the group's config (WES §8). Reminder
+ * cadence is derived from assigned_at + reminder_hours by the timer sweep.
+ */
 async function materializeGroupTasks(
   instanceId: string,
   workflowCode: string,
-  groupNo: number,
+  group: GroupRow,
 ): Promise<void> {
-  const approvers = await query<ApproverRow>(APPROVERS_SQL, [workflowCode, groupNo]);
+  const approvers = await query<ApproverRow>(APPROVERS_SQL, [workflowCode, group.group_no]);
+  const now = Date.now();
+  const at = (h: number | null): string | null =>
+    h ? new Date(now + h * 3_600_000).toISOString() : null;
   for (const a of approvers) {
     if (a.approver_type !== "user") continue; // level/role/dynamic resolve at act-time
     const uid = await resolveUserApprover(a);
@@ -109,10 +122,13 @@ async function materializeGroupTasks(
     // approver; the original assignee is preserved (WES §9).
     const { effective } = await resolveDelegateChain(uid, workflowCode);
     await query(
-      `INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id, delegated_to_user_id)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO portal.workflow_tasks
+         (instance_id, group_no, assignee_user_id, delegated_to_user_id,
+          sla_due_at, warn_at, timeout_at)
+       VALUES ($1, $2, $3, $4, $5::timestamptz, $6::timestamptz, $7::timestamptz)
        ON CONFLICT (instance_id, group_no, assignee_user_id) DO NOTHING`,
-      [instanceId, groupNo, uid, effective !== uid ? effective : null],
+      [instanceId, group.group_no, uid, effective !== uid ? effective : null,
+       at(group.sla_hours), at(group.warn_hours), at(group.timeout_hours)],
     );
   }
 }
@@ -235,7 +251,7 @@ export async function startWorkflow(
       [instanceId, plan.next.group_no],
     );
   }
-  await materializeGroupTasks(instanceId, workflowCode, plan.next.group_no);
+  await materializeGroupTasks(instanceId, workflowCode, plan.next);
   await publishStepPending(instanceId, definition.name, plan.next, resourceType, resourceId);
   return instanceId;
 }
@@ -245,6 +261,7 @@ export async function actOnWorkflow(
   instanceId: string,
   action: "approve" | "reject",
   comments?: string,
+  systemTaskId?: string, // set for scheduler timeout auto-decisions; bypasses the approver check
 ): Promise<WorkflowInstance> {
   const [instance] = await query<{
     id: string;
@@ -272,8 +289,9 @@ export async function actOnWorkflow(
     group.group_no,
   ]);
 
-  // Resolve the acting user's pending task in the current group.
-  const taskId = await resolveActingTask(user, instanceId, group, approvers);
+  // The acting user's pending task (exact-approver), or a system-supplied task
+  // for scheduler timeout auto-decisions.
+  const taskId = systemTaskId ?? (await resolveActingTask(user, instanceId, group, approvers));
 
   // Next applicable group (skipping any whose condition is false, WES §7).
   const plan = planNext(groups, instance.context ?? {}, group.group_no);
@@ -372,7 +390,7 @@ export async function actOnWorkflow(
     for (const s of plan.skipped) {
       await auditSkip(user, instanceId, instance.resource_type, instance.resource_id, s);
     }
-    await materializeGroupTasks(instanceId, instance.workflow_code, nextGroup.group_no);
+    await materializeGroupTasks(instanceId, instance.workflow_code, nextGroup);
     await publishStepPending(
       instanceId,
       workflowName,
