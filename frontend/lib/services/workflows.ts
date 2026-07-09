@@ -2,6 +2,7 @@ import { query, withTransaction } from "@/lib/db";
 import { writeAudit } from "@/lib/services/audit";
 import { publishEvent } from "@/lib/notifications";
 import { evaluateCondition } from "@/lib/services/workflow-conditions";
+import { resolveDelegateChain } from "@/lib/services/workflow-delegations";
 import type { SessionUser } from "@/lib/auth/session";
 
 /**
@@ -104,11 +105,14 @@ async function materializeGroupTasks(
     if (a.approver_type !== "user") continue; // level/role/dynamic resolve at act-time
     const uid = await resolveUserApprover(a);
     if (!uid) continue; // unresolved → no task; act-time refuses, naming the person
+    // Standing delegation (out-of-office): the delegate becomes the effective
+    // approver; the original assignee is preserved (WES §9).
+    const { effective } = await resolveDelegateChain(uid, workflowCode);
     await query(
-      `INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id)
-       VALUES ($1, $2, $3)
+      `INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id, delegated_to_user_id)
+       VALUES ($1, $2, $3, $4)
        ON CONFLICT (instance_id, group_no, assignee_user_id) DO NOTHING`,
-      [instanceId, groupNo, uid],
+      [instanceId, groupNo, uid, effective !== uid ? effective : null],
     );
   }
 }
@@ -412,13 +416,28 @@ async function resolveActingTask(
   group: GroupRow,
   approvers: ApproverRow[],
 ): Promise<string> {
+  // Only the EFFECTIVE approver (delegate if delegated, else the assignee) acts.
   const [task] = await query<{ id: string }>(
     `SELECT id FROM portal.workflow_tasks
      WHERE instance_id = $1 AND group_no = $2 AND status = 'pending'
-       AND (assignee_user_id = $3 OR delegated_to_user_id = $3)`,
+       AND COALESCE(delegated_to_user_id, assignee_user_id) = $3`,
     [instanceId, group.group_no, user.id],
   );
   if (task) return task.id;
+
+  // The acting user is the ORIGINAL approver of a task they delegated away.
+  const [delegatedAway] = await query<{ id: string }>(
+    `SELECT id FROM portal.workflow_tasks
+     WHERE instance_id = $1 AND group_no = $2 AND status = 'pending'
+       AND assignee_user_id = $3 AND delegated_to_user_id IS NOT NULL`,
+    [instanceId, group.group_no, user.id],
+  );
+  if (delegatedAway) {
+    throw new WorkflowError(
+      `Step ${group.group_no} (${group.name}) has been delegated — it is no longer yours to decide.`,
+      403,
+    );
+  }
 
   // A level/role approver the acting user satisfies → materialize their task now.
   const levelMatch = approvers.some(

@@ -28,6 +28,7 @@ export const DEFAULT_FILES = [
   "014_workflow_pio_groups.sql",
   "015_workflow_actions_task.sql",
   "016_workflow_context.sql",
+  "017_workflow_delegation.sql",
   "900_dev_fixtures.sql",
 ];
 

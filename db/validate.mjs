@@ -617,6 +617,49 @@ if (!failed) {
             WHERE definition_code='conditional_demo' AND group_no IN (1,3) AND condition IS NULL`,
       ok: (v) => v === "true",
     },
+    {
+      name: "wf-delegation 017: reason column + 3 event routes seeded",
+      sql: `SELECT (
+              EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema='portal' AND table_name='workflow_delegations' AND column_name='reason')
+              AND (SELECT COUNT(*) FROM portal.event_routes
+                 WHERE event_type IN ('workflow.delegation_created','workflow.delegation_revoked','workflow.task_delegated')) = 3
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-delegation: active standing delegation resolves the delegate",
+      setupSql: `INSERT INTO portal.workflow_delegations (delegator_id, delegate_id, from_date, to_date)
+                 VALUES ('00000000-0000-4000-8000-000000000003',
+                         '00000000-0000-4000-8000-000000000001',
+                         CURRENT_DATE - 1, CURRENT_DATE + 1)`,
+      sql: `SELECT wd.delegate_id::text AS v
+            FROM portal.workflow_delegations wd
+            JOIN public.users u ON u.id = wd.delegate_id AND u.is_active
+            WHERE wd.delegator_id='00000000-0000-4000-8000-000000000003'
+              AND wd.revoked_at IS NULL AND wd.from_date <= CURRENT_DATE AND wd.to_date >= CURRENT_DATE
+            LIMIT 1`,
+      ok: (v) => v === "00000000-0000-4000-8000-000000000001",
+    },
+    {
+      name: "wf-delegation: expired window is not active",
+      setupSql: `INSERT INTO portal.workflow_delegations (delegator_id, delegate_id, from_date, to_date)
+                 VALUES ('00000000-0000-4000-8000-000000000004',
+                         '00000000-0000-4000-8000-000000000001',
+                         CURRENT_DATE - 10, CURRENT_DATE - 5)`,
+      sql: `SELECT (COUNT(*) = 0)::TEXT AS v FROM portal.workflow_delegations
+            WHERE delegator_id='00000000-0000-4000-8000-000000000004'
+              AND revoked_at IS NULL AND from_date <= CURRENT_DATE AND to_date >= CURRENT_DATE`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-delegation: self-delegation rejected by table CHECK",
+      sql: `INSERT INTO portal.workflow_delegations (delegator_id, delegate_id, from_date, to_date)
+            VALUES ('00000000-0000-4000-8000-000000000003',
+                    '00000000-0000-4000-8000-000000000003', CURRENT_DATE, CURRENT_DATE + 1)
+            RETURNING 'x' AS v`,
+      expectError: true,
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
