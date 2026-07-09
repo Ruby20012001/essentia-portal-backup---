@@ -516,6 +516,82 @@ if (!failed) {
             WHERE id = '00000000-0000-4000-8000-0000000000fa'`,
       ok: (v) => v === "approved",
     },
+    {
+      name: "wf-parallel: parallel_demo group 1 is a 2-of-3 quorum",
+      sql: `SELECT (
+              (SELECT quorum FROM portal.workflow_groups
+                 WHERE definition_code='parallel_demo' AND group_no=1) = 2
+              AND
+              (SELECT COUNT(*) FROM portal.workflow_group_approvers ga
+                 JOIN portal.workflow_groups g ON g.id=ga.group_id
+                 WHERE g.definition_code='parallel_demo' AND g.group_no=1) = 3
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Parallel quorum: 2 of 3 approvals complete the group; the 3rd pending
+      // task is skipped and the instance advances to group 2 (director).
+      name: "wf-parallel: 2-of-3 approvals advance + skip the 3rd (task_id audited)",
+      setupSql: `
+        INSERT INTO portal.workflow_instances
+          (id, workflow_code, resource_type, resource_id, current_step, status)
+          VALUES ('00000000-0000-4000-8000-0000000000ba'::uuid,'parallel_demo','projects',
+                  '00000000-0000-4000-8000-0000000000bb', 1, 'pending');
+        -- materialize the 3 parallel tasks (COO, CRM TL, Site)
+        INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id) VALUES
+          ('00000000-0000-4000-8000-0000000000ba'::uuid, 1, '00000000-0000-4000-8000-000000000003'),
+          ('00000000-0000-4000-8000-0000000000ba'::uuid, 1, '00000000-0000-4000-8000-000000000001'),
+          ('00000000-0000-4000-8000-0000000000ba'::uuid, 1, '00000000-0000-4000-8000-000000000004');
+        -- COO approves (1/2) — with task-linked action row
+        WITH t AS (UPDATE portal.workflow_tasks SET status='approved', acted_by='00000000-0000-4000-8000-000000000003', acted_at=NOW()
+                   WHERE instance_id='00000000-0000-4000-8000-0000000000ba'::uuid AND assignee_user_id='00000000-0000-4000-8000-000000000003' RETURNING id)
+        INSERT INTO portal.workflow_actions (instance_id, task_id, step_no, group_no, action, acted_by)
+          SELECT '00000000-0000-4000-8000-0000000000ba'::uuid, id, 1, 1, 'approve', '00000000-0000-4000-8000-000000000003' FROM t;
+        -- CRM TL approves (2/2 -> quorum met)
+        UPDATE portal.workflow_tasks SET status='approved', acted_by='00000000-0000-4000-8000-000000000001', acted_at=NOW()
+          WHERE instance_id='00000000-0000-4000-8000-0000000000ba'::uuid AND assignee_user_id='00000000-0000-4000-8000-000000000001';
+        -- quorum reached: skip remaining pending sibling (Site) + advance to group 2
+        UPDATE portal.workflow_tasks SET status='skipped'
+          WHERE instance_id='00000000-0000-4000-8000-0000000000ba'::uuid AND group_no=1 AND status='pending';
+        UPDATE portal.workflow_instances SET current_step=2
+          WHERE id='00000000-0000-4000-8000-0000000000ba'::uuid AND status='pending' AND current_step=1`,
+      sql: `SELECT (
+              (SELECT current_step FROM portal.workflow_instances WHERE id='00000000-0000-4000-8000-0000000000ba'::uuid) = 2
+              AND
+              (SELECT status FROM portal.workflow_tasks
+                 WHERE instance_id='00000000-0000-4000-8000-0000000000ba'::uuid
+                   AND assignee_user_id='00000000-0000-4000-8000-000000000004') = 'skipped'
+              AND
+              (SELECT COUNT(*) FROM portal.workflow_actions
+                 WHERE instance_id='00000000-0000-4000-8000-0000000000ba'::uuid AND task_id IS NOT NULL) = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // fail_fast: one rejection in a parallel group rejects the instance and
+      // skips the still-pending siblings.
+      name: "wf-parallel: reject (fail_fast) rejects instance + skips siblings",
+      setupSql: `
+        INSERT INTO portal.workflow_instances
+          (id, workflow_code, resource_type, resource_id, current_step, status)
+          VALUES ('00000000-0000-4000-8000-0000000000bc'::uuid,'parallel_demo','projects',
+                  '00000000-0000-4000-8000-0000000000bd', 1, 'pending');
+        INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id) VALUES
+          ('00000000-0000-4000-8000-0000000000bc'::uuid, 1, '00000000-0000-4000-8000-000000000003'),
+          ('00000000-0000-4000-8000-0000000000bc'::uuid, 1, '00000000-0000-4000-8000-000000000001');
+        UPDATE portal.workflow_tasks SET status='rejected', acted_by='00000000-0000-4000-8000-000000000003', acted_at=NOW()
+          WHERE instance_id='00000000-0000-4000-8000-0000000000bc'::uuid AND assignee_user_id='00000000-0000-4000-8000-000000000003';
+        UPDATE portal.workflow_instances SET status='rejected', completed_at=NOW()
+          WHERE id='00000000-0000-4000-8000-0000000000bc'::uuid AND status='pending' AND current_step=1;
+        UPDATE portal.workflow_tasks SET status='skipped'
+          WHERE instance_id='00000000-0000-4000-8000-0000000000bc'::uuid AND group_no=1 AND status='pending'`,
+      sql: `SELECT (
+              (SELECT status FROM portal.workflow_instances WHERE id='00000000-0000-4000-8000-0000000000bc'::uuid) = 'rejected'
+              AND NOT EXISTS (SELECT 1 FROM portal.workflow_tasks
+                 WHERE instance_id='00000000-0000-4000-8000-0000000000bc'::uuid AND status='pending')
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

@@ -110,3 +110,32 @@ WHERE NOT EXISTS (
     AND project_id = '00000000-0000-4000-8000-00000000a001'
     AND sent_at >= date_trunc('week', CURRENT_DATE)
 );
+
+-- ---------------------------------------------------------------------
+-- Parallel-approval demo workflow (Phase 4 Step 4) — DEV ONLY. Group 1 is a
+-- 2-of-3 cross-functional quorum; group 2 is a single director sign-off. Uses
+-- the dev fixture users so it resolves without a Keka sync.
+-- ---------------------------------------------------------------------
+INSERT INTO portal.workflow_definitions (code, name, resource_type) VALUES
+  ('parallel_demo', 'Parallel demo — cross-functional (2 of 3) then director', 'projects')
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO portal.workflow_groups (definition_code, group_no, name, quorum, reject_policy) VALUES
+  ('parallel_demo', 1, 'Cross-functional review (2 of 3)', 2, 'fail_fast'),
+  ('parallel_demo', 2, 'Director sign-off', 1, 'fail_fast')
+ON CONFLICT (definition_code, group_no) DO NOTHING;
+
+INSERT INTO portal.workflow_group_approvers
+  (group_id, approver_type, approver_user_id, approver_hint, sort_order)
+SELECT g.id, 'user', v.uid::uuid, v.hint, v.so
+FROM (VALUES
+  (1, '00000000-0000-4000-8000-000000000003', 'Dev COO — Finance', 1),
+  (1, '00000000-0000-4000-8000-000000000001', 'Dev CRM TL — Legal', 2),
+  (1, '00000000-0000-4000-8000-000000000004', 'Dev Site — HR', 3),
+  (2, '00000000-0000-4000-8000-000000000002', 'Dev Founder — Director', 1)
+) AS v(gno, uid, hint, so)
+JOIN portal.workflow_groups g ON g.definition_code = 'parallel_demo' AND g.group_no = v.gno
+WHERE NOT EXISTS (
+  SELECT 1 FROM portal.workflow_group_approvers ga
+  WHERE ga.group_id = g.id AND ga.approver_user_id = v.uid::uuid
+);
