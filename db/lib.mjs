@@ -24,6 +24,7 @@ export const DEFAULT_FILES = [
   "010_notification_framework.sql",
   "011_scheduler_framework.sql",
   "012_scheduler_alerts.sql",
+  "013_workflow_engine_v1.sql",
   "900_dev_fixtures.sql",
 ];
 

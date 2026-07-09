@@ -404,6 +404,49 @@ if (!failed) {
               OR job_title ILIKE '%Platform Admin%')`,
       ok: (v) => v === "true",
     },
+    {
+      name: "wf-engine 013: the four group/task tables exist",
+      sql: `SELECT (COUNT(*) = 4)::TEXT AS v FROM information_schema.tables
+            WHERE table_schema = 'portal'
+              AND table_name IN ('workflow_groups','workflow_group_approvers',
+                                 'workflow_tasks','workflow_delegations')`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-engine 013: workflow_groups UNIQUE(definition_code, group_no)",
+      setupSql: `INSERT INTO portal.workflow_groups (definition_code, group_no, name)
+                 VALUES ('pio_approval', 1, 'G1')`,
+      sql: `INSERT INTO portal.workflow_groups (definition_code, group_no, name)
+            VALUES ('pio_approval', 1, 'dup') RETURNING 'x' AS v`,
+      expectError: true,
+    },
+    {
+      name: "wf-engine 013: workflow_groups quorum/reject_policy defaults",
+      sql: `SELECT (quorum = 1 AND reject_policy = 'fail_fast')::TEXT AS v
+            FROM portal.workflow_groups WHERE definition_code='pio_approval' AND group_no=1`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "wf-engine 013: workflow_tasks UNIQUE(instance, group, assignee)",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000000000f1','pio_approval','pio',
+                         '00000000-0000-4000-8000-0000000000f2', 1, 'pending');
+                 INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id)
+                 VALUES ('00000000-0000-4000-8000-0000000000f1', 1,
+                         (SELECT id FROM public.users WHERE email='dev.crmtl@essentia.in'))`,
+      sql: `INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id)
+            VALUES ('00000000-0000-4000-8000-0000000000f1', 1,
+                    (SELECT id FROM public.users WHERE email='dev.crmtl@essentia.in'))
+            RETURNING 'x' AS v`,
+      expectError: true,
+    },
+    {
+      name: "wf-engine 013: workflow_tasks status defaults to pending",
+      sql: `SELECT status AS v FROM portal.workflow_tasks
+            WHERE instance_id = '00000000-0000-4000-8000-0000000000f1' LIMIT 1`,
+      ok: (v) => v === "pending",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
