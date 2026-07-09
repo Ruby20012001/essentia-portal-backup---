@@ -701,6 +701,29 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      name: "wf-notify 019: step_pending routes to workflow_task_assignee",
+      sql: `SELECT recipient_strategy AS v FROM portal.event_routes
+            WHERE event_type='workflow.step_pending'`,
+      ok: (v) => v === "workflow_task_assignee",
+    },
+    {
+      name: "wf-notify: task_assignee resolves the DELEGATE for a delegated task",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000000000ea'::uuid,'pio_approval','pio',
+                         '00000000-0000-4000-8000-0000000000eb', 1, 'pending');
+                 INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id, delegated_to_user_id)
+                 VALUES ('00000000-0000-4000-8000-0000000000ea'::uuid, 1,
+                         '00000000-0000-4000-8000-000000000003',
+                         '00000000-0000-4000-8000-000000000001')`,
+      sql: `SELECT DISTINCT COALESCE(t.delegated_to_user_id, t.assignee_user_id)::text AS v
+            FROM portal.workflow_tasks t
+            JOIN portal.workflow_instances i ON i.id = t.instance_id
+            WHERE t.instance_id='00000000-0000-4000-8000-0000000000ea'::uuid
+              AND t.group_no = i.current_step AND t.status='pending'`,
+      ok: (v) => v === "00000000-0000-4000-8000-000000000001",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

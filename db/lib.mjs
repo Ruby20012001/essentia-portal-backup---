@@ -30,6 +30,7 @@ export const DEFAULT_FILES = [
   "016_workflow_context.sql",
   "017_workflow_delegation.sql",
   "018_workflow_sla.sql",
+  "019_workflow_notify.sql",
   "900_dev_fixtures.sql",
 ];
 
