@@ -724,6 +724,12 @@ if (!failed) {
               AND t.group_no = i.current_step AND t.status='pending'`,
       ok: (v) => v === "00000000-0000-4000-8000-000000000001",
     },
+    {
+      name: "wf-advisory 020: versioned workflow_advisory prompt seeded + active",
+      sql: `SELECT (is_active AND system_template <> '' AND user_template LIKE '%{{resourceRef}}%')::TEXT AS v
+            FROM portal.ai_prompts WHERE code='workflow_advisory'`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
