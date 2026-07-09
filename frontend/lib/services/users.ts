@@ -45,3 +45,22 @@ export async function getUserById(id: string): Promise<PortalUser | null> {
     isActive: row.is_active,
   };
 }
+
+/** Search active internal staff by name / email — for pickers (e.g. delegate). */
+export async function searchColleagues(
+  q: string,
+  excludeId: string,
+  limit = 8,
+): Promise<Array<{ id: string; name: string; email: string; jobTitle: string | null }>> {
+  const term = `%${q.trim()}%`;
+  return query<{ id: string; name: string; email: string; jobTitle: string | null }>(
+    `SELECT u.id, COALESCE(u.display_name, u.full_name) AS name, u.email,
+            u.job_title AS "jobTitle"
+     FROM public.users u
+     WHERE u.is_active AND NOT u.is_external AND u.id <> $2
+       AND (u.full_name ILIKE $1 OR u.display_name ILIKE $1 OR u.email ILIKE $1)
+     ORDER BY u.full_name
+     LIMIT $3`,
+    [term, excludeId, limit],
+  );
+}
