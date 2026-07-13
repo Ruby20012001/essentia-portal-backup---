@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
+import { RESOURCE_REF_SQL, RESOURCE_REF_JOINS } from "@/lib/services/workflow-inbox";
 
 /**
  * Workflow timeline — the full approval chain for one instance: every group,
@@ -26,7 +27,7 @@ export type TimelineGroup = {
 export type WorkflowDetail = {
   instanceId: string;
   workflowName: string;
-  resourceRef: string;
+  resourceRef: string | null;
   status: string;
   currentGroup: number;
   groups: TimelineGroup[];
@@ -37,14 +38,14 @@ export async function getWorkflowDetail(_user: SessionUser, instanceId: string):
   const [inst] = await query<{
     workflow_code: string;
     workflow_name: string;
-    resource_type: string;
-    resource_id: string;
+    resource_ref: string | null;
     status: string;
     current_step: number;
   }>(
-    `SELECT i.workflow_code, d.name AS workflow_name, i.resource_type, i.resource_id, i.status, i.current_step
+    `SELECT i.workflow_code, d.name AS workflow_name, ${RESOURCE_REF_SQL} AS resource_ref,
+            i.status, i.current_step
      FROM portal.workflow_instances i
-     JOIN portal.workflow_definitions d ON d.code = i.workflow_code
+     JOIN portal.workflow_definitions d ON d.code = i.workflow_code${RESOURCE_REF_JOINS}
      WHERE i.id = $1`,
     [instanceId],
   );
@@ -113,7 +114,7 @@ export async function getWorkflowDetail(_user: SessionUser, instanceId: string):
   return {
     instanceId,
     workflowName: inst.workflow_name,
-    resourceRef: `${inst.resource_type} ${inst.resource_id}`,
+    resourceRef: inst.resource_ref,
     status: inst.status,
     currentGroup: inst.current_step,
     groups: timelineGroups,
