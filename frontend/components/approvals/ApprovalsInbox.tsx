@@ -164,7 +164,8 @@ export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
                       ) : null}
                     </div>
                     <p className="mt-0.5 font-body text-sm font-light text-label">
-                      {item.groupName} · {item.resourceRef}
+                      {item.groupName}
+                      {item.resourceRef ? <span className="text-espresso"> · {item.resourceRef}</span> : null}
                     </p>
                     <p className={`mt-1 font-body text-xs ${sla.tone}`}>{sla.text}</p>
                   </div>

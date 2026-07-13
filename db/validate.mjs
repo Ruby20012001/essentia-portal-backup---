@@ -763,6 +763,43 @@ if (!failed) {
               AND (u.full_name ILIKE '%Dev%' OR u.email ILIKE '%dev%')`,
       ok: (v) => v === "true",
     },
+    {
+      // Friendly resource ref: a PIO instance resolves to "PIO <num> · <project_code>",
+      // a projects instance to the bare project_code. Mirrors RESOURCE_REF_SQL in
+      // frontend/lib/services/workflow-inbox.ts — keep the two in lockstep.
+      name: "wf-inbox: resource ref resolves to friendly document numbers (PIO / project code)",
+      setupSql: `INSERT INTO ee.pio (id, pio_number, project_id)
+                 VALUES ('00000000-0000-4000-8000-0000000000ef'::uuid, 'ED/26-27/942',
+                         '00000000-0000-4000-8000-00000000a001'::uuid);
+                 INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES
+                   ('00000000-0000-4000-8000-0000000000ee'::uuid,'pio_approval','pio',
+                    '00000000-0000-4000-8000-0000000000ef'::uuid, 1, 'approved'),
+                   ('00000000-0000-4000-8000-0000000000ed'::uuid,'pio_approval','projects',
+                    '00000000-0000-4000-8000-00000000a001'::uuid, 1, 'approved')`,
+      sql: `WITH ref AS (
+              SELECT i.id,
+                CASE
+                  WHEN p.pio_number IS NOT NULL
+                    THEN 'PIO ' || p.pio_number || COALESCE(' · ' || ppr.project_code, '')
+                  WHEN pr.project_code IS NOT NULL THEN pr.project_code
+                  ELSE NULL
+                END AS resource_ref
+              FROM portal.workflow_instances i
+              LEFT JOIN ee.pio p        ON i.resource_type = 'pio'      AND p.id  = i.resource_id
+              LEFT JOIN ee.projects ppr ON ppr.id = p.project_id
+              LEFT JOIN ee.projects pr  ON i.resource_type = 'projects' AND pr.id = i.resource_id
+            )
+            SELECT (
+              (SELECT resource_ref FROM ref WHERE id='00000000-0000-4000-8000-0000000000ee'::uuid)
+                = 'PIO ED/26-27/942 · ED/26-27/901'
+              AND
+              (SELECT resource_ref FROM ref WHERE id='00000000-0000-4000-8000-0000000000ed'::uuid)
+                = 'ED/26-27/901'
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

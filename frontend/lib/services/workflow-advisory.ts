@@ -3,6 +3,7 @@ import { writeAudit } from "@/lib/services/audit";
 import { requirePermission } from "@/lib/services/permissions";
 import { NotFoundError } from "@/lib/services/blocking";
 import { aiCompleteFromPrompt } from "@/lib/ai";
+import { RESOURCE_REF_SQL, RESOURCE_REF_JOINS } from "@/lib/services/workflow-inbox";
 import type { SessionUser } from "@/lib/auth/session";
 
 /**
@@ -55,14 +56,16 @@ export async function getWorkflowAdvisory(user: SessionUser, instanceId: string)
     workflow_name: string;
     resource_type: string;
     resource_id: string;
+    resource_ref: string | null;
     status: string;
     current_step: number;
     context: Record<string, unknown> | null;
   }>(
     `SELECT i.workflow_code, d.name AS workflow_name, i.resource_type, i.resource_id,
+            ${RESOURCE_REF_SQL} AS resource_ref,
             i.status, i.current_step, i.context
      FROM portal.workflow_instances i
-     JOIN portal.workflow_definitions d ON d.code = i.workflow_code
+     JOIN portal.workflow_definitions d ON d.code = i.workflow_code${RESOURCE_REF_JOINS}
      WHERE i.id = $1`,
     [instanceId],
   );
@@ -74,7 +77,7 @@ export async function getWorkflowAdvisory(user: SessionUser, instanceId: string)
     [instanceId, inst.current_step],
   );
   const slaRisk = computeSlaRisk(new Date(), tasks.map((t) => t.sla_due_at));
-  const resourceRef = `${inst.resource_type} ${inst.resource_id}`;
+  const resourceRef = inst.resource_ref ?? `${inst.resource_type} ${inst.resource_id}`;
 
   // Advisory AI — graceful: a missing key / provider error / permission denial
   // degrades to "unavailable" and never blocks the approval.
