@@ -36,7 +36,7 @@ export default async function DashboardPage() {
         <PageTitle />
         <Link
           href="/wio-pio"
-          className="shrink-0 rounded bg-espresso px-5 py-2.5 font-body text-sm font-bold text-cream transition-opacity hover:opacity-90"
+          className="shrink-0 rounded border border-line-strong bg-canvas px-5 py-2.5 font-body text-sm font-bold text-white transition-colors hover:bg-hover"
         >
           + New WIO
         </Link>
@@ -64,14 +64,14 @@ export default async function DashboardPage() {
       </div>
 
       <section className="mb-10">
-        <h2 className="mb-3 font-heading text-2xl text-espresso">
+        <h2 className="mb-3 font-heading text-2xl text-white">
           WIO conversion clock
         </h2>
         <WioClockTable rows={data.wioClock} />
       </section>
 
       <section id="projects">
-        <h2 className="mb-3 font-heading text-2xl text-espresso">
+        <h2 className="mb-3 font-heading text-2xl text-white">
           Active projects by risk
         </h2>
         <ProjectRiskTable rows={data.projectsByRisk} />
@@ -83,7 +83,7 @@ export default async function DashboardPage() {
 function PageTitle() {
   return (
     <div>
-      <h1 className="mb-1 font-heading text-4xl text-espresso">
+      <h1 className="mb-1 font-heading text-4xl text-white">
         CRM TL Dashboard
       </h1>
       <p className="font-body text-sm font-light text-label">

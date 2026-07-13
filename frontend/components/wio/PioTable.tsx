@@ -42,7 +42,7 @@ export function PioTable({
     <div className="overflow-x-auto rounded-lg border border-line">
       <table className="w-full text-left font-body text-[13.5px]">
         <thead>
-          <tr className="bg-espresso text-[11px] uppercase tracking-[0.12em] text-[#EDE6DC]">
+          <tr className="bg-surface text-[11px] uppercase tracking-[0.12em] text-secondary">
             <th className="px-4 py-2.5 font-bold">PIO</th>
             <th className="px-4 py-2.5 font-bold">Project</th>
             <th className="px-4 py-2.5 font-bold">Factory clock</th>
@@ -54,7 +54,7 @@ export function PioTable({
           {pios.map((pio) => {
             const busy = busyId === pio.id;
             return (
-              <tr key={pio.id} className="border-t border-line bg-paper">
+              <tr key={pio.id} className="border-t border-line bg-card transition-colors hover:bg-hover">
                 <td className="px-4 py-2.5 font-bold text-ink">{pio.pioNumber}</td>
                 <td className="px-4 py-2.5 font-light text-ink">
                   {pio.projectCode}
@@ -112,7 +112,7 @@ export function PioTable({
                       type="button"
                       disabled={busy}
                       onClick={() => onRequestApproval(pio)}
-                      className="rounded bg-espresso px-3 py-1.5 font-body text-xs font-bold text-cream transition-opacity hover:opacity-90 disabled:opacity-50"
+                      className="rounded border border-line-strong bg-canvas px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-hover disabled:opacity-50"
                     >
                       {busy ? "…" : "Send for approval"}
                     </button>

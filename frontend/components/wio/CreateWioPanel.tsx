@@ -31,7 +31,7 @@ export function CreateWioPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded bg-espresso px-5 py-2.5 font-body text-sm font-bold text-cream transition-opacity hover:opacity-90"
+        className="rounded border border-line-strong bg-canvas px-5 py-2.5 font-body text-sm font-bold text-white transition-colors hover:bg-hover"
       >
         + New WIO
       </button>
@@ -39,7 +39,7 @@ export function CreateWioPanel({
   }
 
   const selectClass =
-    "w-full rounded border border-line-strong bg-white px-3 py-2 font-body text-sm text-ink";
+    "w-full rounded border border-line-strong bg-card px-3 py-2 font-body text-sm text-ink";
 
   return (
     <form
@@ -118,7 +118,7 @@ export function CreateWioPanel({
         <button
           type="submit"
           disabled={busy || !projectId || !departmentCode}
-          className="rounded bg-espresso px-5 py-2 font-body text-sm font-bold text-cream transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="rounded border border-line-strong bg-canvas px-5 py-2 font-body text-sm font-bold text-white transition-colors hover:bg-hover disabled:opacity-50"
         >
           {busy ? "Creating…" : "Create WIO"}
         </button>

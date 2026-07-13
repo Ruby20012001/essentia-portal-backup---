@@ -14,14 +14,14 @@ export function SetupNeeded({ missing }: { missing: string[] }) {
         {missing.map((name, i) => (
           <span key={name}>
             {i > 0 ? " and " : ""}
-            <code className="rounded bg-white px-1.5 py-0.5 font-bold">
+            <code className="rounded bg-surface px-1.5 py-0.5 font-bold">
               {name}
             </code>
           </span>
         ))}{" "}
-        in <code className="rounded bg-white px-1.5 py-0.5">.env.local</code>{" "}
+        in <code className="rounded bg-surface px-1.5 py-0.5">.env.local</code>{" "}
         (template in .env.example), load{" "}
-        <code className="rounded bg-white px-1.5 py-0.5">
+        <code className="rounded bg-surface px-1.5 py-0.5">
           db/001_essentia_schema.sql
         </code>{" "}
         plus seeds into PostgreSQL 15+, then reload.

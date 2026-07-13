@@ -131,9 +131,9 @@ export function NotificationCenter() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-10 z-50 w-[360px] overflow-hidden rounded-lg border border-line bg-cream shadow-xl">
+        <div className="absolute right-0 top-10 z-50 w-[360px] overflow-hidden rounded-lg border border-line bg-card">
           <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
-            <span className="font-heading text-lg text-espresso">Notifications</span>
+            <span className="font-heading text-lg text-white">Notifications</span>
             <button
               type="button"
               onClick={markAllRead}
@@ -150,7 +150,7 @@ export function NotificationCenter() {
                 type="button"
                 onClick={() => setTab(t)}
                 className={`rounded-full px-2.5 py-0.5 font-body text-[11px] font-bold capitalize ${
-                  tab === t ? "bg-espresso text-cream" : "text-label hover:text-ink"
+                  tab === t ? "bg-selected text-white" : "text-label hover:text-ink"
                 }`}
               >
                 {t}
@@ -160,7 +160,7 @@ export function NotificationCenter() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search…"
-              className="ml-auto w-28 rounded border border-line-strong bg-white px-2 py-1 font-body text-xs text-ink focus:w-36 focus:outline-none"
+              className="ml-auto w-28 rounded border border-line-strong bg-card px-2 py-1 font-body text-xs text-ink focus:w-36 focus:outline-none"
             />
           </div>
 
@@ -178,14 +178,14 @@ export function NotificationCenter() {
                     <button
                       type="button"
                       onClick={() => openItem(item)}
-                      className={`group flex w-full items-start gap-2.5 border-b border-line px-4 py-3 text-left transition-colors hover:bg-paper ${
+                      className={`group flex w-full items-start gap-2.5 border-b border-line px-4 py-3 text-left transition-colors hover:bg-hover ${
                         item.readAt ? "" : "bg-amber/5"
                       }`}
                     >
                       <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${TIER_DOT[item.tier]}`} />
                       <span className="min-w-0 flex-1">
                         <span className="flex items-baseline justify-between gap-2">
-                          <span className={`font-body text-[13px] ${item.readAt ? "font-normal text-ink" : "font-bold text-espresso"}`}>
+                          <span className={`font-body text-[13px] ${item.readAt ? "font-normal text-ink" : "font-bold text-white"}`}>
                             {item.title}
                           </span>
                           <span className="shrink-0 font-body text-[10px] text-label">{timeAgo(item.createdAt)}</span>

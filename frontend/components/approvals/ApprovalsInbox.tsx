@@ -138,8 +138,8 @@ export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
       ) : null}
 
       {items.length === 0 ? (
-        <div className="rounded-xl border border-espresso/10 bg-cream/60 px-6 py-16 text-center">
-          <p className="font-heading text-2xl text-espresso">All clear</p>
+        <div className="rounded-xl border border-line bg-card px-6 py-16 text-center">
+          <p className="font-heading text-2xl text-white">All clear</p>
           <p className="mt-1 font-body text-sm font-light text-label">
             You have no approvals waiting. New items appear here the moment they are assigned to you.
           </p>
@@ -152,11 +152,11 @@ export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
             const detail = details[item.taskId];
             const delegating = delegateFor === item.taskId;
             return (
-              <li key={item.taskId} className="rounded-xl border border-espresso/10 bg-white/70 p-5 shadow-sm">
+              <li key={item.taskId} className="rounded-xl border border-line bg-card p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-heading text-xl text-espresso">{item.workflowName}</h3>
+                      <h3 className="font-heading text-xl text-white">{item.workflowName}</h3>
                       {item.delegated ? (
                         <span className="rounded-full bg-navy/10 px-2 py-0.5 font-body text-xs font-bold text-navy">
                           Delegated to you
@@ -165,7 +165,7 @@ export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
                     </div>
                     <p className="mt-0.5 font-body text-sm font-light text-label">
                       {item.groupName}
-                      {item.resourceRef ? <span className="text-espresso"> · {item.resourceRef}</span> : null}
+                      {item.resourceRef ? <span className="text-white"> · {item.resourceRef}</span> : null}
                     </p>
                     <p className={`mt-1 font-body text-xs ${sla.tone}`}>{sla.text}</p>
                   </div>
@@ -197,21 +197,21 @@ export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
 
                 {delegating ? (
                   <div className="mt-4 rounded-lg border border-navy/20 bg-navy/5 p-4">
-                    <label className="font-body text-sm font-bold text-espresso">Delegate this approval to…</label>
+                    <label className="font-body text-sm font-bold text-white">Delegate this approval to…</label>
                     <input
                       autoFocus
                       value={userQuery}
                       onChange={(e) => searchUsers(e.target.value)}
                       placeholder="Search a colleague by name or email"
-                      className="mt-2 w-full rounded-lg border border-espresso/15 px-3 py-2 font-body text-sm text-espresso"
+                      className="mt-2 w-full rounded-lg border border-line px-3 py-2 font-body text-sm text-white"
                     />
                     {userResults.length ? (
                       <ul className="mt-2 divide-y divide-espresso/5">
                         {userResults.map((c) => (
                           <li key={c.id}>
                             <button type="button" disabled={busyId === item.taskId} onClick={() => delegate(item, c)}
-                              className="flex w-full items-center justify-between px-1 py-2 text-left hover:bg-espresso/5 disabled:opacity-40">
-                              <span className="font-body text-sm text-espresso">{c.name}</span>
+                              className="flex w-full items-center justify-between px-1 py-2 text-left hover:bg-hover disabled:opacity-40">
+                              <span className="font-body text-sm text-white">{c.name}</span>
                               <span className="font-body text-xs text-label">{c.jobTitle ?? c.email}</span>
                             </button>
                           </li>
@@ -224,19 +224,19 @@ export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
                 ) : null}
 
                 {advisory ? (
-                  <div className="mt-4 rounded-lg border border-espresso/10 bg-cream/70 p-4">
+                  <div className="mt-4 rounded-lg border border-line bg-card p-4">
                     {advisory === "loading" ? (
                       <p className="font-body text-sm font-light text-label">Loading advisory…</p>
                     ) : (
                       <div className="space-y-1.5 font-body text-sm">
                         {advisory.slaRisk ? (
                           <p className="text-label">
-                            <span className="font-bold text-espresso">SLA risk:</span> {advisory.slaRisk.level}
+                            <span className="font-bold text-white">SLA risk:</span> {advisory.slaRisk.level}
                             {advisory.slaRisk.hoursRemaining != null ? ` · ${advisory.slaRisk.hoursRemaining}h remaining` : ""}
                           </p>
                         ) : null}
                         <p className="text-label">
-                          <span className="font-bold text-espresso">AI summary:</span>{" "}
+                          <span className="font-bold text-white">AI summary:</span>{" "}
                           {advisory.ai?.available ? advisory.ai.summary : `unavailable — ${advisory.ai?.reason ?? "not configured"}`}
                         </p>
                         {advisory.disclaimer ? (
@@ -248,7 +248,7 @@ export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
                 ) : null}
 
                 {detail ? (
-                  <div className="mt-4 rounded-lg border border-espresso/10 bg-cream/40 p-4">
+                  <div className="mt-4 rounded-lg border border-line bg-card p-4">
                     {detail === "loading" ? (
                       <p className="font-body text-sm font-light text-label">Loading chain…</p>
                     ) : (
@@ -259,7 +259,7 @@ export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
                               {g.state}
                             </span>
                             <div className="min-w-0">
-                              <p className="font-body text-sm font-bold text-espresso">
+                              <p className="font-body text-sm font-bold text-white">
                                 {g.name}
                                 {g.quorum > 1 ? <span className="font-light text-label"> · quorum {g.quorum}</span> : null}
                               </p>
@@ -285,13 +285,13 @@ export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
 }
 
 const ghost =
-  "rounded-lg border border-espresso/15 px-3 py-2 font-body text-sm font-bold text-espresso hover:bg-espresso/5 disabled:opacity-40";
+  "rounded-lg border border-line px-3 py-2 font-body text-sm font-bold text-white hover:bg-hover disabled:opacity-40";
 
 function statePill(state: string): string {
   if (state === "done") return "bg-forest/10 text-forest";
   if (state === "current") return "bg-amber/15 text-amber";
-  if (state === "skipped") return "bg-espresso/5 text-label";
-  return "bg-espresso/5 text-label";
+  if (state === "skipped") return "bg-white/5 text-muted";
+  return "bg-white/5 text-muted";
 }
 
 function slaLabel(slaDueAt: string | null): { text: string; tone: string } {

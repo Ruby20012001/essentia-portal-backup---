@@ -1,3 +1,31 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  /* Dark theme — native controls, scrollbars and form widgets follow suit. */
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: #000000;
+    color: #ffffff;
+  }
+
+  /* No blue browser focus outline anywhere; keyboard focus gets a subtle
+     white ring instead (WCAG-visible, on-brand). */
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 1px;
+  }
+
+  ::selection {
+    background-color: #202020;
+    color: #ffffff;
+  }
+}

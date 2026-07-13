@@ -68,22 +68,32 @@ Key sections to always reference:
 - **Monitoring**: AWS CloudWatch + UptimeRobot
 
 ## BRAND RULES (enforced in every screen, every component, every generated letter)
-### Colours (Cold Coffee palette — never deviate)
-- `#1C1714` — Espresso (headers, dark surfaces)
-- `#F4F2F0` — Cream (all content backgrounds — NEVER solid black)
-- `#A8895C` — Amber (accents, metric numbers, highlights)
-- `#2E5C3A` — Forest (positive states, confirmations, green indicators)
-- `#2E3F6B` — Navy (informational sections)
-- `#B43232` — Alert (risk, delays, critical states — use sparingly)
+> Premium dark theme, ratified 2026-07-13 (supersedes the original Cold Coffee
+> palette). Executive/luxury feel — classic-black canvas, flat surfaces, hairline
+> borders, Lato throughout. All tokens live in `frontend/tailwind.config.ts`
+> (single source of truth); style with semantic classes, never inline hex.
+> The original Cold Coffee token NAMES are retained but remapped to their dark
+> equivalents (espresso→black surface, cream→white text, paper→card, line→hairline).
+
+### Colours (dark theme — never deviate; tokens in tailwind.config.ts)
+- `#000000` — Canvas (app + page background; header, sidebar)
+- `#0D0D0D` — Card (cards, panels, table rows, inputs)
+- `#111111` — Surface (elevated; table headers)
+- `#1E1E1E` — Line (hairline borders) · `#2A2A2A` — Line-strong (input borders)
+- `#171717` — Hover · `#202020` — Selected (active nav / selected state)
+- `#FFFFFF` — Primary text · `#B5B5B5` — Secondary · `#7A7A7A` — Muted
+- `#2E7D32` — Success · `#FFB300` — Warning · `#D32F2F` — Error
+- `#A8895C` — Amber (Essentia signature gold; retained as an optional accent token)
 
 ### Typography
-- **Cormorant Garamond** — all headings H1-H4, dashboard metric numbers
-- **Lato** — all body, data, labels, navigation (weight 300 for body, 700 for labels)
+- **Lato only** — weights 300 (Light), 400 (Regular), 700 (Bold). No other font families.
+- Headings and metric numbers: Lato Light, white. Metric numbers restrained (no oversized type).
+- Body/labels: Lato Light; labels/secondary text in `#B5B5B5`/`#7A7A7A`.
+- No shadows, no gradients, no glow. Subtle fade/opacity transitions only (150–200ms).
 
 ### Logo
 - Always an image, never text
-- Light backgrounds: black transparent PNG (ll.b64)
-- Dark backgrounds: white transparent PNG (ld.b64)
+- White transparent PNG on the black canvas (`/brand/logo-dark.png`)
 - Header: height 20px · Footer: height 14px
 
 ### Vocabulary (never use these words)

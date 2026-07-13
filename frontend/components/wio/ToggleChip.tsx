@@ -21,7 +21,7 @@ export function ToggleChip({
       className={`rounded-full border px-2.5 py-0.5 font-body text-[11px] font-bold transition-colors disabled:opacity-50 ${
         checked
           ? "border-forest bg-forest/10 text-forest"
-          : "border-line-strong bg-white text-label hover:border-amber hover:text-amber-deep"
+          : "border-line-strong bg-card text-secondary hover:border-white hover:text-white"
       }`}
     >
       {checked ? "✓ " : ""}

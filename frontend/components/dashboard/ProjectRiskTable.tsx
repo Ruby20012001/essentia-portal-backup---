@@ -16,7 +16,7 @@ export function ProjectRiskTable({ rows }: { rows: ProjectRiskRow[] }) {
     <div className="overflow-x-auto rounded-lg border border-line">
       <table className="w-full text-left font-body text-[13.5px]">
         <thead>
-          <tr className="bg-espresso text-[11px] uppercase tracking-[0.12em] text-[#EDE6DC]">
+          <tr className="bg-surface text-[11px] uppercase tracking-[0.12em] text-secondary">
             <th className="px-4 py-2.5 font-bold">Code</th>
             <th className="px-4 py-2.5 font-bold">Project · Family</th>
             <th className="px-4 py-2.5 font-bold">Phase</th>
@@ -27,7 +27,7 @@ export function ProjectRiskTable({ rows }: { rows: ProjectRiskRow[] }) {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.projectCode} className="border-t border-line bg-paper">
+            <tr key={row.projectCode} className="border-t border-line bg-card transition-colors hover:bg-hover">
               <td className="px-4 py-2.5 font-bold text-ink">
                 {row.projectCode}
               </td>

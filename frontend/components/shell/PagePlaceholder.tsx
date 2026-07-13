@@ -14,7 +14,7 @@ export function PagePlaceholder({
 }) {
   return (
     <div>
-      <h1 className="mb-1 font-heading text-4xl text-espresso">{title}</h1>
+      <h1 className="mb-1 font-heading text-4xl text-white">{title}</h1>
       <p className="mb-8 font-body text-sm font-light text-label">{section}</p>
       <EmptyState
         title="Screen not built yet"
