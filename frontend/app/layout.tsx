@@ -1,13 +1,8 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Lato } from "next/font/google";
+import { Lato } from "next/font/google";
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-cormorant",
-});
-
+// Lato only — Light (300), Regular (400), Bold (700). No other font families.
 const lato = Lato({
   subsets: ["latin"],
   weight: ["300", "400", "700"],
@@ -27,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${cormorant.variable} ${lato.variable} bg-cream font-body text-espresso antialiased`}
+        className={`${lato.variable} bg-canvas font-body font-light text-white antialiased`}
       >
         {children}
       </body>

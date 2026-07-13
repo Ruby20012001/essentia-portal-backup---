@@ -55,7 +55,7 @@ export default async function WioPioPage() {
 function PageTitle() {
   return (
     <div>
-      <h1 className="mb-1 font-heading text-4xl text-espresso">WIO / PIO Hub</h1>
+      <h1 className="mb-1 font-heading text-4xl text-white">WIO / PIO Hub</h1>
       <p className="font-body text-sm font-light text-label">
         S4 · Phase 1 · Universal work initiation, 15-day clock — Brief §29–30 ·
         Velocity Gate 3

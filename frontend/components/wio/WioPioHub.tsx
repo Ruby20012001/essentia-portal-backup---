@@ -118,7 +118,7 @@ export function WioPioHub({
       </div>
 
       <section className="mb-10">
-        <h2 className="mb-3 font-heading text-2xl text-espresso">
+        <h2 className="mb-3 font-heading text-2xl text-white">
           WIO conversion clock
         </h2>
         <WioTable
@@ -138,7 +138,7 @@ export function WioPioHub({
       </section>
 
       <section id="pio">
-        <h2 className="mb-3 font-heading text-2xl text-espresso">
+        <h2 className="mb-3 font-heading text-2xl text-white">
           PIO factory clock · Triangle of Agreement
         </h2>
         <PioTable

@@ -37,7 +37,7 @@ export function WioTable({
     <div className="overflow-x-auto rounded-lg border border-line">
       <table className="w-full text-left font-body text-[13.5px]">
         <thead>
-          <tr className="bg-espresso text-[11px] uppercase tracking-[0.12em] text-[#EDE6DC]">
+          <tr className="bg-surface text-[11px] uppercase tracking-[0.12em] text-secondary">
             <th className="px-4 py-2.5 font-bold">WIO</th>
             <th className="px-4 py-2.5 font-bold">Project</th>
             <th className="px-4 py-2.5 font-bold">Dept</th>
@@ -50,7 +50,7 @@ export function WioTable({
           {wios.map((wio) => {
             const busy = busyId === wio.id;
             return (
-              <tr key={wio.id} className="border-t border-line bg-paper">
+              <tr key={wio.id} className="border-t border-line bg-card transition-colors hover:bg-hover">
                 <td className="px-4 py-2.5 font-bold text-ink">{wio.wioNumber}</td>
                 <td className="px-4 py-2.5 font-light text-ink">
                   {wio.projectCode}
@@ -100,10 +100,10 @@ export function WioTable({
                     type="button"
                     disabled={busy}
                     onClick={() => onConvert(wio)}
-                    className={`rounded px-3 py-1.5 font-body text-xs font-bold transition-opacity disabled:opacity-50 ${
+                    className={`rounded px-3 py-1.5 font-body text-xs font-bold transition-colors disabled:opacity-50 ${
                       wio.checklistComplete
-                        ? "bg-forest text-cream hover:opacity-90"
-                        : "bg-espresso text-cream hover:opacity-90"
+                        ? "bg-forest text-white hover:bg-forest/90"
+                        : "border border-line-strong bg-canvas text-secondary hover:bg-hover"
                     }`}
                   >
                     {busy ? "…" : "Convert to PIO"}

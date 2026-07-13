@@ -14,14 +14,14 @@ export default function LoginPage({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-espresso px-6">
-      <div className="w-full max-w-sm rounded-lg bg-cream px-8 py-10 shadow-xl">
+      <div className="w-full max-w-sm rounded-lg border border-line bg-card px-8 py-10">
         <div className="mb-8 flex flex-col items-center">
           <Image
             src="/brand/logo-dark.png"
             alt="essentia"
             height={22}
             width={112}
-            className="mb-4 [filter:brightness(0)]"
+            className="mb-4"
             priority
           />
           <p className="font-body text-xs font-light tracking-wide text-label">
