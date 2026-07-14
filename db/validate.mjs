@@ -881,6 +881,30 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      // Gate #6: the 6:30am auto-generation job is registered (db/021).
+      name: "founder-brief 021: 'founder-morning-brief' job seeded daily at 06:30",
+      sql: `SELECT (schedule_kind='daily' AND schedule_expr='06:30' AND enabled)::TEXT AS v
+            FROM portal.scheduled_jobs WHERE name='founder-morning-brief'`,
+      ok: (v) => v === "true",
+    },
+    {
+      // The snapshot is one-per-day: a second generation the same day updates in
+      // place, never a duplicate. Mirrors snapshotFounderBrief's ON CONFLICT upsert.
+      name: "founder-brief: daily snapshot upserts in place (one row per day)",
+      setupSql: `INSERT INTO portal.founder_brief_snapshots (brief_date, numbers)
+                   VALUES (CURRENT_DATE, '[{"n":1}]'::jsonb)
+                 ON CONFLICT (brief_date) DO UPDATE SET numbers=EXCLUDED.numbers, generated_at=NOW();
+                 INSERT INTO portal.founder_brief_snapshots (brief_date, numbers)
+                   VALUES (CURRENT_DATE, '[{"n":1},{"n":2}]'::jsonb)
+                 ON CONFLICT (brief_date) DO UPDATE SET numbers=EXCLUDED.numbers, generated_at=NOW()`,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM portal.founder_brief_snapshots WHERE brief_date=CURRENT_DATE) = 1
+              AND
+              (SELECT jsonb_array_length(numbers) FROM portal.founder_brief_snapshots WHERE brief_date=CURRENT_DATE) = 2
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
