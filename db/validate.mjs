@@ -800,6 +800,56 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      // Org-wide approvals oversight (COO): the LATERAL roll-up resolves one row
+      // per pending instance with friendly ref, effective approver (delegate wins),
+      // pending count and soonest SLA. Mirrors listApprovalsOverview in
+      // frontend/lib/services/workflow-oversight.ts.
+      name: "wf-oversight: org-wide roll-up resolves ref + waiting-on + pending count for a pending instance",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000000000e9'::uuid,'pio_approval','pio',
+                         '00000000-0000-4000-8000-0000000000ef'::uuid, 1, 'pending');
+                 INSERT INTO portal.workflow_tasks
+                   (instance_id, group_no, assignee_user_id, delegated_to_user_id, status, sla_due_at)
+                 VALUES ('00000000-0000-4000-8000-0000000000e9'::uuid, 1,
+                         '00000000-0000-4000-8000-000000000003',
+                         '00000000-0000-4000-8000-000000000001',
+                         'pending', NOW() - INTERVAL '2 hours')`,
+      sql: `SELECT (
+              o.resource_ref = 'PIO ED/26-27/942 · ED/26-27/901'
+              AND o.pending_count = 1
+              AND o.waiting_on IS NOT NULL
+              AND o.sla_due_at IS NOT NULL
+            )::TEXT AS v
+            FROM (
+              SELECT
+                CASE
+                  WHEN p.pio_number IS NOT NULL
+                    THEN 'PIO ' || p.pio_number || COALESCE(' · ' || ppr.project_code, '')
+                  WHEN pr.project_code IS NOT NULL THEN pr.project_code
+                  ELSE NULL
+                END AS resource_ref,
+                tt.sla_due_at, tt.pending_count, tt.waiting_on
+              FROM portal.workflow_instances i
+              JOIN portal.workflow_groups g
+                ON g.definition_code = i.workflow_code AND g.group_no = i.current_step
+              LEFT JOIN ee.pio p        ON i.resource_type = 'pio'      AND p.id  = i.resource_id
+              LEFT JOIN ee.projects ppr ON ppr.id = p.project_id
+              LEFT JOIN ee.projects pr  ON i.resource_type = 'projects' AND pr.id = i.resource_id
+              CROSS JOIN LATERAL (
+                SELECT MIN(t.sla_due_at)::text AS sla_due_at,
+                       COUNT(*)::int AS pending_count,
+                       string_agg(DISTINCT COALESCE(du.full_name, au.full_name), ', ') AS waiting_on
+                FROM portal.workflow_tasks t
+                LEFT JOIN public.users au ON au.id = t.assignee_user_id
+                LEFT JOIN public.users du ON du.id = t.delegated_to_user_id
+                WHERE t.instance_id = i.id AND t.group_no = i.current_step AND t.status = 'pending'
+              ) tt
+              WHERE i.id = '00000000-0000-4000-8000-0000000000e9'::uuid
+            ) o`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
