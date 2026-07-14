@@ -850,6 +850,37 @@ if (!failed) {
             ) o`,
       ok: (v) => v === "true",
     },
+    {
+      // Founder Morning Brief #6 — open escalations requiring a founder: a pending
+      // instance whose current approver is L0 counts; one whose approver is L1 does
+      // not. Mirrors number6Escalations in frontend/lib/services/founder-brief.ts.
+      name: "founder-brief: escalation count includes an L0-approver instance, excludes an L1 one",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES
+                   ('00000000-0000-4000-8000-0000000000e8'::uuid,'pio_approval','pio',
+                    '00000000-0000-4000-8000-0000000000d1'::uuid, 1, 'pending'),
+                   ('00000000-0000-4000-8000-0000000000e7'::uuid,'pio_approval','projects',
+                    '00000000-0000-4000-8000-0000000000d2'::uuid, 1, 'pending');
+                 INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id, status)
+                 VALUES
+                   ('00000000-0000-4000-8000-0000000000e8'::uuid, 1, '00000000-0000-4000-8000-000000000002', 'pending'),
+                   ('00000000-0000-4000-8000-0000000000e7'::uuid, 1, '00000000-0000-4000-8000-000000000003', 'pending')`,
+      sql: `SELECT (
+              (SELECT COUNT(DISTINCT i.id) FROM portal.workflow_instances i
+                 JOIN portal.workflow_tasks t ON t.instance_id=i.id AND t.group_no=i.current_step AND t.status='pending'
+                 JOIN public.users u ON u.id=COALESCE(t.delegated_to_user_id,t.assignee_user_id)
+                 WHERE i.status='pending' AND u.access_level='L0'
+                   AND i.id='00000000-0000-4000-8000-0000000000e8'::uuid) = 1
+              AND
+              (SELECT COUNT(DISTINCT i.id) FROM portal.workflow_instances i
+                 JOIN portal.workflow_tasks t ON t.instance_id=i.id AND t.group_no=i.current_step AND t.status='pending'
+                 JOIN public.users u ON u.id=COALESCE(t.delegated_to_user_id,t.assignee_user_id)
+                 WHERE i.status='pending' AND u.access_level='L0'
+                   AND i.id='00000000-0000-4000-8000-0000000000e7'::uuid) = 0
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
