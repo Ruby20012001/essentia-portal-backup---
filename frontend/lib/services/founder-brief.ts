@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import { formatINR } from "@/lib/format";
+import type { SessionUser } from "@/lib/auth/session";
 
 /**
  * Founder Morning Brief (Brief §37 — Founder Liberation Framework; Velocity
@@ -89,6 +90,35 @@ export async function getFounderBrief(): Promise<FounderBrief> {
   ];
 
   return { numbers };
+}
+
+/**
+ * Velocity Gate #6 — the auto-pilot's 6:30am job. Generates the 7 numbers and
+ * persists one snapshot per day (idempotent upsert), so the brief is "generated"
+ * even if the underlying data moves later in the day. Called by the scheduler
+ * ('founder-morning-brief' handler); safe to re-run (same day → updates in place).
+ */
+export async function snapshotFounderBrief(actor: SessionUser): Promise<{ briefDate: string; numbers: number }> {
+  const { numbers } = await getFounderBrief();
+  const [row] = await query<{ brief_date: string }>(
+    `INSERT INTO portal.founder_brief_snapshots (brief_date, generated_by, numbers, generated_at)
+     VALUES (CURRENT_DATE, $1, $2::jsonb, NOW())
+     ON CONFLICT (brief_date) DO UPDATE
+       SET numbers = EXCLUDED.numbers, generated_at = NOW(), generated_by = EXCLUDED.generated_by
+     RETURNING brief_date::text AS brief_date`,
+    [actor.id, JSON.stringify(numbers)],
+  );
+  return { briefDate: row!.brief_date, numbers: numbers.length };
+}
+
+/** The most recent auto-generated snapshot (for the "auto-generated at" indicator). */
+export async function getLatestBriefSnapshot(): Promise<{ briefDate: string; generatedAt: string } | null> {
+  const [row] = await query<{ brief_date: string; generated_at: string }>(
+    `SELECT brief_date::text AS brief_date, generated_at::text AS generated_at
+     FROM portal.founder_brief_snapshots
+     ORDER BY brief_date DESC LIMIT 1`,
+  );
+  return row ? { briefDate: row.brief_date, generatedAt: row.generated_at } : null;
 }
 
 function number1RAG(r: { on_track: number; watch: number; behind: number }): BriefNumber {

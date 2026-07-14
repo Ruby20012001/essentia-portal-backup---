@@ -1,7 +1,7 @@
 import { FounderBrief } from "@/components/founder/FounderBrief";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/services/permissions";
-import { getFounderBrief } from "@/lib/services/founder-brief";
+import { getFounderBrief, getLatestBriefSnapshot } from "@/lib/services/founder-brief";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +38,17 @@ export default async function FounderBriefPage() {
 }
 
 async function Brief() {
-  const { numbers } = await getFounderBrief();
-  return <FounderBrief numbers={numbers} />;
+  const [{ numbers }, snapshot] = await Promise.all([getFounderBrief(), getLatestBriefSnapshot()]);
+  return (
+    <>
+      <p className="mb-4 font-body text-xs font-light text-muted">{generatedLabel(snapshot)}</p>
+      <FounderBrief numbers={numbers} />
+    </>
+  );
+}
+
+function generatedLabel(snapshot: { briefDate: string; generatedAt: string } | null): string {
+  if (!snapshot) return "Auto-pilot · scheduled daily at 06:30 — not yet generated";
+  const t = new Date(snapshot.generatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+  return `Auto-pilot · last generated ${snapshot.briefDate} at ${t}`;
 }
