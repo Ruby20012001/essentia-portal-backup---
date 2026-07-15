@@ -905,6 +905,35 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      // Gate #2: the Friday Weekly Pulse job is registered (db/022).
+      name: "weekly-pulse 022: 'weekly-pulse-draft' job seeded daily at 05:00",
+      sql: `SELECT (schedule_kind='daily' AND schedule_expr='05:00' AND enabled)::TEXT AS v
+            FROM portal.scheduled_jobs WHERE name='weekly-pulse-draft'`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Idempotency: a project that already has this week's weekly_pulse (fixture
+      // seeds one for a001) is NOT in the "needs draft" set; one without (a002) is.
+      // Mirrors the NOT EXISTS guard in draftWeeklyPulses.
+      name: "weekly-pulse: auto-draft is one-per-project-per-week (skips a project already pulsed)",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM ee.projects p
+                 WHERE p.is_active AND p.id='00000000-0000-4000-8000-00000000a001'::uuid
+                   AND NOT EXISTS (
+                     SELECT 1 FROM portal.communication_spine cs
+                     WHERE cs.project_id=p.id AND cs.letter_type='weekly_pulse'
+                       AND date_trunc('week', cs.created_at)=date_trunc('week', CURRENT_DATE))) = 0
+              AND
+              (SELECT COUNT(*) FROM ee.projects p
+                 WHERE p.is_active AND p.id='00000000-0000-4000-8000-00000000a002'::uuid
+                   AND NOT EXISTS (
+                     SELECT 1 FROM portal.communication_spine cs
+                     WHERE cs.project_id=p.id AND cs.letter_type='weekly_pulse'
+                       AND date_trunc('week', cs.created_at)=date_trunc('week', CURRENT_DATE))) = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
