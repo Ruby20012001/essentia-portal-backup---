@@ -33,6 +33,7 @@ export const DEFAULT_FILES = [
   "019_workflow_notify.sql",
   "020_workflow_advisory.sql",
   "021_founder_brief_snapshot.sql",
+  "022_weekly_pulse_job.sql",
   "900_dev_fixtures.sql",
 ];
 
