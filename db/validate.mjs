@@ -177,10 +177,13 @@ if (!failed) {
       ok: (v) => v === "4",
     },
     {
+      // Intent: EVERY dev fixture user is loginable via the local password path.
+      // (Asserting a fixed count broke whenever a fixture user was added.)
       name: "auth: dev users carry a scrypt password_hash",
-      sql: `SELECT COUNT(*)::TEXT AS v FROM public.users
-            WHERE email LIKE 'dev.%@essentia.in' AND password_hash LIKE '%:%'`,
-      ok: (v) => v === "4",
+      sql: `SELECT (COUNT(*) FILTER (WHERE password_hash LIKE '%:%') = COUNT(*)
+                    AND COUNT(*) >= 4)::TEXT AS v
+            FROM public.users WHERE email LIKE 'dev.%@essentia.in'`,
+      ok: (v) => v === "true",
     },
     {
       name: "auth: essentia_app can write sessions (grant present)",
@@ -933,6 +936,47 @@ if (!failed) {
                        AND date_trunc('week', cs.created_at)=date_trunc('week', CURRENT_DATE))) = 1
             )::TEXT AS v`,
       ok: (v) => v === "true",
+    },
+    {
+      // Gate #4: the 11:59pm sweep is registered (db/023), matching config
+      // exit_protocol.fire_time = "23:59".
+      name: "exit-protocol 023: 'exit-protocol' job seeded daily at 23:59",
+      sql: `SELECT (schedule_kind='daily' AND schedule_expr='23:59' AND enabled)::TEXT AS v
+            FROM portal.scheduled_jobs WHERE name='exit-protocol'`,
+      ok: (v) => v === "true",
+    },
+    {
+      // A recorded removal action is immutable-by-rerun: the UNIQUE(user, exit_date,
+      // action) + ON CONFLICT DO NOTHING means a second sweep cannot overwrite an
+      // honest 'not_wired' with a false 'completed'.
+      name: "exit-protocol: an action is logged once per exit and a re-run cannot overwrite it",
+      setupSql: `INSERT INTO portal.exit_protocol_actions (user_id, exit_date, action_code, status, detail)
+                   VALUES ('00000000-0000-4000-8000-000000000004'::uuid, CURRENT_DATE,
+                           'whatsapp_groups_removed', 'not_wired', 'first write')
+                 ON CONFLICT (user_id, exit_date, action_code) DO NOTHING;
+                 INSERT INTO portal.exit_protocol_actions (user_id, exit_date, action_code, status, detail)
+                   VALUES ('00000000-0000-4000-8000-000000000004'::uuid, CURRENT_DATE,
+                           'whatsapp_groups_removed', 'completed', 'second write')
+                 ON CONFLICT (user_id, exit_date, action_code) DO NOTHING`,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM portal.exit_protocol_actions
+                 WHERE user_id='00000000-0000-4000-8000-000000000004'::uuid
+                   AND exit_date=CURRENT_DATE AND action_code='whatsapp_groups_removed') = 1
+              AND
+              (SELECT status FROM portal.exit_protocol_actions
+                 WHERE user_id='00000000-0000-4000-8000-000000000004'::uuid
+                   AND exit_date=CURRENT_DATE AND action_code='whatsapp_groups_removed') = 'not_wired'
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // 'pending' is a read-model state only (an exit that has not fired yet); it
+      // must never be persisted as an action outcome.
+      name: "exit-protocol: status CHECK rejects the read-model-only 'pending'",
+      sql: `INSERT INTO portal.exit_protocol_actions (user_id, exit_date, action_code, status)
+            VALUES ('00000000-0000-4000-8000-000000000004'::uuid, CURRENT_DATE - 1,
+                    'sso_revoked', 'pending')`,
+      expectError: true,
     },
   ];
 

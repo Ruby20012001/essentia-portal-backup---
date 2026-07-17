@@ -10,6 +10,7 @@ import { runKekaSync } from "@/lib/integrations/keka/sync";
 import { evaluateWorkflowTimers } from "@/lib/services/workflow-timers";
 import { snapshotFounderBrief } from "@/lib/services/founder-brief";
 import { draftWeeklyPulses } from "@/lib/services/weekly-pulse";
+import { fireExitProtocol } from "@/lib/services/exit-protocol";
 
 /**
  * Auto-pilot scheduler (resolves A-14 / IG-06). Cadence lives as data in
@@ -49,6 +50,7 @@ const HANDLERS: Record<string, JobHandler> = {
   "workflow-timers": (actor) => evaluateWorkflowTimers(actor),
   "founder-morning-brief": (actor) => snapshotFounderBrief(actor),
   "weekly-pulse-draft": (actor) => draftWeeklyPulses(actor),
+  "exit-protocol": (actor) => fireExitProtocol(actor),
 };
 
 type JobRow = {
