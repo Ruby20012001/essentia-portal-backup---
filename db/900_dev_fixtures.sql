@@ -36,6 +36,17 @@ VALUES
    'Site team (dev fixture)')
 ON CONFLICT (email) DO NOTHING;
 
+-- Exit-protocol fixture (Velocity Gate #4): a staffer whose Keka exit date is
+-- today, so the 11:59pm sweep has a real exit to fire on in dev.
+INSERT INTO public.users
+  (id, email, full_name, display_name, access_level, department_id, job_title, exit_date)
+VALUES
+  ('00000000-0000-4000-8000-000000000005', 'dev.exiting@essentia.in',
+   'Dev Exiting Staff', 'Dev Exit', 'L3',
+   (SELECT id FROM public.departments WHERE code = 'SITE'),
+   'Site supervisor (dev fixture — exit date today)', CURRENT_DATE)
+ON CONFLICT (email) DO NOTHING;
+
 -- Dev password: all fixture users share 'essentia-dev-2026' (scrypt, one
 -- salt — fine for an in-memory dev seed, never production). Enables the
 -- local password login path; real accounts arrive via Entra.
