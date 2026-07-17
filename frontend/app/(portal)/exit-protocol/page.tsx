@@ -3,6 +3,7 @@ import { ExitProtocolBoard } from "@/components/people/ExitProtocolBoard";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/services/permissions";
 import { listExits } from "@/lib/services/exit-protocol";
+import { listSuccessionPacks } from "@/lib/services/succession-pack";
 
 export const dynamic = "force-dynamic";
 
@@ -40,25 +41,25 @@ export default async function ExitProtocolPage() {
 }
 
 async function Board() {
-  const exits = await listExits();
+  const [exits, packs] = await Promise.all([listExits(), listSuccessionPacks()]);
   const fired = exits.filter((e) => e.fired).length;
-  const scheduled = exits.length - fired;
   const notWired = exits
     .filter((e) => e.fired)
     .reduce((n, e) => n + e.actions.filter((a) => a.status === "not_wired" || a.status === "failed").length, 0);
+  const packed = exits.filter((e) => packs.has(e.userId)).length;
 
   return (
     <>
       <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard label="Exits on record" value={String(exits.length)} />
-        <MetricCard label="Protocol fired" value={String(fired)} />
-        <MetricCard label="Scheduled" value={String(scheduled)} sub="awaiting 11:59pm" />
+        <MetricCard label="Protocol fired" value={String(fired)} sub="11:59pm removals" />
+        <MetricCard label="Succession packs" value={`${packed}/${exits.length}`} sub="generated" />
         <MetricCard label="Removals not done" value={String(notWired)} sub="need an integration" />
       </div>
 
       <section>
         <h2 className="mb-3 font-heading text-2xl text-white">Exits</h2>
-        <ExitProtocolBoard exits={exits} />
+        <ExitProtocolBoard exits={exits} packs={packs} />
       </section>
     </>
   );

@@ -978,6 +978,78 @@ if (!failed) {
                     'sso_revoked', 'pending')`,
       expectError: true,
     },
+    {
+      // Gate #7: the same-day generation job is registered (db/024).
+      name: "succession 024: 'succession-pack' job seeded daily at 06:00",
+      sql: `SELECT (schedule_kind='daily' AND schedule_expr='06:00' AND enabled)::TEXT AS v
+            FROM portal.scheduled_jobs WHERE name='succession-pack'`,
+      ok: (v) => v === "true",
+    },
+    {
+      // The default pack template ships as DATA, and every seeded section names a
+      // source_kind the resolver registry knows.
+      name: "succession 024: pack template seeded, all sections use a known source_kind",
+      sql: `SELECT (
+              COUNT(*) >= 6
+              AND COUNT(*) FILTER (
+                WHERE source_kind IN ('checklist','documents','static_note','project_ownership','pending_approvals')
+              ) = COUNT(*)
+            )::TEXT AS v
+            FROM portal.succession_pack_sections WHERE is_active`,
+      ok: (v) => v === "true",
+    },
+    {
+      // THE POINT OF THE DESIGN: the pack's contents are configuration. HR adds a
+      // section, drops one, and reorders — by editing rows. The generator reads
+      // `WHERE is_active ORDER BY sort_order, code`, so this is exactly what a
+      // regenerated pack would contain. No code changes here.
+      name: "succession: pack contents are config-driven (HR row edits add/remove/reorder sections)",
+      setupSql: `INSERT INTO portal.succession_pack_sections
+                   (code, title, source_kind, params, sort_order, is_active)
+                 VALUES ('hr_added_return_assets', 'Return of company assets', 'checklist',
+                         '{"items": ["Return laptop and access card"]}'::jsonb, 15, TRUE)
+                 ON CONFLICT (code) DO NOTHING;
+                 UPDATE portal.succession_pack_sections SET is_active = FALSE
+                 WHERE code = 'handover_documents'`,
+      sql: `SELECT (
+              -- the HR-added section is now part of the pack…
+              EXISTS (SELECT 1 FROM portal.succession_pack_sections
+                        WHERE code='hr_added_return_assets' AND is_active)
+              -- …the deactivated one is out…
+              AND NOT EXISTS (SELECT 1 FROM portal.succession_pack_sections
+                                WHERE code='handover_documents' AND is_active)
+              -- …and ordering follows sort_order, so HR controls position too.
+              AND (SELECT string_agg(code, ',' ORDER BY sort_order, code)
+                   FROM portal.succession_pack_sections
+                   WHERE is_active AND sort_order <= 20)
+                  = 'successor_briefing,hr_added_return_assets,project_ownership'
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // One pack per person per exit; a regenerate updates in place (that is how a
+      // template change reaches an exit already on the books).
+      name: "succession: pack is one-per-exit and regenerate updates in place",
+      setupSql: `INSERT INTO portal.succession_packs (user_id, exit_date, sections)
+                   VALUES ('00000000-0000-4000-8000-000000000005'::uuid, CURRENT_DATE,
+                           '[{"code":"a"}]'::jsonb)
+                 ON CONFLICT (user_id, exit_date) DO UPDATE SET sections = EXCLUDED.sections;
+                 INSERT INTO portal.succession_packs (user_id, exit_date, sections)
+                   VALUES ('00000000-0000-4000-8000-000000000005'::uuid, CURRENT_DATE,
+                           '[{"code":"a"},{"code":"b"}]'::jsonb)
+                 ON CONFLICT (user_id, exit_date) DO UPDATE
+                   SET sections = EXCLUDED.sections, generated_at = NOW()`,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM portal.succession_packs
+                 WHERE user_id='00000000-0000-4000-8000-000000000005'::uuid
+                   AND exit_date=CURRENT_DATE) = 1
+              AND
+              (SELECT jsonb_array_length(sections) FROM portal.succession_packs
+                 WHERE user_id='00000000-0000-4000-8000-000000000005'::uuid
+                   AND exit_date=CURRENT_DATE) = 2
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

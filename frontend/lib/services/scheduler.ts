@@ -11,6 +11,7 @@ import { evaluateWorkflowTimers } from "@/lib/services/workflow-timers";
 import { snapshotFounderBrief } from "@/lib/services/founder-brief";
 import { draftWeeklyPulses } from "@/lib/services/weekly-pulse";
 import { fireExitProtocol } from "@/lib/services/exit-protocol";
+import { generateSuccessionPacks } from "@/lib/services/succession-pack";
 
 /**
  * Auto-pilot scheduler (resolves A-14 / IG-06). Cadence lives as data in
@@ -51,6 +52,7 @@ const HANDLERS: Record<string, JobHandler> = {
   "founder-morning-brief": (actor) => snapshotFounderBrief(actor),
   "weekly-pulse-draft": (actor) => draftWeeklyPulses(actor),
   "exit-protocol": (actor) => fireExitProtocol(actor),
+  "succession-pack": (actor) => generateSuccessionPacks(actor),
 };
 
 type JobRow = {

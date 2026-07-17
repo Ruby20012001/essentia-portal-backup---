@@ -35,6 +35,7 @@ export const DEFAULT_FILES = [
   "021_founder_brief_snapshot.sql",
   "022_weekly_pulse_job.sql",
   "023_exit_protocol.sql",
+  "024_succession_pack.sql",
   "900_dev_fixtures.sql",
 ];
 
