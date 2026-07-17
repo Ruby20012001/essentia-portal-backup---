@@ -1,11 +1,19 @@
 import type { ExitActionStatus, ExitRow } from "@/lib/services/exit-protocol";
+import type { SuccessionPack } from "@/lib/services/succession-pack";
 
 /**
- * Exit Protocol board — every exit and the confirmed status of all six removal
- * actions (Brief §36 · Gate #4). The brief demands a "confirmed complete log";
- * an action that did not happen is shown as such, never as done.
+ * Exit Protocol board — every exit, the confirmed status of all six removal
+ * actions (Brief §36 · Gate #4), and the succession pack generated on
+ * confirmation (Gate #7). The brief demands a "confirmed complete log"; an
+ * action that did not happen is shown as such, never as done.
  */
-export function ExitProtocolBoard({ exits }: { exits: ExitRow[] }) {
+export function ExitProtocolBoard({
+  exits,
+  packs,
+}: {
+  exits: ExitRow[];
+  packs: Map<string, SuccessionPack>;
+}) {
   if (exits.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-line-strong bg-card px-8 py-16 text-center">
@@ -42,7 +50,10 @@ export function ExitProtocolBoard({ exits }: { exits: ExitRow[] }) {
             </div>
           </div>
 
-          <ol className="mt-4 space-y-1.5">
+          <p className="mt-4 font-body text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+            Removal actions
+          </p>
+          <ol className="mt-2 space-y-1.5">
             {e.actions.map((a) => (
               <li key={a.code} className="flex items-start gap-3">
                 <StatusPill status={a.status} />
@@ -55,9 +66,52 @@ export function ExitProtocolBoard({ exits }: { exits: ExitRow[] }) {
               </li>
             ))}
           </ol>
+
+          <SuccessionPackBlock pack={packs.get(e.userId)} />
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * The generated succession pack. Every section here came from a
+ * portal.succession_pack_sections row — HR changes this by editing rows.
+ */
+function SuccessionPackBlock({ pack }: { pack: SuccessionPack | undefined }) {
+  if (!pack) {
+    return (
+      <p className="mt-5 border-t border-line pt-4 font-body text-xs font-light text-muted">
+        Succession pack — not generated yet (runs the day the exit date is confirmed).
+      </p>
+    );
+  }
+  return (
+    <div className="mt-5 border-t border-line pt-4">
+      <p className="font-body text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+        Succession pack{" "}
+        <span className="font-light normal-case tracking-normal">
+          · generated {pack.generatedAt.slice(0, 16).replace("T", " ")}
+        </span>
+      </p>
+      <div className="mt-2 space-y-3">
+        {pack.sections.map((s) => (
+          <div key={s.code}>
+            <p className="font-body text-[13px] font-bold text-white">{s.title}</p>
+            {s.items.length > 0 ? (
+              <ul className="mt-0.5 list-disc space-y-0.5 pl-5">
+                {s.items.map((item, i) => (
+                  <li key={i} className="font-body text-xs font-light text-secondary">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {s.note ? <p className="mt-0.5 font-body text-xs font-light text-muted">{s.note}</p> : null}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
