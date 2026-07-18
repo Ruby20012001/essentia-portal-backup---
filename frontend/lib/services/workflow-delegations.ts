@@ -147,6 +147,8 @@ export async function createDelegation(user: SessionUser, input: CreateDelegatio
     entityType: "workflow_delegation", entityId: row!.id, actorId: user.id,
     payload: {
       recipientId: input.delegateId,
+      // The 'assignment' template titles on {{resourceRef}} — always supply it.
+      resourceRef: definitionCode ?? "All workflows",
       summary: `You will receive ${definitionCode ?? "all"} workflow approvals delegated from ${delegatorId} (${input.fromDate}–${input.toDate}).`,
       actionUrl: "/wio-pio",
     },
@@ -179,9 +181,72 @@ export async function revokeDelegation(user: SessionUser, delegationId: string) 
   await publishEvent({
     type: "workflow.delegation_revoked", category: "approval",
     entityType: "workflow_delegation", entityId: delegationId, actorId: user.id,
-    payload: { recipientId: d.delegate_id, summary: "A delegation to you has been revoked.", actionUrl: "/wio-pio" },
+    payload: {
+      recipientId: d.delegate_id,
+      resourceRef: "Workflow delegation",
+      summary: "A delegation to you has been revoked.",
+      actionUrl: "/wio-pio",
+    },
   });
   return { id: delegationId };
+}
+
+/**
+ * Scheduler sweep (WES §9/§10) — stamp standing delegations whose window has
+ * closed and tell both parties. Enforcement is NOT here: resolveDelegateChain
+ * already refuses to resolve a delegation once CURRENT_DATE passes to_date, so
+ * expiry is correct even if this job is late, disabled or fails. This makes an
+ * ended delegation explicit (expired_at + notification) instead of merely
+ * implied by a date comparison. Idempotent — a stamped row is never re-swept.
+ */
+export async function expireStandingDelegations(
+  actor: SessionUser,
+): Promise<{ expired: number }> {
+  const due = await query<{ id: string; delegator_id: string; delegate_id: string; to_date: string }>(
+    `UPDATE portal.workflow_delegations
+     SET expired_at = NOW()
+     WHERE revoked_at IS NULL AND expired_at IS NULL AND to_date < CURRENT_DATE
+     RETURNING id, delegator_id, delegate_id, to_date::text AS to_date`,
+  );
+
+  for (const d of due) {
+    await writeAudit({
+      userId: actor.id,
+      role: actor.accessLevel,
+      action: "WORKFLOW_DELEGATION_EXPIRE",
+      resourceType: "workflows",
+      resourceId: d.id,
+      oldValues: { expired: false },
+      newValues: {
+        delegationId: d.id,
+        delegatorId: d.delegator_id,
+        delegateId: d.delegate_id,
+        toDate: d.to_date,
+        expiredBy: actor.id,
+      },
+    });
+    // Both parties are told: the delegate stops receiving, the delegator resumes.
+    for (const recipientId of [d.delegate_id, d.delegator_id]) {
+      await publishEvent({
+        type: "workflow.delegation_expired",
+        category: "approval",
+        entityType: "workflow_delegation",
+        entityId: d.id,
+        actorId: actor.id,
+        payload: {
+          recipientId,
+          resourceRef: "Workflow delegation",
+          summary:
+            recipientId === d.delegate_id
+              ? `A workflow delegation to you ended on ${d.to_date}.`
+              : `Your workflow delegation ended on ${d.to_date} — approvals return to you.`,
+          actionUrl: "/approvals",
+        },
+        dedupeKey: `workflow.delegation_expired:${d.id}:${recipientId}`,
+      });
+    }
+  }
+  return { expired: due.length };
 }
 
 /** My delegations (as delegator or delegate). */
@@ -190,7 +255,7 @@ export async function listDelegations(user: SessionUser) {
     `SELECT wd.id, wd.delegator_id, du.full_name AS delegator_name,
             wd.delegate_id, de.full_name AS delegate_name,
             wd.from_date, wd.to_date, wd.definition_code, wd.reason,
-            wd.revoked_at,
+            wd.revoked_at, wd.expired_at,
             (wd.revoked_at IS NULL AND wd.from_date <= CURRENT_DATE AND wd.to_date >= CURRENT_DATE) AS active
      FROM portal.workflow_delegations wd
      JOIN public.users du ON du.id = wd.delegator_id
@@ -252,6 +317,7 @@ export async function delegateTask(
     entityType: task.resource_type, entityId: task.resource_id, actorId: user.id,
     payload: {
       instanceId, taskId: task.id, recipientId: toUserId,
+      resourceRef: "Workflow approval",
       summary: `A workflow approval was delegated to you.${reason ? ` (${reason})` : ""}`,
       actionUrl: "/wio-pio",
     },

@@ -12,6 +12,7 @@ import { snapshotFounderBrief } from "@/lib/services/founder-brief";
 import { draftWeeklyPulses } from "@/lib/services/weekly-pulse";
 import { fireExitProtocol } from "@/lib/services/exit-protocol";
 import { generateSuccessionPacks } from "@/lib/services/succession-pack";
+import { expireStandingDelegations } from "@/lib/services/workflow-delegations";
 
 /**
  * Auto-pilot scheduler (resolves A-14 / IG-06). Cadence lives as data in
@@ -53,6 +54,7 @@ const HANDLERS: Record<string, JobHandler> = {
   "weekly-pulse-draft": (actor) => draftWeeklyPulses(actor),
   "exit-protocol": (actor) => fireExitProtocol(actor),
   "succession-pack": (actor) => generateSuccessionPacks(actor),
+  "delegation-expiry": (actor) => expireStandingDelegations(actor),
 };
 
 type JobRow = {

@@ -1050,6 +1050,75 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      // WES §9/§10: standing delegations expire automatically via the scheduler.
+      name: "wf-delegation 025: expiry job (daily 00:05) + expired event route + expired_at column",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM portal.scheduled_jobs
+                 WHERE name='delegation-expiry' AND schedule_kind='daily'
+                   AND schedule_expr='00:05' AND enabled) = 1
+              AND (SELECT COUNT(*) FROM portal.event_routes
+                     WHERE event_type='workflow.delegation_expired') = 1
+              AND (SELECT COUNT(*) FROM information_schema.columns
+                     WHERE table_schema='portal' AND table_name='workflow_delegations'
+                       AND column_name='expired_at') = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // The sweep stamps ONLY delegations whose window has closed and that are
+      // neither revoked nor already stamped. Mirrors expireStandingDelegations.
+      name: "wf-delegation: expiry sweep stamps the lapsed one, leaves active and revoked untouched",
+      setupSql: `INSERT INTO portal.workflow_delegations
+                   (id, delegator_id, delegate_id, from_date, to_date, revoked_at) VALUES
+                   ('00000000-0000-4000-8000-0000000000c1'::uuid,
+                    '00000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000004',
+                    CURRENT_DATE - 10, CURRENT_DATE - 1, NULL),
+                   ('00000000-0000-4000-8000-0000000000c2'::uuid,
+                    '00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000001',
+                    CURRENT_DATE - 1, CURRENT_DATE + 5, NULL),
+                   ('00000000-0000-4000-8000-0000000000c3'::uuid,
+                    '00000000-0000-4000-8000-000000000004','00000000-0000-4000-8000-000000000001',
+                    CURRENT_DATE - 10, CURRENT_DATE - 2, NOW());
+                 UPDATE portal.workflow_delegations SET expired_at = NOW()
+                 WHERE revoked_at IS NULL AND expired_at IS NULL AND to_date < CURRENT_DATE`,
+      sql: `SELECT (
+              (SELECT expired_at IS NOT NULL FROM portal.workflow_delegations
+                 WHERE id='00000000-0000-4000-8000-0000000000c1'::uuid)
+              AND (SELECT expired_at IS NULL FROM portal.workflow_delegations
+                     WHERE id='00000000-0000-4000-8000-0000000000c2'::uuid)
+              AND (SELECT expired_at IS NULL FROM portal.workflow_delegations
+                     WHERE id='00000000-0000-4000-8000-0000000000c3'::uuid)
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Idempotent: a second pass has nothing left to stamp (converges).
+      name: "wf-delegation: expiry sweep is idempotent (nothing left to stamp on a second pass)",
+      setupSql: `UPDATE portal.workflow_delegations SET expired_at = NOW()
+                 WHERE revoked_at IS NULL AND expired_at IS NULL AND to_date < CURRENT_DATE`,
+      sql: `SELECT (COUNT(*) = 0)::TEXT AS v
+            FROM portal.workflow_delegations
+            WHERE revoked_at IS NULL AND expired_at IS NULL AND to_date < CURRENT_DATE`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Enforcement must NOT depend on the sweep: a lapsed delegation stops
+      // resolving because of the date window, stamped or not.
+      name: "wf-delegation: a lapsed delegation never resolves, independent of the expiry sweep",
+      setupSql: `INSERT INTO portal.workflow_delegations
+                   (id, delegator_id, delegate_id, from_date, to_date) VALUES
+                   ('00000000-0000-4000-8000-0000000000c4'::uuid,
+                    '00000000-0000-4000-8000-000000000005','00000000-0000-4000-8000-000000000001',
+                    CURRENT_DATE - 10, CURRENT_DATE - 1)`,
+      sql: `SELECT (COUNT(*) = 0)::TEXT AS v
+            FROM portal.workflow_delegations wd
+            JOIN public.users u ON u.id = wd.delegate_id AND u.is_active
+            WHERE wd.delegator_id = '00000000-0000-4000-8000-000000000005'::uuid
+              AND wd.revoked_at IS NULL
+              AND wd.from_date <= CURRENT_DATE AND wd.to_date >= CURRENT_DATE`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

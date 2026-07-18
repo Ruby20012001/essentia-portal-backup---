@@ -29,6 +29,7 @@ vi.mock("@/lib/services/permissions", () => ({ requirePermission: requirePermiss
 import {
   createDelegation,
   delegateTask,
+  expireStandingDelegations,
   listDelegations,
   resolveDelegateChain,
   revokeDelegation,
@@ -60,6 +61,7 @@ const SQL = {
   revokeUpdate: /UPDATE portal\.workflow_delegations SET revoked_at/,
   taskSelect: /FROM portal\.workflow_tasks t/,
   taskUpdate: /UPDATE portal\.workflow_tasks SET delegated_to_user_id/,
+  expirySweep: /SET expired_at = NOW\(\)/,
 };
 
 const MANAGER = "11111111-1111-4111-8111-111111111111";
@@ -488,6 +490,24 @@ describe("notification routing", () => {
     );
   });
 
+  it("every delegation event supplies resourceRef — the 'assignment' template titles on it", async () => {
+    // Regression guard: without resourceRef the notification rendered a raw
+    // "Assigned to you — {{resourceRef}}" placeholder (found in a live drive).
+    routes(activeUser("Lead"), { match: SQL.duplicateCheck, rows: [] }, noCycle, {
+      match: SQL.insertDelegation,
+      rows: [{ id: "d1" }],
+    });
+    await createDelegation(manager, { delegateId: LEAD, fromDate: "2026-07-01", toDate: "2026-07-10" });
+
+    vi.clearAllMocks();
+    routes({ match: SQL.expirySweep, rows: [{ id: "d-x", delegator_id: MANAGER, delegate_id: LEAD, to_date: "2026-07-01" }] });
+    await expireStandingDelegations(manager);
+
+    for (const call of publishMock.mock.calls) {
+      expect(call[0].payload.resourceRef, `${call[0].type} must supply resourceRef`).toBeTruthy();
+    }
+  });
+
   it("revokeDelegation publishes delegation_revoked to the delegate", async () => {
     routes(
       { match: SQL.revokeSelect, rows: [{ delegator_id: MANAGER, delegate_id: LEAD, revoked_at: null }] },
@@ -502,6 +522,72 @@ describe("notification routing", () => {
         payload: expect.objectContaining({ recipientId: LEAD }),
       }),
     );
+  });
+});
+
+/* ── Scheduler auto-expiry (WES §9/§10) ─────────────────────────────────── */
+describe("expireStandingDelegations (scheduler sweep)", () => {
+  const lapsed = {
+    id: "d-lapsed",
+    delegator_id: MANAGER,
+    delegate_id: LEAD,
+    to_date: "2026-07-01",
+  };
+
+  it("stamps only lapsed, unrevoked, unstamped delegations (predicate is in the sweep)", async () => {
+    routes({ match: SQL.expirySweep, rows: [lapsed] });
+
+    await expireStandingDelegations(manager);
+
+    const [sql] = queryMock.mock.calls[0]!;
+    expect(sql).toMatch(/revoked_at IS NULL/);
+    expect(sql).toMatch(/expired_at IS NULL/);
+    expect(sql).toMatch(/to_date < CURRENT_DATE/);
+  });
+
+  it("reports how many it expired", async () => {
+    routes({ match: SQL.expirySweep, rows: [lapsed, { ...lapsed, id: "d-2" }] });
+
+    await expect(expireStandingDelegations(manager)).resolves.toEqual({ expired: 2 });
+  });
+
+  it("is a no-op when nothing has lapsed — no audit, no events", async () => {
+    routes({ match: SQL.expirySweep, rows: [] });
+
+    await expect(expireStandingDelegations(manager)).resolves.toEqual({ expired: 0 });
+    expect(auditMock).not.toHaveBeenCalled();
+    expect(publishMock).not.toHaveBeenCalled();
+  });
+
+  it("audits each expiry with both identities", async () => {
+    routes({ match: SQL.expirySweep, rows: [lapsed] });
+
+    await expireStandingDelegations(manager);
+
+    expect(auditMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "WORKFLOW_DELEGATION_EXPIRE",
+        resourceId: "d-lapsed",
+        newValues: expect.objectContaining({
+          delegatorId: MANAGER,
+          delegateId: LEAD,
+          toDate: "2026-07-01",
+        }),
+      }),
+    );
+  });
+
+  it("notifies BOTH parties via the Event Bus, deduped per recipient", async () => {
+    routes({ match: SQL.expirySweep, rows: [lapsed] });
+
+    await expireStandingDelegations(manager);
+
+    const recipients = publishMock.mock.calls.map((c) => c[0].payload.recipientId);
+    expect(recipients).toEqual([LEAD, MANAGER]); // delegate first, then delegator
+    for (const call of publishMock.mock.calls) {
+      expect(call[0].type).toBe("workflow.delegation_expired");
+      expect(call[0].dedupeKey).toMatch(/^workflow\.delegation_expired:d-lapsed:/);
+    }
   });
 });
 
