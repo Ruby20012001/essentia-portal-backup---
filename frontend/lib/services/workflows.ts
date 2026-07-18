@@ -297,18 +297,24 @@ export async function actOnWorkflow(
   const plan = planNext(groups, instance.context ?? {}, group.group_no);
   const nextGroup = plan.next;
 
+  // The original assignee of the acted task (retained even when a delegate acts),
+  // captured for the audit trail so a delegated decision records BOTH identities
+  // (WES §9). Populated inside the CAS below.
+  let actingAssigneeId: string | null = null;
+
   const outcome = await withTransaction(async (q) => {
     // CAS on the TASK — a concurrent decision on the same task matches zero rows.
-    const applied = await q<{ id: string }>(
+    const applied = await q<{ id: string; assignee_user_id: string }>(
       `UPDATE portal.workflow_tasks
        SET status = $2, acted_by = $3, acted_at = NOW(), comments = $4
        WHERE id = $1 AND status = 'pending'
-       RETURNING id`,
+       RETURNING id, assignee_user_id`,
       [taskId, action === "approve" ? "approved" : "rejected", user.id, comments ?? null],
     );
     if (applied.length === 0) {
       throw new WorkflowError("This approval was already actioned", 409);
     }
+    actingAssigneeId = applied[0]!.assignee_user_id;
     // task_id links the action to the exact task (parallel groups have several
     // actions at the same step_no); step_no is kept (= group number) for
     // backward-compat with the previous engine's record (migration 015).
@@ -370,6 +376,12 @@ export async function actOnWorkflow(
     return { nextStatus: "pending" as WorkflowStatus, advanced: true };
   });
 
+  // A decision by anyone other than the task's original assignee (a delegate, or
+  // the scheduler acting on a timeout) records BOTH identities on the decision
+  // itself, so the delegated-approval audit is explicit, not merely reconstructable
+  // via the task join (WES §9 · clause D).
+  const onBehalfOf = actingAssigneeId !== null && actingAssigneeId !== user.id;
+
   await writeAudit({
     userId: user.id,
     role: user.accessLevel,
@@ -377,7 +389,13 @@ export async function actOnWorkflow(
     resourceType: instance.resource_type,
     resourceId: instance.resource_id,
     oldValues: { status: "pending", step: group.group_no },
-    newValues: { instanceId, stepNo: group.group_no, status: outcome.nextStatus, comments },
+    newValues: {
+      instanceId,
+      stepNo: group.group_no,
+      status: outcome.nextStatus,
+      comments,
+      ...(onBehalfOf ? { onBehalfOf: true, originalApprover: actingAssigneeId } : {}),
+    },
   });
 
   const [definition] = await query<{ name: string }>(
