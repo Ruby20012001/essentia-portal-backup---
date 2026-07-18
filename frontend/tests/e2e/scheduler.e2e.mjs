@@ -22,12 +22,18 @@ const login = await call("/api/auth/login", { method: "POST", body: JSON.stringi
 const cookie = getCookie(login);
 step("login → session cookie", login.status === 200 && Boolean(cookie));
 
-// 1. Status endpoint: L2 has read on 'scheduler' → the three registered jobs.
+// 1. Status endpoint: L2 has read on 'scheduler' → the registered jobs.
+//    Asserts the CORE jobs are registered, not an exact count: new auto-pilot
+//    jobs are added as the platform grows (a fixed count silently went stale
+//    once the Velocity Gate jobs were seeded).
+const CORE_JOBS = ["keka-sync", "notifications-dispatch", "wio-clock", "workflow-timers"];
 let r = await call("/api/scheduler/jobs", { cookie });
 let body = await r.json().catch(() => ({}));
 const names = (body.jobs ?? []).map((j) => j.name).sort();
-step("GET /api/scheduler/jobs → 200 + 3 jobs", r.status === 200 && names.length === 3,
-  names.join(","));
+const missing = CORE_JOBS.filter((j) => !names.includes(j));
+step("GET /api/scheduler/jobs → 200 + core jobs registered",
+  r.status === 200 && missing.length === 0,
+  missing.length ? `missing: ${missing.join(",")}` : names.join(","));
 
 // 2. Tick runs the due jobs (as the L1 system account, regardless of caller).
 r = await call("/api/jobs/tick", { method: "POST", cookie });
