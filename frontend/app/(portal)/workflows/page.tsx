@@ -1,8 +1,13 @@
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { WorkflowDashboard } from "@/components/workflows/WorkflowDashboard";
+import { SettledWorkflows } from "@/components/workflows/SettledWorkflows";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/services/permissions";
-import { itemSlaRisk, listApprovalsOverview } from "@/lib/services/workflow-oversight";
+import {
+  itemSlaRisk,
+  listApprovalsOverview,
+  listSettledWorkflows,
+} from "@/lib/services/workflow-oversight";
 import { listMyApprovals } from "@/lib/services/workflow-inbox";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +52,12 @@ export default async function WorkflowsPage() {
 
 async function Board({ user }: { user: Parameters<typeof listMyApprovals>[0] }) {
   const now = new Date();
-  const [running, mine] = await Promise.all([listApprovalsOverview(), listMyApprovals(user)]);
+  const [running, mine, completed, rejected] = await Promise.all([
+    listApprovalsOverview(),
+    listMyApprovals(user),
+    listSettledWorkflows(["approved"], 10),
+    listSettledWorkflows(["rejected", "cancelled"], 10),
+  ]);
 
   const risks = running.map((r) => itemSlaRisk(r, now));
   const breached = risks.filter((r) => r.level === "breached").length;
@@ -62,9 +72,19 @@ async function Board({ user }: { user: Parameters<typeof listMyApprovals>[0] }) 
         <MetricCard label="SLA breached" value={String(breached)} sub="past deadline" />
       </div>
 
-      <section>
+      <section className="mb-10">
         <h2 className="mb-3 font-heading text-2xl text-white">Running workflows</h2>
         <WorkflowDashboard running={running} now={now} />
+      </section>
+
+      <section className="mb-10">
+        <h2 className="mb-3 font-heading text-2xl text-white">Recently completed</h2>
+        <SettledWorkflows items={completed} emptyLabel="No workflow has completed yet." />
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-heading text-2xl text-white">Recently rejected</h2>
+        <SettledWorkflows items={rejected} emptyLabel="Nothing has been rejected." />
       </section>
     </>
   );

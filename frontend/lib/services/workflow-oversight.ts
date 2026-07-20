@@ -26,6 +26,7 @@ export type ApprovalOverviewItem = {
   pendingCount: number; // approvers still to act in the current group
   quorum: number;
   waitingOn: string | null; // effective approvers (delegate wins), comma-joined
+  startedBy: string | null; // who initiated it (null for system-started)
 };
 
 export async function listApprovalsOverview(): Promise<ApprovalOverviewItem[]> {
@@ -37,6 +38,7 @@ export async function listApprovalsOverview(): Promise<ApprovalOverviewItem[]> {
             g.name AS "groupName",
             i.current_step AS "currentStep",
             i.started_at::text AS "startedAt",
+            sb.full_name AS "startedBy",
             tt.sla_due_at AS "slaDueAt",
             tt.pending_count AS "pendingCount",
             g.quorum AS "quorum",
@@ -45,6 +47,7 @@ export async function listApprovalsOverview(): Promise<ApprovalOverviewItem[]> {
      JOIN portal.workflow_definitions d ON d.code = i.workflow_code
      JOIN portal.workflow_groups g
        ON g.definition_code = i.workflow_code AND g.group_no = i.current_step${RESOURCE_REF_JOINS}
+     LEFT JOIN public.users sb ON sb.id = i.started_by
      CROSS JOIN LATERAL (
        SELECT MIN(t.sla_due_at)::text AS sla_due_at,
               COUNT(*)::int AS pending_count,
@@ -56,6 +59,57 @@ export async function listApprovalsOverview(): Promise<ApprovalOverviewItem[]> {
      ) tt
      WHERE i.status = 'pending' AND tt.pending_count > 0
      ORDER BY tt.sla_due_at NULLS LAST, i.started_at`,
+  );
+}
+
+export type SettledWorkflowItem = {
+  instanceId: string;
+  workflowName: string;
+  resourceRef: string | null;
+  resourceType: string;
+  status: "approved" | "rejected" | "cancelled";
+  startedAt: string;
+  completedAt: string | null;
+  startedBy: string | null;
+  decidedBy: string | null; // who cast the final decision
+};
+
+/**
+ * Workflows that have finished — approved, rejected or cancelled — most recently
+ * settled first. Read-only; the dashboard's "completed" and "recently rejected"
+ * sections. `limit` is clamped so a caller cannot ask for an unbounded scan.
+ */
+export async function listSettledWorkflows(
+  status: Array<"approved" | "rejected" | "cancelled">,
+  limit = 20,
+): Promise<SettledWorkflowItem[]> {
+  if (status.length === 0) return [];
+  const capped = Math.max(1, Math.min(limit, 100));
+  return query<SettledWorkflowItem>(
+    `SELECT i.id AS "instanceId",
+            d.name AS "workflowName",
+            ${RESOURCE_REF_SQL} AS "resourceRef",
+            i.resource_type AS "resourceType",
+            i.status AS "status",
+            i.started_at::text AS "startedAt",
+            i.completed_at::text AS "completedAt",
+            sb.full_name AS "startedBy",
+            la.actor_name AS "decidedBy"
+     FROM portal.workflow_instances i
+     JOIN portal.workflow_definitions d ON d.code = i.workflow_code${RESOURCE_REF_JOINS}
+     LEFT JOIN public.users sb ON sb.id = i.started_by
+     LEFT JOIN LATERAL (
+       SELECT u.full_name AS actor_name
+       FROM portal.workflow_actions wa
+       LEFT JOIN public.users u ON u.id = wa.acted_by
+       WHERE wa.instance_id = i.id
+       ORDER BY wa.acted_at DESC
+       LIMIT 1
+     ) la ON TRUE
+     WHERE i.status = ANY($1)
+     ORDER BY i.completed_at DESC NULLS LAST, i.started_at DESC
+     LIMIT ${capped}`,
+    [status],
   );
 }
 

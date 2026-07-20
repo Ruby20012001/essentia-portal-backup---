@@ -75,6 +75,7 @@ function WorkflowCard({
           <span className="text-secondary">
             {item.startedAt.slice(0, 10)} · {ageLabel(item.startedAt, now)} ago
           </span>
+          {item.startedBy ? <span className="text-muted"> · by {item.startedBy}</span> : null}
         </Row>
       </dl>
 

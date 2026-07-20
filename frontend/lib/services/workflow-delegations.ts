@@ -267,6 +267,28 @@ export async function listDelegations(user: SessionUser) {
 }
 
 /**
+ * Every delegation in the organisation — the admin Active Delegations view.
+ * listDelegations() is deliberately scoped to the caller; this is the org-wide
+ * read, so the CALLER must gate it (assign:workflows / leadership) before use.
+ * Read-only.
+ */
+export async function listAllDelegations(): Promise<Array<Record<string, unknown>>> {
+  return query<Record<string, unknown>>(
+    `SELECT wd.id, wd.delegator_id, du.full_name AS delegator_name,
+            wd.delegate_id, de.full_name AS delegate_name,
+            wd.from_date, wd.to_date, wd.definition_code, wd.reason,
+            d.name AS definition_name,
+            wd.revoked_at, wd.expired_at, wd.created_at,
+            (wd.revoked_at IS NULL AND wd.from_date <= CURRENT_DATE AND wd.to_date >= CURRENT_DATE) AS active
+     FROM portal.workflow_delegations wd
+     JOIN public.users du ON du.id = wd.delegator_id
+     JOIN public.users de ON de.id = wd.delegate_id
+     LEFT JOIN portal.workflow_definitions d ON d.code = wd.definition_code
+     ORDER BY (wd.revoked_at IS NULL AND wd.to_date >= CURRENT_DATE) DESC, wd.created_at DESC`,
+  );
+}
+
+/**
  * Ad-hoc: delegate the acting user's pending task in a workflow instance to
  * another active approver. Only the current effective approver may delegate it.
  */

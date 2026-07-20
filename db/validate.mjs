@@ -1179,6 +1179,99 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      // Frontend read model: settled (approved/rejected) workflows for the
+      // dashboard's completed + recently-rejected sections. Mirrors
+      // listSettledWorkflows in frontend/lib/services/workflow-oversight.ts.
+      name: "wf-dashboard: settled-workflow query returns finished instances with decider + starter",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status,
+                    started_by, completed_at)
+                 VALUES
+                   ('00000000-0000-4000-8000-0000000000d5'::uuid,'pio_approval','projects',
+                    '00000000-0000-4000-8000-00000000a001'::uuid, 1, 'approved',
+                    '00000000-0000-4000-8000-000000000003', NOW()),
+                   ('00000000-0000-4000-8000-0000000000d6'::uuid,'pio_approval','projects',
+                    '00000000-0000-4000-8000-00000000a002'::uuid, 1, 'rejected',
+                    '00000000-0000-4000-8000-000000000003', NOW() - INTERVAL '1 hour');
+                 INSERT INTO portal.workflow_actions
+                   (instance_id, step_no, group_no, action, acted_by)
+                 VALUES ('00000000-0000-4000-8000-0000000000d5'::uuid, 1, 1, 'approve',
+                         '00000000-0000-4000-8000-000000000002')`,
+      sql: `SELECT (
+              -- both settled rows come back, newest-completed first…
+              (SELECT COUNT(*) FROM (
+                 SELECT i.id FROM portal.workflow_instances i
+                 WHERE i.status = ANY(ARRAY['approved','rejected'])
+                   AND i.id IN ('00000000-0000-4000-8000-0000000000d5'::uuid,
+                                '00000000-0000-4000-8000-0000000000d6'::uuid)) x) = 2
+              -- …the starter resolves…
+              AND (SELECT sb.full_name IS NOT NULL
+                     FROM portal.workflow_instances i
+                     LEFT JOIN public.users sb ON sb.id = i.started_by
+                     WHERE i.id='00000000-0000-4000-8000-0000000000d5'::uuid)
+              -- …and the LATERAL picks the most recent decider.
+              AND (SELECT la.actor_name
+                     FROM portal.workflow_instances i
+                     LEFT JOIN LATERAL (
+                       SELECT u.full_name AS actor_name
+                       FROM portal.workflow_actions wa
+                       LEFT JOIN public.users u ON u.id = wa.acted_by
+                       WHERE wa.instance_id = i.id
+                       ORDER BY wa.acted_at DESC LIMIT 1
+                     ) la ON TRUE
+                     WHERE i.id='00000000-0000-4000-8000-0000000000d5'::uuid) IS NOT NULL
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Mirrors getSlaMonitorCounts — aggregates over the timer state the sweep
+      // already maintains (screen 8). Read-only.
+      name: "wf-sla-monitor: counts split approaching / breached / escalated / timed-out",
+      sql: `SELECT (
+              approaching >= 0 AND breached >= 0 AND escalated >= 1 AND timed_out >= 0
+            )::TEXT AS v
+            FROM (
+              SELECT
+                COUNT(*) FILTER (WHERE status='pending' AND sla_warned_at IS NOT NULL
+                                   AND sla_breached_at IS NULL)::int AS approaching,
+                COUNT(*) FILTER (WHERE status='pending' AND sla_breached_at IS NOT NULL)::int AS breached,
+                COUNT(*) FILTER (WHERE status='escalated')::int AS escalated,
+                COUNT(*) FILTER (WHERE status='timed_out')::int AS timed_out
+              FROM portal.workflow_tasks
+            ) c`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Mirrors getSlaTrend — the series is only truthful because the sweep
+      // stamps sla_warned_at / sla_breached_at (db/026). Zero-filled, no gaps.
+      name: "wf-sla-monitor: trend returns one zero-filled row per day",
+      sql: `SELECT (COUNT(*) = 14 AND COUNT(*) FILTER (WHERE warnings IS NULL OR breaches IS NULL) = 0)::TEXT AS v
+            FROM (
+              SELECT to_char(d.day,'YYYY-MM-DD') AS day,
+                     COALESCE(w.n,0)::int AS warnings, COALESCE(b.n,0)::int AS breaches
+              FROM generate_series(CURRENT_DATE - 13, CURRENT_DATE, INTERVAL '1 day') AS d(day)
+              LEFT JOIN (SELECT date_trunc('day', sla_warned_at) AS day, COUNT(*) AS n
+                         FROM portal.workflow_tasks WHERE sla_warned_at IS NOT NULL GROUP BY 1) w
+                ON w.day = d.day
+              LEFT JOIN (SELECT date_trunc('day', sla_breached_at) AS day, COUNT(*) AS n
+                         FROM portal.workflow_tasks WHERE sla_breached_at IS NOT NULL GROUP BY 1) b
+                ON b.day = d.day
+              ORDER BY d.day
+            ) t`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Mirrors listAllDelegations — the org-wide admin read (screen 7), as
+      // opposed to listDelegations which is scoped to the caller.
+      name: "wf-delegation: org-wide listing returns delegations across all users",
+      sql: `SELECT (COUNT(*) >= 2)::TEXT AS v
+            FROM portal.workflow_delegations wd
+            JOIN public.users du ON du.id = wd.delegator_id
+            JOIN public.users de ON de.id = wd.delegate_id
+            LEFT JOIN portal.workflow_definitions d ON d.code = wd.definition_code`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
