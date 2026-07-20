@@ -37,6 +37,7 @@ export const DEFAULT_FILES = [
   "023_exit_protocol.sql",
   "024_succession_pack.sql",
   "025_delegation_expiry.sql",
+  "026_sla_fire_once.sql",
   "900_dev_fixtures.sql",
 ];
 

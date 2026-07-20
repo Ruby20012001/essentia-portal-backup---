@@ -1119,6 +1119,66 @@ if (!failed) {
               AND wd.from_date <= CURRENT_DATE AND wd.to_date >= CURRENT_DATE`,
       ok: (v) => v === "true",
     },
+    {
+      name: "wf-sla 026: fire-once stamps (sla_warned_at / sla_breached_at) exist on tasks",
+      sql: `SELECT (COUNT(*) = 2)::TEXT AS v
+            FROM information_schema.columns
+            WHERE table_schema='portal' AND table_name='workflow_tasks'
+              AND column_name IN ('sla_warned_at','sla_breached_at')`,
+      ok: (v) => v === "true",
+    },
+    {
+      // The audit-flooding fix: a breached task is selected by the sweep ONCE.
+      // Before db/026 the same task was re-selected on every 5-min tick, writing
+      // a WORKFLOW_SLA_BREACH audit row each time (~288/day).
+      name: "wf-sla: a breached task is swept once — the second pass selects nothing",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000000000b1'::uuid,'pio_approval','pio',
+                         '00000000-0000-4000-8000-0000000000b2'::uuid, 1, 'pending');
+                 INSERT INTO portal.workflow_tasks
+                   (id, instance_id, group_no, assignee_user_id, status, sla_due_at)
+                 VALUES ('00000000-0000-4000-8000-0000000000b3'::uuid,
+                         '00000000-0000-4000-8000-0000000000b1'::uuid, 1,
+                         '00000000-0000-4000-8000-000000000003', 'pending', NOW() - INTERVAL '2 hours');
+                 -- pass 1: select the breached task and stamp it (what the sweep does)
+                 UPDATE portal.workflow_tasks SET sla_breached_at = NOW()
+                 WHERE status='pending' AND sla_breached_at IS NULL
+                   AND sla_due_at IS NOT NULL AND sla_due_at <= NOW()`,
+      sql: `SELECT (
+              -- it WAS stamped by pass 1…
+              (SELECT sla_breached_at IS NOT NULL FROM portal.workflow_tasks
+                 WHERE id='00000000-0000-4000-8000-0000000000b3'::uuid)
+              -- …and pass 2 finds nothing left to fire.
+              AND (SELECT COUNT(*) FROM portal.workflow_tasks
+                     WHERE status='pending' AND sla_breached_at IS NULL
+                       AND sla_due_at IS NOT NULL AND sla_due_at <= NOW()) = 0
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Escalation transfers ownership (WES §8): the original is marked and the
+      // target gets a task they can actually act on.
+      name: "wf-sla: escalation marks the original 'escalated' and materialises the target's task",
+      setupSql: `UPDATE portal.workflow_tasks SET status='escalated'
+                 WHERE id='00000000-0000-4000-8000-0000000000b3'::uuid AND status='pending';
+                 INSERT INTO portal.workflow_tasks (instance_id, group_no, assignee_user_id, assigned_at)
+                 VALUES ('00000000-0000-4000-8000-0000000000b1'::uuid, 1,
+                         '00000000-0000-4000-8000-000000000002', NOW())
+                 ON CONFLICT (instance_id, group_no, assignee_user_id) DO UPDATE
+                   SET status='pending', assigned_at=NOW()
+                   WHERE portal.workflow_tasks.status NOT IN ('approved','rejected')`,
+      sql: `SELECT (
+              (SELECT status FROM portal.workflow_tasks
+                 WHERE id='00000000-0000-4000-8000-0000000000b3'::uuid) = 'escalated'
+              AND EXISTS (SELECT 1 FROM portal.workflow_tasks
+                            WHERE instance_id='00000000-0000-4000-8000-0000000000b1'::uuid
+                              AND assignee_user_id='00000000-0000-4000-8000-000000000002'
+                              AND status='pending'
+                              AND sla_due_at IS NULL)
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
