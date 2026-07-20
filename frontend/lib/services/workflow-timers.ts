@@ -69,7 +69,9 @@ export async function evaluateWorkflowTimers(actor: SessionUser): Promise<TimerS
     await publishEvent({
       type: "workflow.sla_warning", category: "approval",
       entityType: "workflow_task", entityId: t.id, actorId: actor.id,
+      // The 'system_alert' template titles on {{title}} — always supply it.
       payload: { instanceId: t.instance_id, recipientId: effective(t),
+        title: "Approval approaching its deadline",
         summary: "An approval assigned to you is approaching its deadline.", actionUrl: "/wio-pio" },
       dedupeKey: `workflow.sla_warning:${t.id}`,
     });
@@ -85,6 +87,7 @@ export async function evaluateWorkflowTimers(actor: SessionUser): Promise<TimerS
       type: "workflow.sla_breached", category: "approval",
       entityType: "workflow_task", entityId: t.id, actorId: actor.id, priority: "urgent",
       payload: { instanceId: t.instance_id, recipientId: effective(t),
+        title: "Approval past its SLA",
         summary: "An approval assigned to you has passed its SLA.", actionUrl: "/wio-pio" },
       dedupeKey: `workflow.sla_breached:${t.id}`,
     });
@@ -95,6 +98,7 @@ export async function evaluateWorkflowTimers(actor: SessionUser): Promise<TimerS
         type: "workflow.escalated", category: "approval",
         entityType: "workflow_task", entityId: t.id, actorId: actor.id, priority: "urgent",
         payload: { instanceId: t.instance_id, recipientId: target,
+          title: "Approval escalated after SLA breach",
           summary: "An approval has breached its SLA and been escalated to you.", actionUrl: "/wio-pio" },
         dedupeKey: `workflow.escalated:${t.id}`,
       });
@@ -119,6 +123,7 @@ export async function evaluateWorkflowTimers(actor: SessionUser): Promise<TimerS
       type: "workflow.task_reminded", category: "approval",
       entityType: "workflow_task", entityId: t.id, actorId: actor.id,
       payload: { instanceId: t.instance_id, recipientId: effective(t),
+        title: "Approval awaiting your decision",
         summary: "Reminder: an approval is awaiting your decision.", actionUrl: "/wio-pio" },
     });
     await query(`UPDATE portal.workflow_tasks SET reminded_at = NOW() WHERE id = $1`, [t.id]);
@@ -145,6 +150,7 @@ export async function evaluateWorkflowTimers(actor: SessionUser): Promise<TimerS
           type: "workflow.timed_out", category: "approval",
           entityType: "workflow_task", entityId: t.id, actorId: actor.id, priority: "urgent",
           payload: { instanceId: t.instance_id, recipientId: effective(t),
+            title: "Approval timed out",
             summary: "An approval has timed out and been escalated.", actionUrl: "/wio-pio" },
           dedupeKey: `workflow.timed_out:${t.id}`,
         });
@@ -154,6 +160,7 @@ export async function evaluateWorkflowTimers(actor: SessionUser): Promise<TimerS
             type: "workflow.escalated", category: "approval",
             entityType: "workflow_task", entityId: t.id, actorId: actor.id, priority: "urgent",
             payload: { instanceId: t.instance_id, recipientId: target,
+              title: "Timed-out approval escalated to you",
               summary: "A timed-out approval has been escalated to you.", actionUrl: "/wio-pio" },
             dedupeKey: `workflow.escalated:${t.id}`,
           });
