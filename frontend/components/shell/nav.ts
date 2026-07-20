@@ -47,6 +47,7 @@ export const NAV: NavGroup[] = [
     label: "Intelligence",
     items: [
       { label: "Knowledge Library", href: "/knowledge", screen: "S16" },
+      { label: "Workflow Definitions", href: "/workflow-definitions", screen: "S20" },
       { label: "API Health", href: "/api-health", screen: "S13" },
     ],
   },
