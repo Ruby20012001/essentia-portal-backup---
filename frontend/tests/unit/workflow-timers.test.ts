@@ -47,6 +47,10 @@ const SQL = {
   userLookup: /SELECT id FROM public\.users WHERE \(id::text/,
   startedBy: /SELECT started_by FROM portal\.workflow_instances/,
   remindedAt: /SET reminded_at = NOW\(\)/,
+  markStatus: /UPDATE portal\.workflow_tasks SET status = \$2/,
+  stampWarned: /SET sla_warned_at = NOW\(\)/,
+  stampBreached: /SET sla_breached_at = NOW\(\)/,
+  insertTask: /INSERT INTO portal\.workflow_tasks \(instance_id, group_no, assignee_user_id, assigned_at\)/,
 };
 
 const ASSIGNEE = "11111111-1111-4111-8111-111111111111";
@@ -82,6 +86,7 @@ describe("an idle sweep", () => {
       escalations: 0,
       reminders: 0,
       timeouts: 0,
+      timeoutFailures: 0,
     });
     expect(publishMock).not.toHaveBeenCalled();
     expect(actMock).not.toHaveBeenCalled();
@@ -117,6 +122,16 @@ describe("SLA warning", () => {
 
     expect(actMock).not.toHaveBeenCalled();
   });
+
+  it("fires once per task: selects only un-stamped tasks and stamps as it goes", async () => {
+    routes({ match: SQL.warn, rows: [task()] });
+
+    await evaluateWorkflowTimers(actor);
+
+    const [sql] = queryMock.mock.calls.find(([s]) => SQL.warn.test(String(s)))!;
+    expect(sql).toMatch(/sla_warned_at IS NULL/);
+    expect(queryMock).toHaveBeenCalledWith(expect.stringMatching(SQL.stampWarned), ["task-1"]);
+  });
 });
 
 /* ── 2. Breach + escalation ─────────────────────────────────────────────── */
@@ -134,6 +149,17 @@ describe("SLA breach", () => {
     expect(auditMock).toHaveBeenCalledWith(
       expect.objectContaining({ action: "WORKFLOW_SLA_BREACH", newValues: expect.objectContaining({ taskId: "task-1" }) }),
     );
+  });
+
+  it("fires once per task — no repeat audit row on every tick", async () => {
+    routes({ match: SQL.breach, rows: [task()] });
+
+    await evaluateWorkflowTimers(actor);
+
+    const [sql] = queryMock.mock.calls.find(([s]) => SQL.breach.test(String(s)))!;
+    expect(sql).toMatch(/sla_breached_at IS NULL/);
+    expect(queryMock).toHaveBeenCalledWith(expect.stringMatching(SQL.stampBreached), ["task-1"]);
+    expect(auditMock).toHaveBeenCalledTimes(1);
   });
 
   it("breach does NOT decide the task (WES §8: breach never approves/rejects)", async () => {
@@ -189,6 +215,94 @@ describe("SLA breach", () => {
 
     expect(r.escalations).toBe(0);
     expect(eventsOfType("workflow.escalated")).toHaveLength(0);
+  });
+});
+
+/* ── Escalation transfers ownership (WES §8) ────────────────────────────── */
+describe("escalation reassigns, it does not merely alert", () => {
+  const escalating = (): Handler[] => [
+    { match: SQL.breach, rows: [task()] },
+    { match: SQL.startedBy, rows: [{ started_by: BOSS }] },
+    { match: SQL.markStatus, rows: [{ id: "task-1" }] },
+  ];
+
+  it("marks the original task 'escalated' and materialises a task for the target", async () => {
+    routes(...escalating());
+
+    await evaluateWorkflowTimers(actor);
+
+    expect(queryMock).toHaveBeenCalledWith(expect.stringMatching(SQL.markStatus), ["task-1", "escalated"]);
+    expect(queryMock).toHaveBeenCalledWith(expect.stringMatching(SQL.insertTask), ["inst-1", 1, BOSS]);
+  });
+
+  it("the escalation task carries NO deadlines, so it cannot immediately re-breach", async () => {
+    routes(...escalating());
+
+    await evaluateWorkflowTimers(actor);
+
+    const [sql] = queryMock.mock.calls.find(([s]) => SQL.insertTask.test(String(s)))!;
+    expect(sql).not.toMatch(/sla_due_at|warn_at|timeout_at/);
+  });
+
+  it("never resurrects a task the target already decided", async () => {
+    routes(...escalating());
+
+    await evaluateWorkflowTimers(actor);
+
+    const [sql] = queryMock.mock.calls.find(([s]) => SQL.insertTask.test(String(s)))!;
+    expect(sql).toMatch(/status NOT IN \('approved', 'rejected'\)/);
+  });
+
+  it("records whether the transfer actually happened in the breach audit", async () => {
+    routes(...escalating());
+
+    await evaluateWorkflowTimers(actor);
+
+    expect(auditMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "WORKFLOW_SLA_BREACH",
+        newValues: expect.objectContaining({ escalatedTo: BOSS, transferred: true }),
+      }),
+    );
+  });
+
+  it("does not materialise a task when the original was decided concurrently (CAS lost)", async () => {
+    routes(
+      { match: SQL.breach, rows: [task()] },
+      { match: SQL.startedBy, rows: [{ started_by: BOSS }] },
+      { match: SQL.markStatus, rows: [] }, // CAS matched nothing
+    );
+
+    await evaluateWorkflowTimers(actor);
+
+    expect(queryMock).not.toHaveBeenCalledWith(expect.stringMatching(SQL.insertTask), expect.anything());
+    expect(auditMock).toHaveBeenCalledWith(
+      expect.objectContaining({ newValues: expect.objectContaining({ transferred: false }) }),
+    );
+  });
+
+  it("transfers on timeout_action='escalate' too, marking the original timed_out", async () => {
+    routes(
+      { match: SQL.timeout, rows: [task({ timeout_action: "escalate" })] },
+      { match: SQL.startedBy, rows: [{ started_by: BOSS }] },
+      { match: SQL.markStatus, rows: [{ id: "task-1" }] },
+    );
+
+    await evaluateWorkflowTimers(actor);
+
+    expect(queryMock).toHaveBeenCalledWith(expect.stringMatching(SQL.markStatus), ["task-1", "timed_out"]);
+    expect(queryMock).toHaveBeenCalledWith(expect.stringMatching(SQL.insertTask), ["inst-1", 1, BOSS]);
+  });
+
+  it("leaves the task PENDING when no target resolves — never strands the group", async () => {
+    routes(
+      { match: SQL.timeout, rows: [task({ timeout_action: "escalate" })] },
+      { match: SQL.startedBy, rows: [{ started_by: null }] },
+    );
+
+    await evaluateWorkflowTimers(actor);
+
+    expect(queryMock).not.toHaveBeenCalledWith(expect.stringMatching(SQL.markStatus), expect.anything());
   });
 });
 
@@ -264,6 +378,26 @@ describe("timeout actions", () => {
     expect(actMock).toHaveBeenCalledTimes(2);
     expect(r.timeouts).toBe(1); // the failed one is not counted as applied
   });
+
+  it("a failed timeout is COUNTED and AUDITED, never silently swallowed", async () => {
+    routes({ match: SQL.timeout, rows: [task({ timeout_action: "auto_approve" })] });
+    actMock.mockRejectedValueOnce(new Error("instance already completed"));
+
+    const r = await evaluateWorkflowTimers(actor);
+
+    expect(r.timeoutFailures).toBe(1);
+    expect(r.timeouts).toBe(0);
+    expect(auditMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "WORKFLOW_TIMEOUT_FAILED",
+        newValues: expect.objectContaining({
+          taskId: "task-1",
+          action: "auto_approve",
+          error: "instance already completed",
+        }),
+      }),
+    );
+  });
 });
 
 /* ── Notification payload contract ──────────────────────────────────────── */
@@ -320,6 +454,7 @@ describe("sweep is driven by stored deadlines, not tick timing", () => {
       escalations: 1,
       reminders: 1,
       timeouts: 1,
+      timeoutFailures: 0,
     });
   });
 });
