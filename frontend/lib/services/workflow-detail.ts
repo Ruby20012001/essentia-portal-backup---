@@ -1,6 +1,7 @@
 import { query } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
 import { RESOURCE_REF_SQL, RESOURCE_REF_JOINS } from "@/lib/services/workflow-inbox";
+import { describeCondition } from "@/lib/services/workflow-conditions";
 
 /**
  * Workflow timeline — the full approval chain for one instance: every group,
@@ -22,14 +23,23 @@ export type TimelineGroup = {
   quorum: number;
   state: "done" | "current" | "skipped" | "upcoming";
   approvers: TimelineApprover[];
+  conditionText: string | null; // plain-language gate, null when the group always runs
+  slaHours: number | null;
+  timeoutAction: string | null;
 };
 
 export type WorkflowDetail = {
   instanceId: string;
   workflowName: string;
+  workflowCode: string;
+  description: string | null;
   resourceRef: string | null;
+  resourceType: string;
   status: string;
   currentGroup: number;
+  startedBy: string | null;
+  startedAt: string;
+  completedAt: string | null;
   groups: TimelineGroup[];
   history: Array<{ action: string; groupNo: number | null; actor: string | null; comments: string | null; at: string }>;
 };
@@ -38,21 +48,39 @@ export async function getWorkflowDetail(_user: SessionUser, instanceId: string):
   const [inst] = await query<{
     workflow_code: string;
     workflow_name: string;
+    description: string | null;
     resource_ref: string | null;
+    resource_type: string;
     status: string;
     current_step: number;
+    started_by: string | null;
+    started_at: string;
+    completed_at: string | null;
   }>(
-    `SELECT i.workflow_code, d.name AS workflow_name, ${RESOURCE_REF_SQL} AS resource_ref,
-            i.status, i.current_step
+    `SELECT i.workflow_code, d.name AS workflow_name, d.description,
+            ${RESOURCE_REF_SQL} AS resource_ref, i.resource_type,
+            i.status, i.current_step,
+            sb.full_name AS started_by,
+            i.started_at::text AS started_at,
+            i.completed_at::text AS completed_at
      FROM portal.workflow_instances i
      JOIN portal.workflow_definitions d ON d.code = i.workflow_code${RESOURCE_REF_JOINS}
+     LEFT JOIN public.users sb ON sb.id = i.started_by
      WHERE i.id = $1`,
     [instanceId],
   );
   if (!inst) return null;
 
-  const groups = await query<{ group_no: number; name: string; quorum: number }>(
-    `SELECT group_no, name, quorum FROM portal.workflow_groups
+  const groups = await query<{
+    group_no: number;
+    name: string;
+    quorum: number;
+    condition: unknown;
+    sla_hours: number | null;
+    timeout_action: string | null;
+  }>(
+    `SELECT group_no, name, quorum, condition, sla_hours, timeout_action
+     FROM portal.workflow_groups
      WHERE definition_code = $1 ORDER BY group_no`,
     [inst.workflow_code],
   );
@@ -108,15 +136,30 @@ export async function getWorkflowDetail(_user: SessionUser, instanceId: string):
           .filter((h) => h.group_no === g.group_no)
           .map((h) => ({ name: h.approver_hint ?? "Assigned approver", status: null, delegatedTo: null, actedBy: null, actedAt: null }));
 
-    return { groupNo: g.group_no, name: g.name, quorum: g.quorum, state, approvers };
+    return {
+      groupNo: g.group_no,
+      name: g.name,
+      quorum: g.quorum,
+      state,
+      approvers,
+      conditionText: describeCondition(g.condition),
+      slaHours: g.sla_hours,
+      timeoutAction: g.timeout_action,
+    };
   });
 
   return {
     instanceId,
     workflowName: inst.workflow_name,
+    workflowCode: inst.workflow_code,
+    description: inst.description,
     resourceRef: inst.resource_ref,
+    resourceType: inst.resource_type,
     status: inst.status,
     currentGroup: inst.current_step,
+    startedBy: inst.started_by,
+    startedAt: inst.started_at,
+    completedAt: inst.completed_at,
     groups: timelineGroups,
     history: history.map((h) => ({ action: h.action, groupNo: h.group_no, actor: h.actor_name, comments: h.comments, at: h.acted_at })),
   };

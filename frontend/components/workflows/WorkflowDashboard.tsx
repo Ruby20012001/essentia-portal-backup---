@@ -82,7 +82,7 @@ function WorkflowCard({
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-3">
         <span className={`font-body text-xs ${sla.tone}`}>{sla.text}</span>
         <Link
-          href={`/approvals?instance=${item.instanceId}`}
+          href={`/workflows/${item.instanceId}`}
           className="shrink-0 rounded border border-line-strong px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-hover"
         >
           Open

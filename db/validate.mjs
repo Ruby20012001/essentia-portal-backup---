@@ -1272,6 +1272,46 @@ if (!failed) {
             LEFT JOIN portal.workflow_definitions d ON d.code = wd.definition_code`,
       ok: (v) => v === "true",
     },
+    {
+      // Screen 2 Audit tab — the read model unifies THREE existing sources for
+      // one instance. The load-bearing link is the one the task hinged on: a
+      // notification delivery joins back to the instance through its event's
+      // payload.instanceId. Mirrors getWorkflowAudit.
+      name: "wf-audit: aggregation links approvals + audit.log + notification deliveries to one instance",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000cafe0001'::uuid,'pio_approval','pio',
+                         '00000000-0000-4000-8000-0000cafe0002'::uuid, 1, 'pending');
+                 INSERT INTO portal.workflow_actions (instance_id, step_no, group_no, action, acted_by)
+                 VALUES ('00000000-0000-4000-8000-0000cafe0001'::uuid, 1, 1, 'approve',
+                         '00000000-0000-4000-8000-000000000003');
+                 INSERT INTO audit.log (user_id, actor_role, action, resource_type, resource_id, new_values)
+                 VALUES ('00000000-0000-4000-8000-0000000000a0','L1','WORKFLOW_SLA_BREACH','workflows',
+                         '00000000-0000-4000-8000-0000cafe0001'::uuid,
+                         '{"taskId":"t","escalatedTo":"00000000-0000-4000-8000-000000000002"}'::jsonb);
+                 INSERT INTO portal.events (id, event_type, category, entity_type, entity_id, payload)
+                 VALUES ('00000000-0000-4000-8000-0000cafe0003'::uuid,'workflow.step_pending','approval',
+                         'pio','00000000-0000-4000-8000-0000cafe0002'::uuid,
+                         '{"instanceId":"00000000-0000-4000-8000-0000cafe0001"}'::jsonb);
+                 INSERT INTO portal.notification_deliveries
+                   (event_id, recipient_id, channel, notification_type, status)
+                 VALUES ('00000000-0000-4000-8000-0000cafe0003'::uuid,
+                         '00000000-0000-4000-8000-000000000003','in_app','assignment','sent')`,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM portal.workflow_actions
+                 WHERE instance_id='00000000-0000-4000-8000-0000cafe0001'::uuid) = 1
+              AND (SELECT COUNT(*) FROM audit.log l
+                     WHERE l.action LIKE 'WORKFLOW\\_%'
+                       AND l.action NOT IN ('WORKFLOW_APPROVE','WORKFLOW_REJECT')
+                       AND l.resource_type='workflows'
+                       AND l.resource_id::text='00000000-0000-4000-8000-0000cafe0001') = 1
+              AND (SELECT COUNT(*)
+                     FROM portal.events e
+                     JOIN portal.notification_deliveries nd ON nd.event_id = e.id
+                     WHERE e.payload->>'instanceId' = '00000000-0000-4000-8000-0000cafe0001') = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

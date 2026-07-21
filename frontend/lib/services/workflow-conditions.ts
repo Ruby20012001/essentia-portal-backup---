@@ -109,3 +109,43 @@ export function validateCondition(node: unknown, depth = 0): { valid: boolean; e
   }
   return { valid: false, error: "node must be a logical (op+clauses) or comparison (field+op) predicate" };
 }
+
+const OP_WORDS: Record<string, string> = {
+  "==": "is", "!=": "is not", "<": "<", "<=": "≤", ">": ">", ">=": "≥",
+  in: "in", not_in: "not in", exists: "is set",
+};
+
+/** Human-readable amount: 50000000 → "₹5 Cr", 250000 → "₹2.5 L". */
+function describeValue(value: unknown): string {
+  if (Array.isArray(value)) return value.map(describeValue).join(", ");
+  if (typeof value === "number") {
+    if (Math.abs(value) >= 1e7) return `₹${+(value / 1e7).toFixed(2)} Cr`;
+    if (Math.abs(value) >= 1e5) return `₹${+(value / 1e5).toFixed(2)} L`;
+    return String(value);
+  }
+  if (typeof value === "string") return `"${value}"`;
+  return String(value);
+}
+
+/**
+ * Plain-language description of a condition for display (WES §7). Pure; returns
+ * null for "no condition" (always runs). Mirrors the DSL, not the evaluator —
+ * it never runs the predicate, it only reads it.
+ */
+export function describeCondition(node: unknown): string | null {
+  if (node === null || node === undefined) return null;
+  const n = asRecord(node);
+  if (!n) return null;
+
+  if (typeof n.op === "string" && LOGICAL_OPS.has(n.op)) {
+    const clauses = Array.isArray(n.clauses) ? n.clauses : [];
+    if (n.op === "not") return `not (${describeCondition(clauses[0]) ?? "…"})`;
+    const parts = clauses.map((c) => describeCondition(c) ?? "…");
+    return parts.length ? parts.join(n.op === "and" ? " and " : " or ") : null;
+  }
+  if (typeof n.field === "string" && typeof n.op === "string" && COMPARISON_OPS.has(n.op)) {
+    if (n.op === "exists") return `${n.field} is set`;
+    return `${n.field} ${OP_WORDS[n.op] ?? n.op} ${describeValue(n.value)}`;
+  }
+  return null;
+}
