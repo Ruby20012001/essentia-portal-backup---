@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type Item = {
   id: string;
@@ -208,6 +209,14 @@ export function NotificationCenter() {
               </ul>
             )}
           </div>
+
+          <Link
+            href="/notifications"
+            onClick={() => setOpen(false)}
+            className="block border-t border-line px-4 py-2.5 text-center font-body text-[11px] font-bold text-amber-deep hover:underline"
+          >
+            View all notifications
+          </Link>
         </div>
       ) : null}
     </div>

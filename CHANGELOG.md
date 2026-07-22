@@ -6,6 +6,30 @@
 
 ## Frontend-first phase (Phase 4 UI) — 2026-07-20 →
 
+- **S5 Workflow Builder** — `/workflow-builder/[code]` + `/new`: the visual editor
+  for a definition's approval chain — groups (add/edit/remove/reorder), quorum,
+  reject policy, conditions (DSL, `amount > ₹5 Cr`), SLA/warn/timeout/escalation,
+  and approvers by user/level/role/dynamic. Live validation; Save draft / Activate /
+  Duplicate / Archive. **Backend added (approved, read+write):** `workflow-builder.ts`
+  — `getWorkflowDefinitionDetail`, `createDefinition`, `updateDefinitionMeta`,
+  `saveDefinitionStructure` (atomic replace, one txn), `activateDefinition`; pure
+  `workflow-builder-shared.ts` `validateDefinitionStructure`; API routes
+  `POST /definitions`, `GET|PATCH /[code]`, `PUT /[code]/structure`, `POST /[code]/activate`.
+  Editing gated to inactive definitions with **no running instances** (duplicate →
+  edit → activate → archive). **No schema change** (existing columns only); +12 unit
+  tests, +3 harness checks. `/workflow-definitions` gains a "New workflow" button.
+- **S9 Notifications Center** — `/notifications`: full-page inbox over the existing
+  store — status tabs (all/unread/read/archived), category, search, read /
+  mark-all-read / archive / acknowledge, deep links; header bell gains "View all".
+  No backend change.
+- **S8 SLA Monitor** — `/sla-monitor`: approaching / breached / escalated / timed-out
+  counts, a 14-day warning/breach trend, and the in-flight items ranked by SLA risk.
+  Consumes `workflow-sla-monitor.ts` + `listApprovalsOverview` + `itemSlaRisk`. No backend change.
+- **S7 Active Delegations** — `/workflow-delegations`: admin register of standing
+  delegations — summary cards, filters, search, 9-col table, status badges, detail
+  drawer (audit + notification history), revoke. Read-only exposures only: extended
+  `listAllDelegations` (created-by, department, derived status/last-updated, pending
+  instance) + `getDelegationDetail`; `GET /api/workflows/delegations/[id]`. +2 harness checks.
 - **S2 Workflow Detail** — `/workflows/[id]`: header, vertical timeline (state
   markers), parallel cards + quorum indicator, conditional-skip viz, delegation
   chain, SLA badges, read-only AI advisory (no action buttons), Audit tab. Added

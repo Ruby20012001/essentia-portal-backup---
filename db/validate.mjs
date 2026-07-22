@@ -1312,6 +1312,162 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      // Screen 7 — listAllDelegations derives STATUS from existing timestamps
+      // only (no stored status column): revoked wins, then expiry (stamped OR
+      // window passed), then a future window, else live. Four fixtures, one per
+      // branch, must classify exactly.
+      name: "wf-delegation: status derived from timestamps (active/scheduled/expired/revoked)",
+      setupSql: `INSERT INTO portal.workflow_delegations
+                   (id, delegator_id, delegate_id, from_date, to_date, revoked_at, expired_at, created_by) VALUES
+                 ('00000000-0000-4000-8000-0000beef0101'::uuid,'00000000-0000-4000-8000-0000000000a0',
+                  '00000000-0000-4000-8000-000000000003', CURRENT_DATE-1, CURRENT_DATE+1, NULL, NULL,
+                  '00000000-0000-4000-8000-0000000000a0'),
+                 ('00000000-0000-4000-8000-0000beef0102'::uuid,'00000000-0000-4000-8000-0000000000a0',
+                  '00000000-0000-4000-8000-000000000003', CURRENT_DATE+2, CURRENT_DATE+5, NULL, NULL,
+                  '00000000-0000-4000-8000-0000000000a0'),
+                 ('00000000-0000-4000-8000-0000beef0103'::uuid,'00000000-0000-4000-8000-0000000000a0',
+                  '00000000-0000-4000-8000-000000000003', CURRENT_DATE-5, CURRENT_DATE-1, NULL, NULL,
+                  '00000000-0000-4000-8000-0000000000a0'),
+                 ('00000000-0000-4000-8000-0000beef0104'::uuid,'00000000-0000-4000-8000-0000000000a0',
+                  '00000000-0000-4000-8000-000000000003', CURRENT_DATE-1, CURRENT_DATE+1, NOW(), NULL,
+                  '00000000-0000-4000-8000-0000000000a0')`,
+      sql: `SELECT (COUNT(*) = 4 AND COUNT(*) FILTER (WHERE derived = expected) = 4)::TEXT AS v
+            FROM (
+              SELECT wd.id,
+                CASE
+                  WHEN wd.revoked_at IS NOT NULL THEN 'revoked'
+                  WHEN wd.expired_at IS NOT NULL OR wd.to_date < CURRENT_DATE THEN 'expired'
+                  WHEN wd.from_date > CURRENT_DATE THEN 'scheduled'
+                  ELSE 'active'
+                END AS derived,
+                x.expected
+              FROM portal.workflow_delegations wd
+              JOIN (VALUES
+                ('00000000-0000-4000-8000-0000beef0101'::uuid,'active'),
+                ('00000000-0000-4000-8000-0000beef0102'::uuid,'scheduled'),
+                ('00000000-0000-4000-8000-0000beef0103'::uuid,'expired'),
+                ('00000000-0000-4000-8000-0000beef0104'::uuid,'revoked')
+              ) x(id, expected) ON x.id = wd.id
+            ) t`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Screen 7 — getDelegationDetail aggregates EXISTING data for one standing
+      // delegation: (1) tasks it routed are workflow_tasks where the delegate
+      // stands in for the delegator, in scope; (2) audit history is audit.log
+      // rows keyed to the delegation id; (3) notification history is events for
+      // this delegation → deliveries. The scope filter must exclude other codes.
+      name: "wf-delegation: detail aggregates routed tasks (scoped), audit and notification history",
+      setupSql: `INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000beef0201'::uuid,'pio_approval','pio',
+                         '00000000-0000-4000-8000-0000beef0202'::uuid, 1, 'pending');
+                 INSERT INTO portal.workflow_tasks
+                   (instance_id, group_no, assignee_user_id, delegated_to_user_id, status)
+                 VALUES ('00000000-0000-4000-8000-0000beef0201'::uuid, 1,
+                         '00000000-0000-4000-8000-0000000000a0','00000000-0000-4000-8000-000000000003','pending');
+                 INSERT INTO portal.workflow_delegations
+                   (id, delegator_id, delegate_id, from_date, to_date, definition_code, created_by)
+                 VALUES ('00000000-0000-4000-8000-0000beef0210'::uuid,'00000000-0000-4000-8000-0000000000a0',
+                         '00000000-0000-4000-8000-000000000003', CURRENT_DATE-1, CURRENT_DATE+5,'pio_approval',
+                         '00000000-0000-4000-8000-0000000000a0');
+                 INSERT INTO audit.log (user_id, actor_role, action, resource_type, resource_id, new_values)
+                 VALUES ('00000000-0000-4000-8000-0000000000a0','L1','WORKFLOW_DELEGATION_CREATE','workflows',
+                         '00000000-0000-4000-8000-0000beef0210'::uuid,
+                         '{"delegationId":"00000000-0000-4000-8000-0000beef0210"}'::jsonb);
+                 INSERT INTO portal.events (id, event_type, category, entity_type, entity_id, payload)
+                 VALUES ('00000000-0000-4000-8000-0000beef0220'::uuid,'workflow.delegation_created','approval',
+                         'workflow_delegation','00000000-0000-4000-8000-0000beef0210'::uuid,'{}'::jsonb);
+                 INSERT INTO portal.notification_deliveries
+                   (event_id, recipient_id, channel, notification_type, status)
+                 VALUES ('00000000-0000-4000-8000-0000beef0220'::uuid,
+                         '00000000-0000-4000-8000-000000000003','in_app','assignment','sent')`,
+      sql: `SELECT (
+              EXISTS (
+                SELECT 1 FROM portal.workflow_tasks t
+                JOIN portal.workflow_instances i ON i.id = t.instance_id
+                WHERE t.instance_id = '00000000-0000-4000-8000-0000beef0201'::uuid
+                  AND t.assignee_user_id='00000000-0000-4000-8000-0000000000a0'
+                  AND t.delegated_to_user_id='00000000-0000-4000-8000-000000000003'
+                  AND t.status='pending' AND i.status='pending'
+                  AND (NULL IS NULL OR i.workflow_code='pio_approval')
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM portal.workflow_tasks t
+                JOIN portal.workflow_instances i ON i.id = t.instance_id
+                WHERE t.instance_id = '00000000-0000-4000-8000-0000beef0201'::uuid
+                  AND t.assignee_user_id='00000000-0000-4000-8000-0000000000a0'
+                  AND t.delegated_to_user_id='00000000-0000-4000-8000-000000000003'
+                  AND i.workflow_code='a_different_scope'
+              )
+              AND (SELECT COUNT(*) FROM audit.log l
+                     WHERE l.resource_type='workflows'
+                       AND l.resource_id::text='00000000-0000-4000-8000-0000beef0210'
+                       AND l.action LIKE 'WORKFLOW\\_DELEGATION%') = 1
+              AND (SELECT COUNT(*)
+                     FROM portal.events e
+                     JOIN portal.notification_deliveries nd ON nd.event_id = e.id
+                     WHERE e.entity_type='workflow_delegation'
+                       AND e.entity_id::text='00000000-0000-4000-8000-0000beef0210') = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Screen 5 (Workflow Builder) — getWorkflowDefinitionDetail reads a
+      // definition's groups (ordered by group_no) and their approvers.
+      name: "wf-builder: definition detail reads groups (ordered) + approvers",
+      setupSql: `INSERT INTO portal.workflow_definitions (code, name, is_active, updated_at)
+                 VALUES ('abed_wf','Abed builder demo', FALSE, NOW());
+                 INSERT INTO portal.workflow_groups (id, definition_code, group_no, name, quorum) VALUES
+                   ('00000000-0000-4000-8000-0000abed0001'::uuid,'abed_wf',1,'First',1),
+                   ('00000000-0000-4000-8000-0000abed0002'::uuid,'abed_wf',2,'Second',1);
+                 INSERT INTO portal.workflow_group_approvers (group_id, approver_type, approver_level, sort_order) VALUES
+                   ('00000000-0000-4000-8000-0000abed0001'::uuid,'access_level','L1',1),
+                   ('00000000-0000-4000-8000-0000abed0001'::uuid,'access_level','L2',2),
+                   ('00000000-0000-4000-8000-0000abed0002'::uuid,'access_level','L0',1)`,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM portal.workflow_groups WHERE definition_code='abed_wf') = 2
+              AND (SELECT string_agg(name, ',' ORDER BY group_no)
+                     FROM portal.workflow_groups WHERE definition_code='abed_wf') = 'First,Second'
+              AND (SELECT COUNT(*) FROM portal.workflow_group_approvers a
+                     JOIN portal.workflow_groups g ON g.id = a.group_id
+                     WHERE g.definition_code='abed_wf') = 3
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Screen 5 — the edit gate: a definition with a pending instance counts as
+      // "running" and must be refused for editing (edit only draft copies).
+      name: "wf-builder: a definition with a pending instance is detected as running (edit gate)",
+      setupSql: `INSERT INTO portal.workflow_definitions (code, name, is_active, updated_at)
+                 VALUES ('abed_gate','Abed gate', FALSE, NOW());
+                 INSERT INTO portal.workflow_instances
+                   (id, workflow_code, resource_type, resource_id, current_step, status)
+                 VALUES ('00000000-0000-4000-8000-0000abed0101'::uuid,'abed_gate','projects',
+                         '00000000-0000-4000-8000-0000abed0102'::uuid, 1, 'pending')`,
+      sql: `SELECT ((SELECT COUNT(*) FROM portal.workflow_instances
+                     WHERE workflow_code='abed_gate' AND status='pending') = 1)::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Screen 5 — the atomic structure save replaces groups by DELETE-then-
+      // reinsert; it relies on approvers cascading from workflow_groups.
+      name: "wf-builder: deleting a group cascades its approvers (structure replace relies on this)",
+      setupSql: `INSERT INTO portal.workflow_definitions (code, name, is_active, updated_at)
+                 VALUES ('abed_casc','Abed cascade', FALSE, NOW());
+                 INSERT INTO portal.workflow_groups (id, definition_code, group_no, name, quorum)
+                 VALUES ('00000000-0000-4000-8000-0000abed0201'::uuid,'abed_casc',1,'G',1);
+                 INSERT INTO portal.workflow_group_approvers (group_id, approver_type, approver_level, sort_order)
+                 VALUES ('00000000-0000-4000-8000-0000abed0201'::uuid,'access_level','L1',1);
+                 DELETE FROM portal.workflow_groups WHERE definition_code='abed_casc'`,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM portal.workflow_groups WHERE definition_code='abed_casc') = 0
+              AND (SELECT COUNT(*) FROM portal.workflow_group_approvers
+                     WHERE group_id='00000000-0000-4000-8000-0000abed0201') = 0
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

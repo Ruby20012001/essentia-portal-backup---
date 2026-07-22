@@ -18,12 +18,22 @@ export default async function WorkflowDefinitionsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="mb-1 font-heading text-4xl text-white">Workflow Definitions</h1>
-        <p className="font-body text-sm font-light text-muted">
-          The approval chains the portal runs. Archiving stops new workflows starting — work already
-          running is never interrupted.
-        </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="mb-1 font-heading text-4xl text-white">Workflow Definitions</h1>
+          <p className="font-body text-sm font-light text-muted">
+            The approval chains the portal runs. Archiving stops new workflows starting — work already
+            running is never interrupted.
+          </p>
+        </div>
+        {decision.allowed ? (
+          <a
+            href="/workflow-builder/new"
+            className="shrink-0 rounded-lg border border-line-strong bg-canvas px-4 py-2 font-body text-xs font-bold text-white transition-colors hover:bg-hover"
+          >
+            + New workflow
+          </a>
+        ) : null}
       </div>
 
       {!decision.allowed ? (
