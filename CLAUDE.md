@@ -137,3 +137,15 @@ When they are incomplete: ask Ruby only for the missing element, then build.
 - VisionCAM photo required before any billing milestone is triggered
 - TL must scroll to bottom of Communication Spine letter before send button activates
 - Exit protocol fires at exactly 11:59pm — all 6 removal actions simultaneously
+
+## PROJECT MEMORY (read these after this file, every session)
+This file is the permanent brief. Live build state lives in six companion docs at
+the repo root — keep them current, and regenerate HANDOFF.md before context runs out:
+- **PROJECT.md** — one-page orientation: what's built, what's next, how to run.
+- **ARCHITECTURE.md** — system shape + load-bearing patterns (points into `docs/architecture/`).
+- **DECISIONS.md** — the ADR log (why we did it this way; don't re-litigate).
+- **TODO.md** — living backlog and what's blocked.
+- **CHANGELOG.md** — shipped increments, newest first, with commit refs.
+- **HANDOFF.md** — "resume here": the current task, the exact blocking decision, gotchas.
+
+Reading order for a cold start: **CLAUDE.md → PROJECT.md → HANDOFF.md**.
