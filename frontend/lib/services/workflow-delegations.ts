@@ -267,25 +267,318 @@ export async function listDelegations(user: SessionUser) {
 }
 
 /**
- * Every delegation in the organisation — the admin Active Delegations view.
- * listDelegations() is deliberately scoped to the caller; this is the org-wide
- * read, so the CALLER must gate it (assign:workflows / leadership) before use.
- * Read-only.
+ * Lifecycle of a standing delegation, derived from existing timestamps only —
+ * no stored status column, no new field. Precedence: an explicit revoke wins,
+ * then expiry (stamped OR the window has passed), then a not-yet-started window,
+ * else it is live.
  */
-export async function listAllDelegations(): Promise<Array<Record<string, unknown>>> {
-  return query<Record<string, unknown>>(
-    `SELECT wd.id, wd.delegator_id, du.full_name AS delegator_name,
-            wd.delegate_id, de.full_name AS delegate_name,
-            wd.from_date, wd.to_date, wd.definition_code, wd.reason,
-            d.name AS definition_name,
-            wd.revoked_at, wd.expired_at, wd.created_at,
-            (wd.revoked_at IS NULL AND wd.from_date <= CURRENT_DATE AND wd.to_date >= CURRENT_DATE) AS active
+export type DelegationStatus = "active" | "scheduled" | "revoked" | "expired";
+
+/** A row in the admin Active Delegations register (read-only). */
+export type DelegationSummary = {
+  id: string;
+  type: "standing";
+  delegatorId: string;
+  delegatorName: string;
+  delegatorDepartment: string | null;
+  delegateId: string;
+  delegateName: string;
+  definitionCode: string | null;
+  definitionName: string | null;
+  scopeLabel: string;
+  fromDate: string;
+  toDate: string;
+  reason: string | null;
+  createdById: string | null;
+  createdByName: string | null;
+  createdAt: string;
+  revokedAt: string | null;
+  expiredAt: string | null;
+  lastUpdated: string;
+  status: DelegationStatus;
+  pendingCount: number;
+  /** The single pending affected instance, when there is exactly one; else null. */
+  openInstanceId: string | null;
+};
+
+// Status + "last updated" are DERIVED in SQL from existing columns (WES §9); no
+// status/updated_at is stored. Kept as a shared fragment so the list and the
+// detail read compute them identically.
+const STATUS_SQL = `CASE
+    WHEN wd.revoked_at IS NOT NULL THEN 'revoked'
+    WHEN wd.expired_at IS NOT NULL OR wd.to_date < CURRENT_DATE THEN 'expired'
+    WHEN wd.from_date > CURRENT_DATE THEN 'scheduled'
+    ELSE 'active'
+  END`;
+const LAST_UPDATED_SQL = `COALESCE(wd.revoked_at, wd.expired_at, wd.created_at)::text`;
+// Order: live first, then scheduled, then closed (revoked/expired); newest within.
+const STATUS_RANK_SQL = `CASE
+    WHEN wd.revoked_at IS NOT NULL OR wd.expired_at IS NOT NULL OR wd.to_date < CURRENT_DATE THEN 2
+    WHEN wd.from_date > CURRENT_DATE THEN 1
+    ELSE 0
+  END`;
+
+type DelegationRow = {
+  id: string;
+  delegator_id: string;
+  delegator_name: string;
+  delegator_department: string | null;
+  delegate_id: string;
+  delegate_name: string;
+  definition_code: string | null;
+  definition_name: string | null;
+  from_date: string;
+  to_date: string;
+  reason: string | null;
+  created_by: string | null;
+  created_by_name: string | null;
+  created_at: string;
+  revoked_at: string | null;
+  expired_at: string | null;
+  last_updated: string;
+  status: DelegationStatus;
+  pending_count: number;
+  one_instance_id: string | null;
+};
+
+function toSummary(r: DelegationRow): DelegationSummary {
+  const pendingCount = Number(r.pending_count ?? 0);
+  return {
+    id: r.id,
+    type: "standing",
+    delegatorId: r.delegator_id,
+    delegatorName: r.delegator_name,
+    delegatorDepartment: r.delegator_department,
+    delegateId: r.delegate_id,
+    delegateName: r.delegate_name,
+    definitionCode: r.definition_code,
+    definitionName: r.definition_name,
+    scopeLabel: r.definition_name ?? (r.definition_code ? r.definition_code : "All workflows"),
+    fromDate: r.from_date,
+    toDate: r.to_date,
+    reason: r.reason,
+    createdById: r.created_by,
+    createdByName: r.created_by_name,
+    createdAt: r.created_at,
+    revokedAt: r.revoked_at,
+    expiredAt: r.expired_at,
+    lastUpdated: r.last_updated,
+    status: r.status,
+    pendingCount,
+    // "Open workflow" is only unambiguous when exactly one instance is pending.
+    openInstanceId: pendingCount === 1 ? r.one_instance_id : null,
+  };
+}
+
+/**
+ * Every standing delegation in the organisation — the admin Active Delegations
+ * register. listDelegations() is deliberately scoped to the caller; this is the
+ * org-wide read, so the CALLER must gate it (assign:workflows / leadership)
+ * before use. Read-only: it aggregates existing rows and derives status,
+ * "last updated", and the pending-instance count from them — nothing is stored.
+ */
+export async function listAllDelegations(): Promise<DelegationSummary[]> {
+  const rows = await query<DelegationRow>(
+    `SELECT wd.id,
+            wd.delegator_id, du.full_name AS delegator_name, ddep.name AS delegator_department,
+            wd.delegate_id,  de.full_name AS delegate_name,
+            wd.definition_code, d.name AS definition_name,
+            wd.from_date::text AS from_date, wd.to_date::text AS to_date,
+            wd.reason,
+            wd.created_by, cb.full_name AS created_by_name,
+            wd.created_at::text AS created_at,
+            wd.revoked_at::text AS revoked_at, wd.expired_at::text AS expired_at,
+            ${LAST_UPDATED_SQL} AS last_updated,
+            ${STATUS_SQL} AS status,
+            pend.n AS pending_count, pend.one_id AS one_instance_id
      FROM portal.workflow_delegations wd
      JOIN public.users du ON du.id = wd.delegator_id
      JOIN public.users de ON de.id = wd.delegate_id
+     LEFT JOIN public.departments ddep ON ddep.id = du.department_id
+     LEFT JOIN public.users cb ON cb.id = wd.created_by
      LEFT JOIN portal.workflow_definitions d ON d.code = wd.definition_code
-     ORDER BY (wd.revoked_at IS NULL AND wd.to_date >= CURRENT_DATE) DESC, wd.created_at DESC`,
+     LEFT JOIN LATERAL (
+       SELECT COUNT(DISTINCT t.instance_id)::int AS n, MIN(t.instance_id::text) AS one_id
+       FROM portal.workflow_tasks t
+       JOIN portal.workflow_instances i ON i.id = t.instance_id
+       WHERE t.assignee_user_id = wd.delegator_id
+         AND t.delegated_to_user_id = wd.delegate_id
+         AND t.status = 'pending' AND i.status = 'pending'
+         AND (wd.definition_code IS NULL OR i.workflow_code = wd.definition_code)
+     ) pend ON TRUE
+     ORDER BY ${STATUS_RANK_SQL}, wd.created_at DESC`,
   );
+  return rows.map(toSummary);
+}
+
+export type DelegationTask = {
+  instanceId: string;
+  workflowCode: string;
+  workflowName: string | null;
+  resourceType: string;
+  groupNo: number;
+  taskStatus: string;
+  instanceStatus: string;
+  assignedAt: string;
+  slaDueAt: string | null;
+};
+
+export type DelegationAuditEntry = { at: string; action: string; actor: string | null; detail: string | null };
+export type DelegationNotification = {
+  at: string;
+  eventType: string;
+  recipient: string | null;
+  channel: string | null;
+  status: string | null;
+};
+
+export type DelegationDetail = DelegationSummary & {
+  delegateDepartment: string | null;
+  tasksAffected: DelegationTask[];
+  pendingApprovals: DelegationTask[];
+  audit: DelegationAuditEntry[];
+  notifications: DelegationNotification[];
+};
+
+function humanizeDelegationAction(action: string): string {
+  if (action === "WORKFLOW_DELEGATION_CREATE") return "Delegation created";
+  if (action === "WORKFLOW_DELEGATION_REVOKE") return "Delegation revoked";
+  if (action === "WORKFLOW_DELEGATION_EXPIRE") return "Delegation expired";
+  return action.replace(/^WORKFLOW_/, "").replace(/_/g, " ").toLowerCase();
+}
+
+/**
+ * One standing delegation, fully expanded for the admin detail drawer. READ-ONLY
+ * and purely aggregative — it joins existing rows and derives everything:
+ *   - tasks affected / pending approvals  ← workflow_tasks stamped by this
+ *       delegation (assignee = delegator, delegated_to = delegate, in scope)
+ *   - audit history                       ← audit.log rows keyed to the delegation id
+ *   - notification history                ← events (entity = this delegation) → deliveries
+ * Nothing is copied into a new table and no new field is stored. Returns null if
+ * the delegation does not exist. The CALLER must gate (assign:workflows).
+ */
+export async function getDelegationDetail(id: string): Promise<DelegationDetail | null> {
+  const [core] = await query<DelegationRow & { delegate_department: string | null }>(
+    `SELECT wd.id,
+            wd.delegator_id, du.full_name AS delegator_name, ddep.name AS delegator_department,
+            wd.delegate_id,  de.full_name AS delegate_name,  edep.name AS delegate_department,
+            wd.definition_code, d.name AS definition_name,
+            wd.from_date::text AS from_date, wd.to_date::text AS to_date,
+            wd.reason,
+            wd.created_by, cb.full_name AS created_by_name,
+            wd.created_at::text AS created_at,
+            wd.revoked_at::text AS revoked_at, wd.expired_at::text AS expired_at,
+            ${LAST_UPDATED_SQL} AS last_updated,
+            ${STATUS_SQL} AS status,
+            0 AS pending_count, NULL AS one_instance_id
+     FROM portal.workflow_delegations wd
+     JOIN public.users du ON du.id = wd.delegator_id
+     JOIN public.users de ON de.id = wd.delegate_id
+     LEFT JOIN public.departments ddep ON ddep.id = du.department_id
+     LEFT JOIN public.departments edep ON edep.id = de.department_id
+     LEFT JOIN public.users cb ON cb.id = wd.created_by
+     LEFT JOIN portal.workflow_definitions d ON d.code = wd.definition_code
+     WHERE wd.id = $1`,
+    [id],
+  );
+  if (!core) return null;
+
+  // Tasks this delegation routed: the delegate stands in for the delegator, in
+  // scope. Pending approvals are the live subset (task + instance still pending).
+  const taskRows = await query<{
+    instance_id: string;
+    workflow_code: string;
+    workflow_name: string | null;
+    resource_type: string;
+    group_no: number;
+    task_status: string;
+    instance_status: string;
+    assigned_at: string;
+    sla_due_at: string | null;
+  }>(
+    `SELECT t.instance_id, i.workflow_code, d.name AS workflow_name, i.resource_type,
+            t.group_no, t.status AS task_status, i.status AS instance_status,
+            t.assigned_at::text AS assigned_at, t.sla_due_at::text AS sla_due_at
+     FROM portal.workflow_tasks t
+     JOIN portal.workflow_instances i ON i.id = t.instance_id
+     LEFT JOIN portal.workflow_definitions d ON d.code = i.workflow_code
+     WHERE t.assignee_user_id = $1 AND t.delegated_to_user_id = $2
+       AND ($3::text IS NULL OR i.workflow_code = $3)
+     ORDER BY t.assigned_at DESC`,
+    [core.delegator_id, core.delegate_id, core.definition_code],
+  );
+  const tasksAffected: DelegationTask[] = taskRows.map((t) => ({
+    instanceId: t.instance_id,
+    workflowCode: t.workflow_code,
+    workflowName: t.workflow_name,
+    resourceType: t.resource_type,
+    groupNo: t.group_no,
+    taskStatus: t.task_status,
+    instanceStatus: t.instance_status,
+    assignedAt: t.assigned_at,
+    slaDueAt: t.sla_due_at,
+  }));
+  const pendingApprovals = tasksAffected.filter(
+    (t) => t.taskStatus === "pending" && t.instanceStatus === "pending",
+  );
+  const pendingInstances = [...new Set(pendingApprovals.map((t) => t.instanceId))];
+
+  const auditRows = await query<{ action: string; at: string; actor: string | null }>(
+    `SELECT l.action, l.created_at::text AS at, u.full_name AS actor
+     FROM audit.log l
+     LEFT JOIN public.users u ON u.id = l.user_id
+     WHERE l.resource_type = 'workflows' AND l.resource_id::text = $1
+       AND l.action LIKE 'WORKFLOW\\_DELEGATION%'
+     ORDER BY l.created_at DESC`,
+    [id],
+  );
+  const audit: DelegationAuditEntry[] = auditRows.map((a) => ({
+    at: a.at,
+    action: humanizeDelegationAction(a.action),
+    actor: a.actor,
+    detail: null,
+  }));
+
+  const notifRows = await query<{
+    event_type: string;
+    at: string;
+    recipient: string | null;
+    channel: string | null;
+    status: string | null;
+  }>(
+    `SELECT e.event_type, nd.created_at::text AS at, r.full_name AS recipient,
+            nd.channel, nd.status
+     FROM portal.events e
+     JOIN portal.notification_deliveries nd ON nd.event_id = e.id
+     LEFT JOIN public.users r ON r.id = nd.recipient_id
+     WHERE e.entity_type = 'workflow_delegation' AND e.entity_id::text = $1
+     ORDER BY nd.created_at DESC`,
+    [id],
+  );
+  const notifications: DelegationNotification[] = notifRows.map((n) => ({
+    at: n.at,
+    eventType: n.event_type.replace(/^workflow\./, "").replace(/_/g, " "),
+    recipient: n.recipient,
+    channel: n.channel,
+    status: n.status,
+  }));
+
+  const summary = toSummary({
+    ...core,
+    pending_count: pendingApprovals.length,
+    one_instance_id: pendingInstances[0] ?? null,
+  });
+
+  return {
+    ...summary,
+    // A standing delegation points at one instance only when exactly one is live.
+    openInstanceId: pendingInstances.length === 1 ? pendingInstances[0]! : null,
+    delegateDepartment: core.delegate_department,
+    tasksAffected,
+    pendingApprovals,
+    audit,
+    notifications,
+  };
 }
 
 /**

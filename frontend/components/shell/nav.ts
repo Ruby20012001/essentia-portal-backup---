@@ -13,6 +13,7 @@ export const NAV: NavGroup[] = [
     items: [
       { label: "Dashboard", href: "/dashboard", screen: "S2" },
       { label: "My Approvals", href: "/approvals", screen: "S4b" },
+      { label: "Notifications", href: "/notifications", screen: "S23" },
       { label: "Workflows", href: "/workflows", screen: "S19" },
       { label: "COO Operations", href: "/coo", screen: "S8" },
       { label: "Founder Morning Brief", href: "/founder-brief", screen: "S18" },
@@ -48,6 +49,8 @@ export const NAV: NavGroup[] = [
     items: [
       { label: "Knowledge Library", href: "/knowledge", screen: "S16" },
       { label: "Workflow Definitions", href: "/workflow-definitions", screen: "S20" },
+      { label: "Active Delegations", href: "/workflow-delegations", screen: "S21" },
+      { label: "SLA Monitor", href: "/sla-monitor", screen: "S22" },
       { label: "API Health", href: "/api-health", screen: "S13" },
     ],
   },

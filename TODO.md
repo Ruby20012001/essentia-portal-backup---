@@ -5,31 +5,17 @@
 > [`docs/architecture/TECH_DEBT.md`](docs/architecture/TECH_DEBT.md); roadmap:
 > [`docs/architecture/ROADMAP.md`](docs/architecture/ROADMAP.md).
 
-## 🔴 In progress / blocked
+## ✅ Phase 4 frontend — COMPLETE (2026-07-22)
+All 10 workflow UI screens shipped and verified. This arc closed S7 Active
+Delegations, S8 SLA Monitor, S9 Notifications Center, and S5 Workflow Builder
+(the last, with its approved read+write backend). See [`CHANGELOG.md`](CHANGELOG.md).
+Backend stays frozen again except where a future screen genuinely needs a read model.
 
-### S7 Active Delegations — PAUSED, awaiting Monica's decision
-Backend verified; the fully-supported core is buildable now (6 summary cards,
-table minus 2 cols, 6 of 7 filters, revoke). Reported gaps need a call before
-building the *complete* screen — details in [`HANDOFF.md`](HANDOFF.md):
-- **Created By** column — `created_by` exists but `listAllDelegations()` doesn't resolve the name.
-- **Department** filter — `users.department_id` exists but isn't exposed.
-- **Detail drawer** (4 sections) — data exists (audit.log by delegationId, tasks by
-  delegate, pending approvals, notification history via events `entity_id`), no read service yet.
-- **"Last Updated"** — no `updated_at` column; proposed derivation `COALESCE(revoked_at, expired_at, created_at)`.
-- **"Open workflow"** — a *standing* delegation has no single instance; needs an agreed interpretation.
-
-**Two paths offered:** (A) approve the read-only exposures (extend
-`listAllDelegations` for created_by/department + add `getDelegationDetail(id)`) and
-build the complete screen; or (B) stay "existing services only" and ship the
-supported core now, leaving the drawer, Created By and Department filter out.
-**Do not build S7 until Monica picks A or B.**
-
-## 🟡 Next (frontend-first phase, in order)
-- **S8 SLA Monitor** — consume `workflow-sla-monitor.ts` (already built: counts + zero-filled trend).
-- **S9 Notifications Center** — over `portal.notifications` / `notification_deliveries`.
-- **S5 Workflow Builder (LAST)** — the visual definition editor; consumes
-  `workflow-definitions.ts` (already built). Biggest + riskiest, deliberately last.
-- Re-check every new screen at 320 / 768 / 1024 / 1440 for horizontal scroll.
+## 🟡 Next candidates (no longer workflow-frontend)
+- **Wire the "Edit" journeys** end-to-end with real definitions once business
+  authors start building chains (the builder is live; seed real approval flows).
+- Velocity Gates below are the highest-value remaining product work.
+- Re-check every new screen at 320 / 768 / 1024 / 1440 for horizontal scroll (standing rule).
 
 ## 🟢 Velocity Gates still open (Brief §35)
 - **#1 VisionCAM billing** live on every active site (photo required before any billing milestone).
