@@ -223,3 +223,27 @@ JOIN (VALUES
 WHERE g.definition_code = 'wio_approval'
   AND ga.group_id = g.id
   AND ga.approver_user_id IS NULL;
+
+-- ---------------------------------------------------------------------
+-- Design Room (S5) — DEV ONLY. A realistic 14-stage Drawing Ladder for
+-- ED/26-27/901 (Mehra Residence, in design_development) so the tracker has
+-- data: CP -> SLD -> FI -> TP -> GFC -> AB. 7 complete (50%), 2 awaiting
+-- approval, 1 in progress, 4 to come.
+-- ---------------------------------------------------------------------
+INSERT INTO ee.design_stages
+  (project_id, stage_no, stage_name, drawing_level, status, actual_date, planned_date) VALUES
+  ('00000000-0000-4000-8000-00000000a001'::uuid, 1,'Conceptualisation, Client Brief & Layout Finalisation','CP','complete','2026-05-12',NULL),
+  ('00000000-0000-4000-8000-00000000a001'::uuid, 2,'Structure SLD for Tendering','SLD','complete','2026-05-20',NULL),
+  ('00000000-0000-4000-8000-00000000a001'::uuid, 3,'MEP First Cut SLD — HVAC, Electrical, Plumbing','SLD','complete','2026-05-28',NULL),
+  ('00000000-0000-4000-8000-00000000a001'::uuid, 4,'External Elevation Design & Concept','SLD','complete','2026-06-04',NULL),
+  ('00000000-0000-4000-8000-00000000a001'::uuid, 5,'External Elevation Design Finalisation','FI','complete','2026-06-11',NULL),
+  ('00000000-0000-4000-8000-00000000a001'::uuid, 6,'Structure Drawings GFC','GFC','complete','2026-06-18',NULL),
+  ('00000000-0000-4000-8000-00000000a001'::uuid, 7,'Furniture & Joinery Layout','TP','complete','2026-06-25',NULL),
+  ('00000000-0000-4000-8000-00000000a001'::uuid, 8,'Ceiling & Lighting GFC','GFC','pending_approval',NULL,'2026-07-24'),
+  ('00000000-0000-4000-8000-00000000a001'::uuid, 9,'Flooring & Finishes Schedule','TP','pending_approval',NULL,'2026-07-28'),
+  ('00000000-0000-4000-8000-00000000a001'::uuid,10,'Kitchen & Wardrobe GFC','GFC','in_progress',NULL,'2026-08-05'),
+  ('00000000-0000-4000-8000-00000000a001'::uuid,11,'Bathroom Details GFC','GFC','not_started',NULL,'2026-08-12'),
+  ('00000000-0000-4000-8000-00000000a001'::uuid,12,'Electrical & Automation GFC','GFC','not_started',NULL,'2026-08-18'),
+  ('00000000-0000-4000-8000-00000000a001'::uuid,13,'Final GFC Set Compilation','GFC','not_started',NULL,'2026-08-25'),
+  ('00000000-0000-4000-8000-00000000a001'::uuid,14,'As-Built Drawings','AB','not_started',NULL,'2026-09-30')
+ON CONFLICT (project_id, stage_no) DO NOTHING;
