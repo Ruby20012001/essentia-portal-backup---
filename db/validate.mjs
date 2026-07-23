@@ -1499,6 +1499,24 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      // WIO/GFC approval on the engine (028) — the definition seeds the three
+      // internal sign-off groups (Vishakha → Yoginder → Khushpreet), active, one
+      // approver each, ready for startWorkflow('wio_approval','wio', id).
+      name: "wf-wio: wio_approval seeds the active 3-group GFC sign-off chain",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM portal.workflow_definitions
+                 WHERE code='wio_approval' AND is_active AND resource_type='wio') = 1
+              AND (SELECT COUNT(*) FROM portal.workflow_groups WHERE definition_code='wio_approval') = 3
+              AND (SELECT COUNT(*) FROM portal.workflow_group_approvers a
+                     JOIN portal.workflow_groups g ON g.id = a.group_id
+                     WHERE g.definition_code='wio_approval') = 3
+              AND (SELECT string_agg(name, ' -> ' ORDER BY group_no)
+                     FROM portal.workflow_groups WHERE definition_code='wio_approval')
+                  = 'WIO / GFC Head sign-off -> Design sign-off -> Production Head sign-off'
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

@@ -206,3 +206,20 @@ JOIN portal.workflow_groups g ON g.definition_code = 'sla_demo' AND g.group_no =
 WHERE NOT EXISTS (
   SELECT 1 FROM portal.workflow_group_approvers ga WHERE ga.group_id = g.id
 );
+
+-- ---------------------------------------------------------------------
+-- WIO / GFC approval (028) — DEV ONLY. Map the three sign-off groups to
+-- fixture users so the chain resolves and runs without a Keka sync:
+--   Vishakha → Dev CRM TL · Yoginder → Dev COO · Khushpreet → Dev Founder.
+-- ---------------------------------------------------------------------
+UPDATE portal.workflow_group_approvers ga
+SET approver_user_id = m.uid::uuid
+FROM portal.workflow_groups g
+JOIN (VALUES
+  (1, '00000000-0000-4000-8000-000000000001'),
+  (2, '00000000-0000-4000-8000-000000000003'),
+  (3, '00000000-0000-4000-8000-000000000002')
+) AS m(gno, uid) ON m.gno = g.group_no
+WHERE g.definition_code = 'wio_approval'
+  AND ga.group_id = g.id
+  AND ga.approver_user_id IS NULL;
