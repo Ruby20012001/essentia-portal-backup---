@@ -1537,6 +1537,25 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      // VisionCAM (S3) — the photo log seeds for ED/26-27/903 (4 captures, 3 QC
+      // pass) and a photo-gated billing milestone is blocked awaiting a photo
+      // (trigger_type='visioncam', not invoice_raised) — the Gate-1 surface.
+      name: "visioncam: photo log + photo-gated (blocked) billing milestone seed",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM ee.visioncam_photos
+                 WHERE project_id='00000000-0000-4000-8000-00000000a003') = 4
+              AND (SELECT COUNT(*) FROM ee.visioncam_photos
+                     WHERE project_id='00000000-0000-4000-8000-00000000a003' AND qc_status='pass') = 3
+              AND (SELECT COUNT(*) FROM ee.billing_milestones
+                     WHERE project_id='00000000-0000-4000-8000-00000000a003'
+                       AND trigger_type='visioncam' AND NOT invoice_raised) = 1
+              AND (SELECT amount FROM ee.billing_milestones
+                     WHERE project_id='00000000-0000-4000-8000-00000000a003'
+                       AND trigger_type='visioncam') = 240000
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

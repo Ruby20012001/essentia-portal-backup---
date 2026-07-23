@@ -3,8 +3,16 @@
 import { useRouter } from "next/navigation";
 import type { ProjectOption } from "@/lib/services/projects";
 
-/** Switch which project the Design Room is showing (navigates to ?project=id). */
-export function ProjectSwitcher({ projects, currentId }: { projects: ProjectOption[]; currentId: string }) {
+/** Switch which project a screen is showing (navigates to {basePath}?project=id). */
+export function ProjectSwitcher({
+  projects,
+  currentId,
+  basePath,
+}: {
+  projects: ProjectOption[];
+  currentId: string;
+  basePath: string;
+}) {
   const router = useRouter();
   return (
     <label className="flex items-center gap-2">
@@ -12,7 +20,7 @@ export function ProjectSwitcher({ projects, currentId }: { projects: ProjectOpti
       <select
         aria-label="Switch project"
         value={currentId}
-        onChange={(e) => router.push(`/design-room?project=${e.target.value}`)}
+        onChange={(e) => router.push(`${basePath}?project=${e.target.value}`)}
         className="rounded border border-line-strong bg-card px-3 py-2 font-body text-sm text-secondary focus:border-white focus:outline-none"
       >
         {projects.map((p) => (

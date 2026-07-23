@@ -247,3 +247,25 @@ INSERT INTO ee.design_stages
   ('00000000-0000-4000-8000-00000000a001'::uuid,13,'Final GFC Set Compilation','GFC','not_started',NULL,'2026-08-25'),
   ('00000000-0000-4000-8000-00000000a001'::uuid,14,'As-Built Drawings','AB','not_started',NULL,'2026-09-30')
 ON CONFLICT (project_id, stage_no) DO NOTHING;
+
+-- ---------------------------------------------------------------------
+-- VisionCAM (S3) — DEV ONLY. A photo-gated billing milestone for ED/26-27/903
+-- (painting stage, ₹2.4L, blocked awaiting a QC-passed photo) + recent site
+-- captures, so the billing gate and photo log have data. (Real images live in
+-- S3; these s3_urls are placeholders — the web view is a log/monitor.)
+-- ---------------------------------------------------------------------
+INSERT INTO ee.billing_milestones
+  (project_id, milestone_name, sequence_no, amount, milestone_pct, trigger_type, is_due, due_date, invoice_raised)
+SELECT '00000000-0000-4000-8000-00000000a003'::uuid,'Painting stage — Living Room', 5, 240000, 8, 'visioncam', TRUE, CURRENT_DATE - 2, FALSE
+WHERE NOT EXISTS (
+  SELECT 1 FROM ee.billing_milestones
+  WHERE project_id='00000000-0000-4000-8000-00000000a003' AND milestone_name='Painting stage — Living Room'
+);
+
+INSERT INTO ee.visioncam_photos
+  (project_id, design_stage_no, s3_key, s3_url, gfc_drawing_ref, qc_status, captured_by, captured_at) VALUES
+  ('00000000-0000-4000-8000-00000000a003'::uuid, 8,'dev/903/pnt-lr-001','https://s3.local/dev/903/pnt-lr-001.jpg','GFC-903-PNT-LR-002','pass','00000000-0000-4000-8000-000000000004', NOW() - INTERVAL '2 hours'),
+  ('00000000-0000-4000-8000-00000000a003'::uuid, 8,'dev/903/pnt-lr-002','https://s3.local/dev/903/pnt-lr-002.jpg','GFC-903-PNT-LR-002','pass','00000000-0000-4000-8000-000000000004', NOW() - INTERVAL '3 hours'),
+  ('00000000-0000-4000-8000-00000000a003'::uuid, 7,'dev/903/civ-001','https://s3.local/dev/903/civ-001.jpg','GFC-903-CIV-001','pass','00000000-0000-4000-8000-000000000004', NOW() - INTERVAL '5 hours'),
+  ('00000000-0000-4000-8000-00000000a003'::uuid, 9,'dev/903/elec-001','https://s3.local/dev/903/elec-001.jpg','GFC-903-ELEC-001','pending','00000000-0000-4000-8000-000000000004', NOW() - INTERVAL '1 hour')
+ON CONFLICT (s3_key) DO NOTHING;
