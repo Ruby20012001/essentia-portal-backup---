@@ -12,6 +12,7 @@ export const NAV: NavGroup[] = [
     label: "Overview",
     items: [
       { label: "Dashboard", href: "/dashboard", screen: "S2" },
+      { label: "Project Hub", href: "/projects", screen: "S25" },
       { label: "My Approvals", href: "/approvals", screen: "S4b" },
       { label: "Notifications", href: "/notifications", screen: "S23" },
       { label: "Workflows", href: "/workflows", screen: "S19" },

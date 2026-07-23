@@ -1468,6 +1468,37 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      // Project Hub — the read model joins ee.projects → families (client name) and
+      // → users (CRM TL), and each detail section (phases, billing, WIOs incl. the
+      // days-remaining clock) hangs off project_id. Self-contained.
+      name: "project-hub: list joins family + TL, detail reads phases/billing/wio",
+      setupSql: `INSERT INTO public.families (id, primary_contact)
+                 VALUES ('00000000-0000-4000-8000-0000ace00001'::uuid,'Test Family Ace');
+                 INSERT INTO ee.projects
+                   (id, project_code, family_id, site_address, rag_status, crmtl_id, current_phase, is_active)
+                 VALUES ('00000000-0000-4000-8000-0000ace00002'::uuid,'ED/99-99/001',
+                         '00000000-0000-4000-8000-0000ace00001'::uuid,'1 Test Rd','red',
+                         '00000000-0000-4000-8000-000000000001'::uuid,'discovery',TRUE);
+                 INSERT INTO ee.activity_phases (project_id, phase, completion_pct, status)
+                 VALUES ('00000000-0000-4000-8000-0000ace00002'::uuid,'discovery',50,'in_progress');
+                 INSERT INTO ee.billing_milestones (project_id, milestone_name, amount)
+                 VALUES ('00000000-0000-4000-8000-0000ace00002'::uuid,'Signing',1000000);
+                 INSERT INTO ee.wio (wio_number, project_id, department_code, target_pio_date)
+                 VALUES ('WIO/99-99/001/ARCH','00000000-0000-4000-8000-0000ace00002'::uuid,'ARCH', CURRENT_DATE + 10)`,
+      sql: `SELECT (
+              (SELECT f.primary_contact FROM ee.projects p JOIN public.families f ON f.id = p.family_id
+                 WHERE p.id='00000000-0000-4000-8000-0000ace00002') = 'Test Family Ace'
+              AND (SELECT u.full_name IS NOT NULL FROM ee.projects p JOIN public.users u ON u.id = p.crmtl_id
+                     WHERE p.id='00000000-0000-4000-8000-0000ace00002')
+              AND (SELECT rag_status::text FROM ee.projects WHERE id='00000000-0000-4000-8000-0000ace00002') = 'red'
+              AND (SELECT COUNT(*) FROM ee.activity_phases WHERE project_id='00000000-0000-4000-8000-0000ace00002') = 1
+              AND (SELECT COUNT(*) FROM ee.billing_milestones WHERE project_id='00000000-0000-4000-8000-0000ace00002') = 1
+              AND (SELECT (target_pio_date - CURRENT_DATE)::int FROM ee.wio
+                     WHERE project_id='00000000-0000-4000-8000-0000ace00002') = 10
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
