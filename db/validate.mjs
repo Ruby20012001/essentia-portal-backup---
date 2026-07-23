@@ -1517,6 +1517,26 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      // Design Room (S5) — the 14-stage Drawing Ladder seeds for ED/26-27/901,
+      // and the counts that drive the progress metrics (7 complete = 50%, 2
+      // awaiting approval, current level GFC at the first non-complete stage).
+      name: "design-room: 14-stage Drawing Ladder seeds with derived progress",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM ee.design_stages
+                 WHERE project_id='00000000-0000-4000-8000-00000000a001') = 14
+              AND (SELECT COUNT(*) FROM ee.design_stages
+                     WHERE project_id='00000000-0000-4000-8000-00000000a001' AND status='complete') = 7
+              AND (SELECT COUNT(*) FROM ee.design_stages
+                     WHERE project_id='00000000-0000-4000-8000-00000000a001' AND status='pending_approval') = 2
+              AND (SELECT drawing_level FROM ee.design_stages
+                     WHERE project_id='00000000-0000-4000-8000-00000000a001' AND stage_no=8) = 'GFC'
+              AND (SELECT stage_name FROM ee.design_stages
+                     WHERE project_id='00000000-0000-4000-8000-00000000a001'
+                     ORDER BY stage_no LIMIT 1) LIKE 'Conceptualisation%'
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
