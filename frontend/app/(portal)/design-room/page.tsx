@@ -54,7 +54,7 @@ export default async function DesignRoomPage({ searchParams }: { searchParams: {
             ) : null}
           </p>
         </div>
-        <ProjectSwitcher projects={projects} currentId={selectedId} />
+        <ProjectSwitcher projects={projects} currentId={selectedId} basePath="/design-room" />
       </div>
 
       {room ? (
