@@ -4,6 +4,21 @@
 > (feature branches merged `--no-ff`, kept as history). Format loosely follows
 > Keep a Changelog. In-flight/unshipped work lives in [`TODO.md`](TODO.md).
 
+## Modules on the engine — 2026-07-22 →
+
+- **WIO / GFC approval on the workflow engine** — the drawing sign-off chain
+  (Vishakha → Yoginder → Khushpreet) now runs on the Phase-4 engine via
+  `wio_approval` (migration 028) + `requestWioApproval` + a "Send for GFC approval"
+  action; flows through My Approvals like any workflow. Live-verified end to end. `fec6f74`.
+- **Project Hub** — the central project record (`/projects` + `/projects/[id]`):
+  health / phase / team / commercials, phase timeline, billing, linked WIO/PIO;
+  RLS-scoped, financials fenced to `read:billing`. `0da4579` / `807b5df`.
+- **Brand/brief reconciliation** — docs + UI labels aligned to the authoritative
+  group brief ("luxury" banned, "production facility", not "factory"). `05ee0fb` / `c0a9f0e`.
+- **Reference specs added** — `docs/reference/` holds the RUBY package's 18-screen
+  UI build sequence + team/tools; repo `CLAUDE.md` and `db/001` stay authoritative
+  (the package copies are the older seed). See [`docs/reference/README.md`](docs/reference/README.md).
+
 ## Frontend-first phase (Phase 4 UI) — 2026-07-20 →
 
 - **S5 Workflow Builder** — `/workflow-builder/[code]` + `/new`: the visual editor
