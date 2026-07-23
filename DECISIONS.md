@@ -52,7 +52,7 @@ When someone acts on behalf of another (`actingAssigneeId !== user.id`), the aud
 `newValues` records `{ onBehalfOf: true, originalApprover }`. Attribution is never lost.
 
 ### ADR-FE-01 — Dark theme is the default; tokens are the only source of colour
-Premium luxury dark theme, ratified 2026-07-13 (supersedes Cold Coffee). All colour
+Premium dark theme, ratified 2026-07-13 (supersedes Cold Coffee). All colour
 lives in `frontend/tailwind.config.ts` (legacy token names retained but remapped to
 dark equivalents). Style with semantic classes; **no inline hex anywhere**. Lato only.
 

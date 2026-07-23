@@ -3,11 +3,20 @@
 # This IS the project brain. Never ask what essentia does. Read this.
 
 ## WHO WE ARE BUILDING FOR
-essentia group. Two verticals:
-- **essentia environments (EE)** — luxury design-and-build. 58+ active projects. 11-month build cycle.
-- **essentia home (EH)** — luxury furniture retail. 3 Experience Centres (Gurugram, Delhi, Mumbai).
-- **NH8 Factory** — 177,000 sqft proprietary manufacturing. 9 departments. 145 craftspeople.
-- **490 staff total**. 22 departments.
+essentia group — 2 businesses, 1 group. **Authoritative brief:
+`Portal_Group_Essentia_Complete_Brief.html`** (reconciled 2026-07-22; supersedes
+earlier figures).
+- **essentia environments (EE)** — Adrem India Pvt. Ltd. Full-service design-and-build
+  (architecture, interiors, turnkey execution). 58+ active projects. 18–24 month
+  project lifecycle. 9 milestone-triggered billing instalments = 100% of design fee.
+- **essentia home (EH)** — Essentia Designs Pvt. Ltd. Retail + staging + in-house
+  manufacturing. Experience Centres: Gurugram (15,000 sqft flagship), Delhi (Sultanpur),
+  Mumbai (Lower Parel); building to 24 owned + franchised locations.
+- **NH8 production facility** — Gurugram, 1,50,000 sqft. 9 production departments.
+  Every EE item made in-house. (The DB schema is still named `factory` — an internal
+  identifier only, never shown to a user; see Vocabulary.)
+- **6 user communities · 46 portal modules · 21 generated document types · 850+ internal
+  users · 600+ advocates/alumni · 105-day full deployment.**
 
 ## THE NORTH STAR (never violate this)
 **Every client returns.** Every system, every screen, every feature must make this more true.
@@ -29,7 +38,7 @@ It is 916 KB. 39 sections. Read the relevant section before building any feature
 Key sections to always reference:
 - Section 28: Client Advisory Layer (CA workflow, fee structure, Communication Spine)
 - Section 29: Design and Build Processes (Drawing Ladder, WIO/PIO, Activity Chart)
-- Section 30: WIO/PIO is universal — ALL departments, not just factory
+- Section 30: WIO/PIO is universal — ALL departments, not just the production facility
 - Section 33: Procurement and WO generation (VRN, WO, PO, GRN, all formats)
 - Section 35: The 8 Velocity Gates (portal does not go live until all 8 pass)
 - Section 37: Founder Liberation Framework (the 7 numbers, the 4 questions never asked)
@@ -69,7 +78,7 @@ Key sections to always reference:
 
 ## BRAND RULES (enforced in every screen, every component, every generated letter)
 > Premium dark theme, ratified 2026-07-13 (supersedes the original Cold Coffee
-> palette). Executive/luxury feel — classic-black canvas, flat surfaces, hairline
+> palette). Executive/premium feel — classic-black canvas, flat surfaces, hairline
 > borders, Lato throughout. All tokens live in `frontend/tailwind.config.ts`
 > (single source of truth); style with semantic classes, never inline hex.
 > The original Cold Coffee token NAMES are retained but remapped to their dark
@@ -96,11 +105,25 @@ Key sections to always reference:
 - White transparent PNG on the black canvas (`/brand/logo-dark.png`)
 - Header: height 20px · Footer: height 14px
 
-### Vocabulary (never use these words)
-- "studio" → use "essentia" or the vertical name
-- "handover" → "Day of Recognition"
-- "complaint" → "concern" or "feedback"
-- "deliverable" → "milestone" or the specific item name
+### Vocabulary — enforced in EVERY interface label, generated document, automated message
+**Always use:**
+- **essentia** — always lowercase
+- **production facility** — never "factory" (the `factory` DB schema is an internal identifier only, never surfaced)
+- **Experience Centre** — never "showroom"
+- **Day of Recognition** — never "delivery" or "handover"
+- **Client Advisor** — never "salesperson"
+- **custom / made-to-order** — never "bespoke"
+- **The Brigade** — the Staging & Styling team
+- **Completion Certificate** — never "handover certificate"
+
+**Banned, zero exceptions:**
+- **luxury** — banned entirely (do not use anywhere — copy, theme notes, marketing)
+- **studio** → "firm" / "design-and-build firm" / the vertical name
+- **bespoke** → custom / made-to-order
+- **curated · seamless · holistic** — banned
+- **world-class · best-in-class** — banned
+- **complaint** → "concern" / "feedback" (retained house rule)
+- **deliverable** → "milestone" / the specific item name (retained house rule)
 
 ## ANTI-BUSY-LOOKING RULES (enforce at every module — Brief §39)
 1. VisionCAM photo REQUIRED before any stage can be marked complete — never a silent block
@@ -130,7 +153,7 @@ When those 4 are present: build immediately, no clarifying questions.
 When they are incomplete: ask Ruby only for the missing element, then build.
 
 ## WHAT NEVER CHANGES (permanent constraints — do not negotiate these)
-- No PIO → no factory work begins
+- No PIO → no production work begins
 - No BOM + PIO → no material released from Store
 - Triangle of Agreement (BOQ + 3D + GFC all aligned) before every PIO
 - 20% coordination charge on all third-party WO scopes — cannot be deleted by anyone
