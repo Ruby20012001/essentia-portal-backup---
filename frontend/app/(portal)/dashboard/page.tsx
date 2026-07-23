@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GreetingHeader } from "@/components/dashboard/GreetingHeader";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { PrioritySignalBand } from "@/components/dashboard/PrioritySignalBand";
 import { ProjectRiskTable } from "@/components/dashboard/ProjectRiskTable";
@@ -33,7 +34,7 @@ export default async function DashboardPage() {
   return (
     <div>
       <div className="mb-6 flex items-start justify-between gap-4">
-        <PageTitle />
+        <GreetingHeader name={user.name} activeProjects={metrics.activeProjects} />
         <Link
           href="/wio-pio"
           className="shrink-0 rounded border border-line-strong bg-canvas px-5 py-2.5 font-body text-sm font-bold text-white transition-colors hover:bg-hover"
