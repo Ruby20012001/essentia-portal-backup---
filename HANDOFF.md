@@ -13,15 +13,16 @@
 ## 1. What's happening right now
 **PAUSED, awaiting Monica's pick of the next screen.** Nothing is mid-flight.
 Phase 4 is COMPLETE (engine Steps 1–10 + all 10 workflow UI screens). Since then,
-also shipped: **Project Hub** (`/projects`, `807b5df`), **WIO/GFC approval on the
-engine** (`fec6f74`), **brand reconciliation** to the group brief (`c0a9f0e`), and
-**`docs/reference/`** (the RUBY package's 18-screen sequence + team/tools — repo
-CLAUDE.md/schema remain authoritative). Green baseline: **harness 103/0,
-unit 155/155, tsc/lint/build clean.**
+also shipped: **Project Hub** (`807b5df`), **WIO/GFC approval on the engine**
+(`fec6f74`), **brand reconciliation** (`c0a9f0e`), **`docs/reference/`** (RUBY
+package), and — 2026-07-23 — the **Phase-1 Core screens Design Room (S5, `2619d7a`),
+CRM TL Dashboard greeting (S2, `9734283`), VisionCAM (S3, `c573b48`)**. Green
+baseline: **harness 105/0, unit 155/155, tsc/lint/build clean.**
 
-**Next candidates** (from the 18-screen sequence, in [`docs/reference/`](docs/reference/)):
-Design Room (S5, continues the WIO/GFC thread), VisionCAM (S3, "highest value" +
-Gate #1), or CRM TL Dashboard (S2). See [`TODO.md`](TODO.md).
+**Next candidates** (18-screen sequence, in [`docs/reference/`](docs/reference/)):
+**S6 EH · Experience Centre** (last Phase-1 Core), then Phase-2 integrations
+(S7 BD/HubSpot, S9 Procurement/TranZact, …), and the VisionCAM mobile capture app.
+See [`TODO.md`](TODO.md).
 
 ## 2. The workflow screens (where each lives)
 | Screen | Route | Backend it uses |
@@ -55,7 +56,7 @@ if automating.
 node db/dev-db.mjs           # PGlite wire :55432 — start FIRST, keep running
 cd frontend && npm run dev   # Next.js :3000
 ```
-Green baseline right now: **DB harness 103/0** (`node db/validate.mjs`), **types clean**
+Green baseline right now: **DB harness 105/0** (`node db/validate.mjs`), **types clean**
 (`npx tsc --noEmit`), **unit 155 / 10 files** (`npm run test`), **lint + `next build` clean**.
 Dev logins (pw `essentia-dev-2026`): `dev.founder@` L0 · `dev.coo@` L1 ·
 `dev.crmtl@` L2 · `dev.site@` L3 (all `@essentia.in`).

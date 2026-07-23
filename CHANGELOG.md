@@ -4,6 +4,17 @@
 > (feature branches merged `--no-ff`, kept as history). Format loosely follows
 > Keep a Changelog. In-flight/unshipped work lives in [`TODO.md`](TODO.md).
 
+## Phase-1 Core screens — 2026-07-23
+
+- **VisionCAM (S3)** — the site-photo log + the billing gate (Velocity Gate 1): a
+  VisionCAM-triggered milestone can't invoice until its photo is captured and
+  QC-passed. `/visioncam`; billing amounts fenced to `read:billing`. Capture stays
+  the mobile app. `c573b48`.
+- **CRM TL Dashboard (S2)** — the personalised greeting ("Good morning, {name}. {date}
+  · N active projects") on the existing signal-first dashboard. `9734283`.
+- **Design Room (S5)** — the 14-stage Drawing Ladder (CP→SLD→FI→TP→GFC→AB) over
+  `ee.design_stages`, with progress metrics and a project switcher. `/design-room`. `2619d7a`.
+
 ## Modules on the engine — 2026-07-22 →
 
 - **WIO / GFC approval on the workflow engine** — the drawing sign-off chain
