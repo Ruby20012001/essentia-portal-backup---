@@ -39,6 +39,7 @@ export const DEFAULT_FILES = [
   "025_delegation_expiry.sql",
   "026_sla_fire_once.sql",
   "027_workflow_definition_admin.sql",
+  "028_wio_approval.sql",
   "900_dev_fixtures.sql",
 ];
 

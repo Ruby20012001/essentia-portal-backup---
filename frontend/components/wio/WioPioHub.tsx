@@ -132,14 +132,18 @@ export function WioPioHub({
           }
           onConvert={(wio) =>
             call(wio.id, `/api/wio/${wio.id}/convert`, { method: "POST" },
-              `${wio.wioNumber} converted — PIO created and the 45-day factory clock is running.`)
+              `${wio.wioNumber} converted — PIO created and the 45-day production clock is running.`)
+          }
+          onRequestApproval={(wio) =>
+            call(wio.id, `/api/wio/${wio.id}/request-approval`, { method: "POST" },
+              `${wio.wioNumber} sent into the GFC approval chain (Vishakha → Yoginder → Khushpreet).`)
           }
         />
       </section>
 
       <section id="pio">
         <h2 className="mb-3 font-heading text-2xl text-white">
-          PIO factory clock · Triangle of Agreement
+          PIO production clock · Triangle of Agreement
         </h2>
         <PioTable
           pios={pios}

@@ -14,6 +14,7 @@ export function WioTable({
   busyId,
   onPatch,
   onConvert,
+  onRequestApproval,
 }: {
   wios: Wio[];
   busyId: string | null;
@@ -24,6 +25,7 @@ export function WioTable({
     >,
   ) => void;
   onConvert: (wio: Wio) => void;
+  onRequestApproval: (wio: Wio) => void;
 }) {
   if (wios.length === 0) {
     return (
@@ -96,18 +98,28 @@ export function WioTable({
                   </span>
                 </td>
                 <td className="px-4 py-2.5 text-right">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => onConvert(wio)}
-                    className={`rounded px-3 py-1.5 font-body text-xs font-bold transition-colors disabled:opacity-50 ${
-                      wio.checklistComplete
-                        ? "bg-forest text-white hover:bg-forest/90"
-                        : "border border-line-strong bg-canvas text-secondary hover:bg-hover"
-                    }`}
-                  >
-                    {busy ? "…" : "Convert to PIO"}
-                  </button>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => onRequestApproval(wio)}
+                      className="whitespace-nowrap rounded border border-line-strong bg-canvas px-3 py-1.5 font-body text-xs font-bold text-secondary transition-colors hover:bg-hover disabled:opacity-50"
+                    >
+                      {busy ? "…" : "Send for GFC approval"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => onConvert(wio)}
+                      className={`whitespace-nowrap rounded px-3 py-1.5 font-body text-xs font-bold transition-colors disabled:opacity-50 ${
+                        wio.checklistComplete
+                          ? "bg-forest text-white hover:bg-forest/90"
+                          : "border border-line-strong bg-canvas text-secondary hover:bg-hover"
+                      }`}
+                    >
+                      {busy ? "…" : "Convert to PIO"}
+                    </button>
+                  </div>
                 </td>
               </tr>
             );

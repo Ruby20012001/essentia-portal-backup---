@@ -5,7 +5,7 @@ import { ToggleChip } from "@/components/wio/ToggleChip";
 import type { Pio } from "@/lib/services/pio";
 
 /**
- * The factory clock (Brief §29). Triangle chips PATCH live; "Send for
+ * The production clock (Brief §29). Triangle chips PATCH live; "Send for
  * approval" enforces the Triangle gate server-side, and approval state
  * comes from the workflow engine (Khushpreet → Deepak Ji → Hardesh).
  */
@@ -33,7 +33,7 @@ export function PioTable({
   if (pios.length === 0) {
     return (
       <p className="font-body text-sm font-light text-label">
-        No live PIOs — convert a WIO to start the factory clock.
+        No live PIOs — convert a WIO to start the production clock.
       </p>
     );
   }

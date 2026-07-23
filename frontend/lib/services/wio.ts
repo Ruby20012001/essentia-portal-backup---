@@ -3,6 +3,7 @@ import { getConfig } from "@/lib/services/config";
 import { writeAudit } from "@/lib/services/audit";
 import { requirePermission } from "@/lib/services/permissions";
 import { publishEvent } from "@/lib/notifications";
+import { startWorkflow } from "@/lib/services/workflows";
 import {
   BlockingRuleError,
   ConflictError,
@@ -516,6 +517,45 @@ export async function convertWioToPio(
       status: "converted_to_pio",
     } as Wio,
   };
+}
+
+/**
+ * Send a WIO's drawings into the GFC approval chain on the workflow engine
+ * (Brief §29 — Vishakha → Yoginder → Khushpreet). The engine owns the chain
+ * from here: it materialises the first approver's task, runs the sequence, and
+ * refuses (409) if an approval is already pending for this WIO. This does NOT
+ * touch the 15-day clock or the BOQ/3D/SLD checklist — those stay the conversion
+ * gate; this is the formal drawing sign-off routed through the same engine as
+ * pio_approval.
+ */
+export async function requestWioApproval(user: SessionUser, wioId: string): Promise<Wio> {
+  await requirePermission(user, "edit", "wio");
+
+  const wio = await withUserContext(user, async (q) => {
+    const [row] = await q<{ wio_number: string; status: string }>(
+      `SELECT w.wio_number, w.status
+       FROM ee.wio w JOIN ee.projects p ON p.id = w.project_id
+       WHERE w.id = $1`,
+      [wioId],
+    );
+    return row;
+  });
+  if (!wio) throw new NotFoundError("WIO not found or not visible to you");
+  if (wio.status === "converted_to_pio" || wio.status === "cancelled") {
+    throw new BlockingRuleError(
+      `${wio.wio_number} is ${wio.status.replace("_", " ")} — it can no longer go for approval.`,
+    );
+  }
+
+  // The workflow engine owns the chain (409 if an approval is already pending).
+  await startWorkflow(user, "wio_approval", "wio", wioId);
+
+  const [refreshed] = await withUserContext(user, (q) =>
+    q<WioRow>(`${CLOCK_SELECT} WHERE id = $1`, [wioId]),
+  );
+  return refreshed
+    ? toWio(refreshed)
+    : ({ id: wioId, wioNumber: wio.wio_number, status: wio.status } as Wio);
 }
 
 /**
