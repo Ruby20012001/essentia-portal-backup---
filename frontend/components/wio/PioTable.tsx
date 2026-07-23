@@ -45,7 +45,7 @@ export function PioTable({
           <tr className="bg-surface text-[11px] uppercase tracking-[0.12em] text-secondary">
             <th className="px-4 py-2.5 font-bold">PIO</th>
             <th className="px-4 py-2.5 font-bold">Project</th>
-            <th className="px-4 py-2.5 font-bold">Factory clock</th>
+            <th className="px-4 py-2.5 font-bold">Production clock</th>
             <th className="px-4 py-2.5 font-bold">Triangle of Agreement (all 4)</th>
             <th className="px-4 py-2.5 font-bold">Approval — §26 chain</th>
           </tr>

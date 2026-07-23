@@ -15,7 +15,7 @@
 **Every client returns.** That is the North Star. Every system, screen, and feature
 is judged by whether it makes a returning client more likely. The portal exists to
 free the founders from operational firefighting and to make excellence repeatable
-across 490 staff and 58+ concurrent luxury projects.
+across 850+ internal users and 58+ concurrent projects.
 
 ## 2. Business purpose
 
@@ -23,11 +23,11 @@ essentia group runs three businesses on one operating model:
 
 | Vertical | What it is | Scale |
 |---|---|---|
-| **essentia environments (EE)** | Luxury design-and-build | 58+ active projects · 11-month build cycle |
-| **essentia home (EH)** | Luxury furniture retail | 3 Experience Centres (Gurugram, Delhi, Mumbai) |
-| **NH8 Factory** | Proprietary manufacturing | 177,000 sqft · 9 departments · 145 craftspeople |
+| **essentia environments (EE)** | Full-service design-and-build | 58+ active projects · 18–24 month lifecycle |
+| **essentia home (EH)** | Retail + staging + in-house manufacturing | Experience Centres: Gurugram, Delhi, Mumbai (building to 24) |
+| **NH8 production facility** | Proprietary manufacturing | 1,50,000 sqft · 9 production departments |
 
-**490 staff · 22 departments.** The portal is the connective tissue: it runs the
+**850+ internal users · 6 user communities · 46 modules.** The portal is the connective tissue: it runs the
 order spine (WIO → PIO → Work Orders → delivery), enforces the non-negotiable gates,
 and gives founders the numbers without asking for them.
 

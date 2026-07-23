@@ -25,7 +25,7 @@ export const NAV: NavGroup[] = [
       { label: "Design Room", href: "/design-room", screen: "S5" },
       { label: "WIO / PIO Hub", href: "/wio-pio", screen: "S4" },
       { label: "VisionCAM", href: "/visioncam", screen: "S3" },
-      { label: "Factory — NH8", href: "/factory", screen: "S10" },
+      { label: "Production Facility — NH8", href: "/factory", screen: "S10" },
     ],
   },
   {

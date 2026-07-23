@@ -176,7 +176,7 @@ export async function updateTriangle(
     await q(`UPDATE ee.pio SET ${sets.join(", ")} WHERE id = $1`, params);
 
     const [row] = await q<PioRow>(`${PIO_SELECT} WHERE c.id = $1`, [pioId]);
-    if (!row) throw new NotFoundError("PIO left the factory clock");
+    if (!row) throw new NotFoundError("PIO left the production clock");
     return toPio(row);
   });
 
@@ -243,6 +243,6 @@ export async function requestPioApproval(
   const [refreshed] = await withUserContext(user, (q) =>
     q<PioRow>(`${PIO_SELECT} WHERE c.id = $1`, [pioId]),
   );
-  if (!refreshed) throw new NotFoundError("PIO left the factory clock");
+  if (!refreshed) throw new NotFoundError("PIO left the production clock");
   return toPio(refreshed);
 }

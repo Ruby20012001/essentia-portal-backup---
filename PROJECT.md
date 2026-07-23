@@ -5,10 +5,12 @@
 > For depth, follow the pointers into [`docs/architecture/`](docs/architecture/).
 
 ## What this is
-The internal operating portal for **essentia group** — luxury design-build
-(essentia environments, 58+ active projects), luxury furniture retail
-(essentia home, 3 Experience Centres) and the NH8 factory (177,000 sqft, 9
-departments, 145 craftspeople). **490 staff, 22 departments.**
+The internal operating portal for **essentia group** — a design-and-build business
+(essentia environments, 58+ active projects, 18–24 month lifecycle) and a retail +
+in-house manufacturing business (essentia home, Experience Centres in Gurugram, Delhi
+and Mumbai, building to 24) served by the **NH8 production facility** (Gurugram,
+1,50,000 sqft, 9 production departments). **6 user communities · 46 modules · 850+
+internal users.** Authoritative brief: `Portal_Group_Essentia_Complete_Brief.html`.
 
 **North Star (never violate):** *Every client returns.* Every screen and feature
 must make that more true.

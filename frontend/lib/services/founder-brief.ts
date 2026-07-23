@@ -168,7 +168,7 @@ function number3PIO(p: { active: number; approaching: number }): BriefNumber {
     n: 3,
     label: "NH8 production health",
     value: `${p.active} in production · ${p.approaching} approaching Day 45`,
-    detail: p.active === 0 ? "No PIOs on the factory clock." : p.approaching > 0 ? "PIOs nearing the 45-day mark — watch resting items." : "All PIOs comfortably inside the clock.",
+    detail: p.active === 0 ? "No PIOs on the production clock." : p.approaching > 0 ? "PIOs nearing the 45-day mark — watch resting items." : "All PIOs comfortably inside the clock.",
     status,
   };
 }
