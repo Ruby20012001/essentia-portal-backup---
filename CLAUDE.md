@@ -168,6 +168,8 @@ checkpoint; it must stay good enough to recover the project with no chat history
 - **docs/PROJECT_MEMORY.md** — overview · status · architecture · implementation
   history · current work · decisions · known issues · recovery · next steps.
 - **docs/CHANGELOG.md** — shipped milestones, newest first, with commit refs.
+- **docs/DEVELOPER_HANDOVER.md** — onboarding for a new developer: the domain
+  vocabulary, setup, the never-break rules, how to make a change, handover checklist.
 - **RUNBOOK.md** — how to set up, run, test, debug, deploy and recover.
 - **ARCHITECTURE.md** — system shape + load-bearing patterns (points into `docs/architecture/`).
 - **DECISIONS.md** — the full ADR log (why we did it this way; don't re-litigate).

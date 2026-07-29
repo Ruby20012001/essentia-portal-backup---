@@ -7,6 +7,10 @@
 > **Read order for a cold start:** [`CLAUDE.md`](../CLAUDE.md) (the brain, outranks
 > everything) → this file → [`RUNBOOK.md`](../RUNBOOK.md) (how to operate it).
 >
+> **Onboarding a new developer?** Give them
+> [`DEVELOPER_HANDOVER.md`](DEVELOPER_HANDOVER.md) — it teaches the domain
+> vocabulary this file assumes, and ends with a handover checklist.
+>
 > **Last verified:** 2026-07-28 · **Baseline:** `platform-baseline-v1` @ `1491b83`
 > **Green:** DB harness 105/0 · tsc 0 · unit 155/155 · lint clean *(observed, not inherited)*
 
