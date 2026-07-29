@@ -162,13 +162,27 @@ When they are incomplete: ask Ruby only for the missing element, then build.
 - Exit protocol fires at exactly 11:59pm — all 6 removal actions simultaneously
 
 ## PROJECT MEMORY (read these after this file, every session)
-This file is the permanent brief. Live build state lives in six companion docs at
-the repo root — keep them current, and regenerate HANDOFF.md before context runs out:
-- **PROJECT.md** — one-page orientation: what's built, what's next, how to run.
+This file is the permanent brief. Live build state lives in **`docs/PROJECT_MEMORY.md`**
+— the single source of truth, consolidated 2026-07-28. Keep it current at every
+checkpoint; it must stay good enough to recover the project with no chat history.
+- **docs/PROJECT_MEMORY.md** — overview · status · architecture · implementation
+  history · current work · decisions · known issues · recovery · next steps.
+- **docs/CHANGELOG.md** — shipped milestones, newest first, with commit refs.
+- **RUNBOOK.md** — how to set up, run, test, debug, deploy and recover.
 - **ARCHITECTURE.md** — system shape + load-bearing patterns (points into `docs/architecture/`).
-- **DECISIONS.md** — the ADR log (why we did it this way; don't re-litigate).
+- **DECISIONS.md** — the full ADR log (why we did it this way; don't re-litigate).
 - **TODO.md** — living backlog and what's blocked.
-- **CHANGELOG.md** — shipped increments, newest first, with commit refs.
-- **HANDOFF.md** — "resume here": the current task, the exact blocking decision, gotchas.
 
-Reading order for a cold start: **CLAUDE.md → PROJECT.md → HANDOFF.md**.
+`PROJECT.md`, `HANDOFF.md` and `CHANGELOG.md` at the repo root are now pointer
+stubs kept only so older links resolve — do not write state into them.
+
+Reading order for a cold start: **CLAUDE.md → docs/PROJECT_MEMORY.md → RUNBOOK.md**.
+
+### Repository facts (a cold session needs these)
+- **Baseline branch is `platform-baseline-v1`, NOT `main`** — `main` sits at the
+  original stub commit and contains none of the build.
+- **Remote:** `https://github.com/Ruby20012001/essentia-portal-backup---.git`
+  (renamed from `essentia-portal-`; the URL was corrected 2026-07-28).
+- **Canonical working copy:** `C:\Users\Ai-01\Desktop\ruby crm\essentia-portal`.
+- **Two npm workspaces** — install in **both** `db/` and `frontend/`.
+- Green baseline: harness 105/0 · `tsc` 0 · unit 155/155 · lint clean.

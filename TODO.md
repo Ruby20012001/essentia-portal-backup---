@@ -1,7 +1,7 @@
 # TODO
 
 > Living backlog. Newest priorities on top. When something ships, move it to
-> [`CHANGELOG.md`](CHANGELOG.md) with its commit ref. Deep tech-debt register:
+> [`docs/CHANGELOG.md`](docs/CHANGELOG.md) with its commit ref. Deep tech-debt register:
 > [`docs/architecture/TECH_DEBT.md`](docs/architecture/TECH_DEBT.md); roadmap:
 > [`docs/architecture/ROADMAP.md`](docs/architecture/ROADMAP.md).
 
@@ -46,7 +46,7 @@ See [`docs/reference/README.md`](docs/reference/README.md) + [`docs/BRIEF_DISCRE
 These are recorded `not_wired` today by design; wiring them is real work.
 
 ## ⚪ Standing hygiene
-- Keep the six memory docs current each session; regenerate [`HANDOFF.md`](HANDOFF.md) before context runs out.
+- Keep [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md) and [`docs/CHANGELOG.md`](docs/CHANGELOG.md) current at every checkpoint (they replaced the six root memory docs on 2026-07-28).
 - New migration ⇒ add to `db/lib.mjs` `DEFAULT_FILES` **and** a `db/validate.mjs` check.
 - New `publishEvent` ⇒ supply every `{{var}}` its db/010 template uses (+ a regression test).
 - Never global-`sed` over `db/validate.mjs` (short id fragments recur; corrupts unrelated checks).
