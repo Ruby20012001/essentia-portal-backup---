@@ -269,3 +269,116 @@ INSERT INTO ee.visioncam_photos
   ('00000000-0000-4000-8000-00000000a003'::uuid, 7,'dev/903/civ-001','https://s3.local/dev/903/civ-001.jpg','GFC-903-CIV-001','pass','00000000-0000-4000-8000-000000000004', NOW() - INTERVAL '5 hours'),
   ('00000000-0000-4000-8000-00000000a003'::uuid, 9,'dev/903/elec-001','https://s3.local/dev/903/elec-001.jpg','GFC-903-ELEC-001','pending','00000000-0000-4000-8000-000000000004', NOW() - INTERVAL '1 hour')
 ON CONFLICT (s3_key) DO NOTHING;
+
+
+-- ---------------------------------------------------------------------
+-- S6 · essentia home — Experience Centre + the discount control gate
+-- (Brief §28 · Velocity Gate 5).
+--
+-- db/002 already seeds the three centres, so these are UPDATEs, not INSERTs,
+-- and everything below addresses a centre by its code rather than inventing
+-- an id. One Country Head holds Gurugram — the screen's own persona, and the
+-- proof that db/029's eh_sales_country_head policy returns rows for an L2.
+-- Thresholds differ per centre so the gate is visibly configuration-driven.
+-- ---------------------------------------------------------------------
+INSERT INTO public.users (id, email, full_name, display_name, access_level, department_id, job_title)
+VALUES
+  ('00000000-0000-4000-8000-000000000006', 'dev.echead@essentia.in',
+   'Dev Country Head', 'Dev EC Head', 'L2', NULL, 'Country Head — Experience Centre (dev fixture)'),
+  ('00000000-0000-4000-8000-000000000007', 'dev.ca.priya@essentia.in',
+   'Dev Client Advisor Priya', 'Dev CA P', 'L3', NULL, 'Client Advisor, EH (dev fixture)'),
+  ('00000000-0000-4000-8000-000000000008', 'dev.ca.rahul@essentia.in',
+   'Dev Client Advisor Rahul', 'Dev CA R', 'L3', NULL, 'Client Advisor, EH (dev fixture)')
+ON CONFLICT (email) DO NOTHING;
+
+-- The shared dev hash is applied near the top of this file, before these three
+-- rows exist. Re-apply for any fixture user still without one, so every
+-- dev.*@essentia.in account stays loginable no matter where it was added.
+UPDATE public.users
+SET password_hash = (
+      SELECT password_hash FROM public.users
+       WHERE email = 'dev.crmtl@essentia.in' AND password_hash IS NOT NULL
+    ),
+    auth_provider = 'local'
+WHERE email LIKE 'dev.%@essentia.in' AND password_hash IS NULL;
+
+UPDATE eh.experience_centres SET
+  country_head_id        = '00000000-0000-4000-8000-000000000006',
+  target_monthly         = 12000000.00,
+  discount_threshold_pct = 10.00
+WHERE code = 'gurugram_hq';
+
+UPDATE eh.experience_centres SET
+  target_monthly         = 7000000.00,
+  discount_threshold_pct = 10.00
+WHERE code = 'sultanpur_delhi';
+
+UPDATE eh.experience_centres SET
+  target_monthly         = 7000000.00,
+  discount_threshold_pct = 15.00
+WHERE code = 'mumbai_lower_parel';
+
+-- Sales this month at Gurugram. Two rows are LOGGED VIOLATIONS — the discount
+-- reached the family before the Country Head approved it. They are not hidden
+-- or repaired; the screen names the advisor and the figure (ADR-HS-01).
+INSERT INTO eh.sales
+  (ec_id, sale_date, invoice_number, family_id, ca_id, gross_amount, discount_pct,
+   discount_approved_by, discount_approved_at, discount_communicated_before_approval, net_amount)
+SELECT ec.id, v.sale_date, v.invoice_number, v.family_id::uuid, v.ca_id::uuid,
+       v.gross_amount, v.discount_pct, v.approved_by::uuid, v.approved_at, v.breach, v.net_amount
+FROM eh.experience_centres ec
+CROSS JOIN (VALUES
+  -- awaiting sign-off, and already communicated → breach
+  (CURRENT_DATE,     'EH/GGN/26-27/0181', '00000000-0000-4000-8000-00000000f001',
+   '00000000-0000-4000-8000-000000000007', 420000.00, 18.00, NULL, NULL::timestamptz, TRUE,  344400.00),
+  -- awaiting sign-off, and already communicated → breach
+  (CURRENT_DATE,     'EH/GGN/26-27/0182', '00000000-0000-4000-8000-00000000f002',
+   '00000000-0000-4000-8000-000000000008', 260000.00, 22.00, NULL, NULL::timestamptz, TRUE,  202800.00),
+  -- awaiting sign-off, correctly NOT yet communicated
+  (CURRENT_DATE,     'EH/GGN/26-27/0183', '00000000-0000-4000-8000-00000000f001',
+   '00000000-0000-4000-8000-000000000007', 180000.00, 12.00, NULL, NULL::timestamptz, FALSE, 158400.00),
+  -- approved before communication — the happy path
+  (CURRENT_DATE - 1, 'EH/GGN/26-27/0180', '00000000-0000-4000-8000-00000000f002',
+   '00000000-0000-4000-8000-000000000007', 300000.00, 15.00,
+   '00000000-0000-4000-8000-000000000006', NOW() - INTERVAL '1 day', FALSE, 255000.00),
+  -- below Gurugram's 10% threshold — never needed approval
+  (CURRENT_DATE - 2, 'EH/GGN/26-27/0179', '00000000-0000-4000-8000-00000000f001',
+   '00000000-0000-4000-8000-000000000008', 150000.00,  5.00, NULL, NULL::timestamptz, FALSE, 142500.00),
+  -- no discount at all
+  (CURRENT_DATE - 3, 'EH/GGN/26-27/0178', '00000000-0000-4000-8000-00000000f002',
+   '00000000-0000-4000-8000-000000000007', 680000.00,  0.00, NULL, NULL::timestamptz, FALSE, 680000.00)
+) AS v(sale_date, invoice_number, family_id, ca_id, gross_amount, discount_pct,
+       approved_by, approved_at, breach, net_amount)
+WHERE ec.code = 'gurugram_hq'
+  AND NOT EXISTS (SELECT 1 FROM eh.sales x WHERE x.invoice_number = v.invoice_number);
+
+-- Delhi and Mumbai carry month-to-date revenue so the tracker shows all three.
+INSERT INTO eh.sales (ec_id, sale_date, invoice_number, ca_id, gross_amount, discount_pct, net_amount)
+SELECT ec.id, CURRENT_DATE - 1, v.invoice_number,
+       '00000000-0000-4000-8000-000000000007'::uuid, v.gross_amount, 0.00, v.net_amount
+FROM eh.experience_centres ec
+CROSS JOIN (VALUES
+  ('sultanpur_delhi',    'EH/DEL/26-27/0094', 6200000.00, 6200000.00),
+  ('mumbai_lower_parel', 'EH/MUM/26-27/0071', 3800000.00, 3800000.00)
+) AS v(ec_code, invoice_number, gross_amount, net_amount)
+WHERE ec.code::text = v.ec_code
+  AND NOT EXISTS (SELECT 1 FROM eh.sales x WHERE x.invoice_number = v.invoice_number);
+
+-- Opening checklist for today at the head's own centre.
+INSERT INTO eh.daily_checklist (ec_id, check_date, completed_by, all_complete, items)
+SELECT ec.id, CURRENT_DATE, '00000000-0000-4000-8000-000000000006', TRUE,
+  '[{"item":"Lighting scene set","complete":true},
+    {"item":"Floor and glass cleaned","complete":true},
+    {"item":"Displays dressed to plan","complete":true},
+    {"item":"Fabric swatches replenished","complete":true},
+    {"item":"Catalogue stock checked","complete":true},
+    {"item":"Music and scent on","complete":true},
+    {"item":"Refreshments stocked","complete":true},
+    {"item":"Advisor roster confirmed","complete":true},
+    {"item":"POS terminal live","complete":true},
+    {"item":"Zakya sync verified","complete":true},
+    {"item":"Washrooms checked","complete":true},
+    {"item":"Entrance signage clear","complete":true}]'::jsonb
+FROM eh.experience_centres ec
+WHERE ec.code = 'gurugram_hq'
+ON CONFLICT (ec_id, check_date) DO NOTHING;

@@ -11,8 +11,8 @@
 > [`DEVELOPER_HANDOVER.md`](DEVELOPER_HANDOVER.md) — it teaches the domain
 > vocabulary this file assumes, and ends with a handover checklist.
 >
-> **Last verified:** 2026-07-28 · **Baseline:** `platform-baseline-v1` @ `1491b83`
-> **Green:** DB harness 105/0 · tsc 0 · unit 155/155 · lint clean *(observed, not inherited)*
+> **Last verified:** 2026-07-30 · **Baseline:** `platform-baseline-v1`
+> **Green:** DB harness 110/0 · tsc 0 · unit 165/165 · lint clean · build clean *(observed)*
 
 ---
 
@@ -102,7 +102,7 @@ gated but **not yet wired** — see §7.
 backend is **frozen** — extend a read model only if a new screen genuinely needs it;
 stop and report before adding write backend.
 
-**Current milestone.** Phase-1 Core screens — 3 of 4 shipped.
+**Current milestone.** Phase-1 Core screens — **COMPLETE** (S2–S6).
 
 **Completed**
 - Platform foundation, RBAC, auth, notification framework, scheduler
@@ -110,18 +110,22 @@ stop and report before adding write backend.
   quorum, conditional routing, SLA timers, delegation, AI advisory)
 - **All 10 workflow UI screens** (S1–S9 + builder)
 - **Project Hub**, **WIO/GFC approval on the engine**, brand reconciliation
-- **Phase-1 Core:** Design Room (S5), CRM TL greeting (S2), VisionCAM (S3)
+- **Phase-1 Core — COMPLETE:** Design Room (S5), CRM TL greeting (S2), VisionCAM (S3),
+  WIO/PIO Hub (S4), **Experience Centre (S6) + the discount gate**
 - **Velocity Gates passed: #2, #3, #4, #6, #7**
 
 **In progress.** Nothing mid-flight. Paused awaiting screen selection.
 
 **Not started**
-- **S6 EH · Experience Centre** — the last Phase-1 Core screen
 - Phase 2 integrations: S7 BD/HubSpot, S8 COO, S9 Procurement/TranZact,
   S10 Factory HOD, S11 HR/Keka, S13 API Health, S14 Vendor
 - VisionCAM **mobile capture** (React Native, offline-first) — the web log/gate exists
-- **Velocity Gates open: #1** VisionCAM billing on every site · **#5** EH discount
-  gate across 3 ECs · **#8** Communication Spine welcome letter
+- **Velocity Gates open: #1** VisionCAM billing on every site ·
+  **#8** Communication Spine welcome letter
+- **#5 EH discount gate — enforced, not yet closable.** The gate ships and is
+  configured on all three centres, but only Gurugram has a `country_head_id`.
+  Until Delhi and Mumbai have heads assigned, nobody at L2 can approve their
+  discounts. A data task, not a code one.
 
 **Known issues.** See §7.
 
@@ -143,11 +147,11 @@ lib/services/*      ALL business logic + SQL (the read/write surface)
 lib/db              query() / withUserContext() over PGlite (dev) / Postgres (prod)
 lib/auth            getCurrentUser, session
 db/*.sql            Additive numbered migrations, listed in db/lib.mjs DEFAULT_FILES
-db/validate.mjs     In-process PGlite harness (105 checks) — the schema contract
+db/validate.mjs     In-process PGlite harness (110 checks) — the schema contract
 ```
 
 **Database.** 7 schemas (`public`, `ee`, `eh`, `factory`, `proc`, `portal`, `audit`),
-72 base tables. Migrations are **additive and numbered** (`001`–`028` + `900_dev_fixtures`)
+72 base tables. Migrations are **additive and numbered** (`001`–`029` + `900_dev_fixtures`)
 and must be registered in `DEFAULT_FILES` in `db/lib.mjs` **and** given a check in
 `db/validate.mjs`. RLS via `withUserContext()`. **The golden thread:** `project_code`
 (`ED/YY-YY/NNN`) links every document; all document numbers are sequence-generated
@@ -179,6 +183,7 @@ Newest first. Full detail in [`docs/CHANGELOG.md`](CHANGELOG.md); full history i
 | Date | Milestone | Commits |
 |---|---|---|
 | 2026-07-28 | Work restored to a clean branch; all 98 commits + 33 branches pushed to GitHub (Layer 3 was empty) | `1491b83` |
+| 2026-07-30 | **S6 Experience Centre** + discount control gate (db/029); L2 could not approve its own gate | this commit |
 | 2026-07-23 | **Phase-1 Core:** VisionCAM S3, CRM TL greeting S2, Design Room S5 | `c573b48` · `9734283` · `2619d7a` |
 | 2026-07-22 | WIO/GFC approval on the engine (db/028); Project Hub; brand reconciliation | `fec6f74` · `807b5df` · `c0a9f0e` |
 | 2026-07-22 | **Phase 4 frontend complete** — S7, S8, S9, S5 builder | `45b769e` · `e6d6fee` |
@@ -194,10 +199,11 @@ Newest first. Full detail in [`docs/CHANGELOG.md`](CHANGELOG.md); full history i
 
 **Current task.** None in flight — paused awaiting a screen decision.
 
-**Completed portion.** Phase 4 complete; 3 of 4 Phase-1 Core screens shipped; work
-restored and backed up to GitHub; green baseline verified 2026-07-28.
+**Completed portion.** Phase 4 complete; **all Phase-1 Core screens shipped**; work
+restored and backed up to GitHub. Green baseline re-verified 2026-07-30:
+harness 110/0 · tsc 0 · unit 165/165 · lint clean · build clean.
 
-**Remaining work.** S6 EH · Experience Centre, then Phase 2 integrations.
+**Remaining work.** Phase 2 integrations, and the two open Velocity Gates.
 
 **Blockers.** None technical. Two decisions are open:
 1. Whether `essentia-portal-backup---` is the permanent GitHub home given its name.
@@ -297,9 +303,9 @@ cd frontend && npm run dev    # Next.js on :3000
 
 | Command | Expected |
 |---|---|
-| `node db/validate.mjs` | 105 PASS / 0 FAIL |
+| `node db/validate.mjs` | 110 PASS / 0 FAIL |
 | `cd frontend && npx tsc --noEmit` | exit 0 |
-| `cd frontend && npm run test` | 155 passed, 10 files |
+| `cd frontend && npm run test` | 165 passed, 11 files |
 | `cd frontend && npm run lint` | no warnings or errors |
 | `cd frontend && npm run build` | clean — **never run while `next dev` is running** |
 
@@ -329,8 +335,8 @@ real credential. Switch the previewed role via `DEV_USER_ID` rather than logging
 Priority order. Backlog: [`TODO.md`](../TODO.md); roadmap:
 [`docs/architecture/ROADMAP.md`](architecture/ROADMAP.md).
 
-1. **S6 EH · Experience Centre** — the last Phase-1 Core screen; carries Velocity
-   Gate #5 (discount control across all 3 ECs).
+1. **Assign Country Heads to Delhi and Mumbai** — one UPDATE each; without it
+   Velocity Gate #5 cannot close (§2).
 2. **Velocity Gate #8 — Communication Spine** welcome letter within 4 hrs of first
    instalment, with the scroll-to-bottom send gate.
 3. **Velocity Gate #1 — VisionCAM billing** live on every active site.
