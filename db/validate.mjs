@@ -1541,6 +1541,83 @@ if (!failed) {
       // VisionCAM (S3) — the photo log seeds for ED/26-27/903 (4 captures, 3 QC
       // pass) and a photo-gated billing milestone is blocked awaiting a photo
       // (trigger_type='visioncam', not invoice_raised) — the Gate-1 surface.
+      // S6 · EH (Velocity Gate 5). Three centres seed, each with a target, and
+      // the gate threshold is a per-centre COLUMN, not a constant in code —
+      // the business retunes a centre by UPDATE (ADR-EP-01).
+      name: "eh: three Experience Centres seed with per-centre discount thresholds",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM eh.experience_centres) = 3
+              AND (SELECT COUNT(*) FROM eh.experience_centres WHERE target_monthly > 0) = 3
+              AND (SELECT discount_threshold_pct FROM eh.experience_centres
+                     WHERE code='gurugram_hq') = 10.00
+              AND (SELECT discount_threshold_pct FROM eh.experience_centres
+                     WHERE code='mumbai_lower_parel') = 15.00
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // The gate's own shape: unapproved discounts at/above threshold are the
+      // pending queue, and two of them are LOGGED BREACHES — communicated to
+      // the family before sign-off. The breach is recorded, not prevented
+      // (ADR-HS-01): a CHECK forcing FALSE would make it unrecordable.
+      name: "eh: discount gate — pending queue + breaches recorded, not suppressed",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM eh.sales s
+                 JOIN eh.experience_centres ec ON ec.id = s.ec_id
+                WHERE s.discount_approved_at IS NULL
+                  AND s.discount_pct >= ec.discount_threshold_pct
+                  AND s.discount_pct > 0) = 3
+              AND (SELECT COUNT(*) FROM eh.sales
+                     WHERE discount_communicated_before_approval) = 2
+              AND (SELECT COUNT(*) FROM eh.sales
+                     WHERE discount_communicated_before_approval
+                       AND discount_approved_at IS NULL) = 2
+              AND (SELECT COUNT(*) FROM eh.sales
+                     WHERE discount_approved_at IS NOT NULL) = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // A discount below its centre's threshold never enters the queue at all.
+      name: "eh: a discount below the centre threshold needs no sign-off",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM eh.sales s
+                 JOIN eh.experience_centres ec ON ec.id = s.ec_id
+                WHERE s.discount_pct > 0
+                  AND s.discount_pct < ec.discount_threshold_pct) = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // The Country Head is L2 and would read ZERO rows under db/001's
+      // L0/L1-only policy — on their own screen. db/029 adds ownership-scoped
+      // access, the same shape as families_project_team.
+      // A gate nobody can pass is not a gate. The Country Head is the actor
+      // §28 names, so L2 must hold approve + financial_access on eh_sales —
+      // while pio.approve stays denied at L2, which is a different rule (§26).
+      name: "eh: the Country Head (L2) can actually work the gate",
+      sql: `SELECT (
+              (SELECT allowed FROM public.permissions
+                WHERE access_level='L2' AND resource_type='eh_sales' AND action_code='approve')
+              AND (SELECT allowed FROM public.permissions
+                     WHERE access_level='L2' AND resource_type='eh_sales' AND action_code='financial_access')
+              AND NOT (SELECT allowed FROM public.permissions
+                         WHERE access_level='L2' AND resource_type='pio' AND action_code='approve')
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "eh: RLS grants the Country Head their own centre (db/029)",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM pg_policies
+                WHERE schemaname='eh' AND tablename='sales'
+                  AND policyname='eh_sales_country_head') = 1
+              AND (SELECT COUNT(*) FROM eh.experience_centres
+                     WHERE country_head_id='00000000-0000-4000-8000-000000000006') = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
       name: "visioncam: photo log + photo-gated (blocked) billing milestone seed",
       sql: `SELECT (
               (SELECT COUNT(*) FROM ee.visioncam_photos

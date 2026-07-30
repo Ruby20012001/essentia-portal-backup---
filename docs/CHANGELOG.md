@@ -8,6 +8,68 @@
 
 ---
 
+## 2026-07-30 — S6 · essentia home, Experience Centre + discount control gate
+
+Completes the Phase-1 Core screens (S2–S6).
+
+### Added
+- **S6 Experience Centre** `/eh` — the Country Head's floor: revenue against
+  target, today's trading, the opening checklist, the monthly target tracker,
+  and the discount control gate. Replaces the placeholder.
+- **The discount gate (Velocity Gate 5)** — a Client Advisor may not communicate
+  a discount until the Country Head signs it off. Pending queue, one-click
+  approval, and a banner naming any advisor who went early.
+- `lib/services/eh.ts` — read model + `approveDiscount`, a guarded
+  compare-and-swap so two heads cannot both claim one approval.
+- `POST /api/eh/discounts/[id]/approve`.
+
+### Changed
+- The approval threshold is **per centre, held in the database**
+  (`eh.experience_centres.discount_threshold_pct`), not a constant in code —
+  the business retunes a centre with an UPDATE (ADR-EP-01). Seeded 10% at
+  Gurugram and Delhi, 15% at Mumbai, precisely so the difference is visible.
+- The monthly target tracker lists only centres whose sales the viewer can
+  actually read. An unfiltered roll-up printed a real target beside a ₹0 that
+  meant "invisible to you", not "sold nothing" (ADR-HS-01).
+
+### Fixed
+- **The gate's own actor could not work the gate.** L2 held read/create/edit on
+  `eh_sales` but not `approve`, so a Country Head could see the queue and never
+  clear it — Velocity Gate 5 with no way to pass it. Granted `approve` and
+  `financial_access` at `own_dept`, the same shape db/004 already uses for
+  `communication_spine.approve` and `billing.financial_access`. `pio.approve`
+  stays denied at L2 — a different rule (§26), and a harness check now pins both.
+- **RLS returned zero rows to the screen's own persona.** `eh.sales` was fenced
+  to L0/L1, so an L2 Country Head read nothing on their own dashboard — the same
+  trap db/001 documents for `families_project_team`. Added ownership-scoped
+  policies for `eh.sales` and for the families who bought at that centre.
+
+### Database
+- `029_eh_experience_centre.sql` — `discount_threshold_pct`, two RLS policies,
+  the L2 grants, and two indexes. Additive and idempotent; no gate columns
+  added, because db/001 already carried the whole contract.
+- The breach flag is deliberately **not** constrained to FALSE: a CHECK would
+  make a violation unrecordable, and the portal's job is to surface it.
+- Fixtures seed three centres, a Country Head, two Client Advisors and six
+  sales — including two logged breaches and one below-threshold sale.
+
+### Tests
+- +10 unit tests (`eh-discount-gate.test.ts`) — every refusal and its exact
+  wording, the compare-and-swap, the audit payload, and that approving never
+  clears the early-communication flag. Suite **155 → 165**.
+- +5 harness checks. Harness **105 → 110**.
+
+### Notes
+- Driven live end to end: approving a breached 22% discount moved it to settled
+  while it kept reading "Communicated early" — history is not rewritten.
+- Checked at 320/768/1440: no page-level horizontal scroll; tables scroll in
+  their own containers.
+- **Gate 5 is enforced but not yet closable.** Only Gurugram has a
+  `country_head_id`; Delhi and Mumbai have none, so no L2 can approve their
+  discounts today. Assigning those two heads is a data task, not a code one.
+
+---
+
 ## 2026-07-28 — Work restoration, GitHub backup, memory consolidation
 
 ### Added

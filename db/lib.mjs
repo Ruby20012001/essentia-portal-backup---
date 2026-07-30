@@ -40,6 +40,7 @@ export const DEFAULT_FILES = [
   "026_sla_fire_once.sql",
   "027_workflow_definition_admin.sql",
   "028_wio_approval.sql",
+  "029_eh_experience_centre.sql",
   "900_dev_fixtures.sql",
 ];
 
