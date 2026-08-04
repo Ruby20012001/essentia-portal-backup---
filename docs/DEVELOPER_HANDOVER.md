@@ -78,7 +78,7 @@ system. When in doubt about how two records relate, they relate through this.
 | **Drawing Ladder** | The 14-stage design sequence: **CP → SLD → FI → TP → GFC → AB**. Implemented as the Design Room screen. |
 | **Triangle of Agreement** | Final BOQ **+** final 3D **+** client-signed GFC **+** shared BOM, all aligned. Required before *every* PIO. Non-negotiable. |
 | **WIO → PIO checklist** | Approved BOQ, Approved 3D, Approved SLD — all three before conversion. |
-| **Velocity Gates** | 8 conditions that must all pass before go-live (Brief §35). 5 pass today. |
+| **Velocity Gates** | 8 conditions that must all pass before go-live (Brief §35). 6 pass today. |
 | **Communication Spine** | The client-communication system. Letters are generated, reviewed and sent from here. |
 | **VisionCAM** | Site-photo capture. A photo is required before a billing milestone can fire. |
 | **Weekly Pulse** | The Friday client update, auto-drafted per active project. |
@@ -168,9 +168,9 @@ current baseline — if one drops, you changed something you did not mean to.
 
 | Command | Expected |
 |---|---|
-| `node db/validate.mjs` | **105 PASS / 0 FAIL** |
+| `node db/validate.mjs` | **112 PASS / 0 FAIL** |
 | `cd frontend && npx tsc --noEmit` | exit 0 |
-| `cd frontend && npm run test` | **155 passed**, 10 files |
+| `cd frontend && npm run test` | **165 passed**, 11 files |
 | `cd frontend && npm run lint` | no warnings or errors |
 
 **Never run `npm run build` while `npm run dev` is running** — it clobbers `.next`
@@ -292,12 +292,11 @@ audit found genuine defects. Read the code before assuming something is missing.
 workflow engine and all 10 of its screens; Project Hub; WIO/PIO Hub; Design Room;
 VisionCAM web view; Founder Morning Brief; Exit Protocol; Succession Pack.
 
-**Velocity Gates:** 5 of 8 pass (#2, #3, #4, #6, #7). Open: **#1** VisionCAM
-billing on every site · **#5** EH discount gate · **#8** Communication Spine
-welcome letter.
+**Velocity Gates:** 6 of 8 pass (#2, #3, #4, #5, #6, #7). Open: **#1** VisionCAM
+billing on every site · **#8** Communication Spine welcome letter.
 
-**Next up:** S6 EH · Experience Centre, then Phase 2 integrations (HubSpot,
-TranZact, Keka, Microsoft Graph, WhatsApp).
+**Next up:** Phase 2 integrations (HubSpot, TranZact, Keka, Microsoft Graph,
+WhatsApp), and the two open Velocity Gates.
 
 **The workflow engine backend is frozen.** Extend a read model only if a screen
 genuinely needs it, and raise it before adding any write path.

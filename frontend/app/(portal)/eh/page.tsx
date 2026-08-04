@@ -64,7 +64,12 @@ export default async function EssentiaHomePage({ searchParams }: { searchParams:
       </div>
 
       {ec ? (
-        <ExperienceCentreView ec={ec} canApprove={approve.allowed} canSeeFinancials={financial.allowed} />
+        <ExperienceCentreView
+          ec={ec}
+          canApprove={approve.allowed}
+          canSeeFinancials={financial.allowed}
+          isLeadership={read.scope === "all"}
+        />
       ) : (
         <Block title="Not available" body="That centre doesn't exist, or it isn't one you hold." />
       )}

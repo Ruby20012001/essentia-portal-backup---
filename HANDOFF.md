@@ -14,5 +14,5 @@ that drift apart.
 > Phase 4 and 3 of 4 Phase-1 Core screens are complete; the workflow backend is
 > frozen — extend a read model only if a new screen genuinely needs it, and
 > stop-and-report before adding write backend. Verify the green baseline first
-> (harness 105/0 · tsc 0 · unit 155/155 · lint clean), then pick the next task
+> (harness 112/0 · tsc 0 · unit 165/165 · lint clean), then pick the next task
 > from §9. Build on a `feat/*` branch, verify, merge `--no-ff`.
