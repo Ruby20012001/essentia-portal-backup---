@@ -12,7 +12,7 @@
 > vocabulary this file assumes, and ends with a handover checklist.
 >
 > **Last verified:** 2026-07-30 · **Baseline:** `platform-baseline-v1`
-> **Green:** DB harness 110/0 · tsc 0 · unit 165/165 · lint clean · build clean *(observed)*
+> **Green:** DB harness 112/0 · tsc 0 · unit 165/165 · lint clean · build clean *(observed)*
 
 ---
 
@@ -112,7 +112,7 @@ stop and report before adding write backend.
 - **Project Hub**, **WIO/GFC approval on the engine**, brand reconciliation
 - **Phase-1 Core — COMPLETE:** Design Room (S5), CRM TL greeting (S2), VisionCAM (S3),
   WIO/PIO Hub (S4), **Experience Centre (S6) + the discount gate**
-- **Velocity Gates passed: #2, #3, #4, #6, #7**
+- **Velocity Gates passed: #2, #3, #4, #5, #6, #7** — 6 of 8
 
 **In progress.** Nothing mid-flight. Paused awaiting screen selection.
 
@@ -122,10 +122,11 @@ stop and report before adding write backend.
 - VisionCAM **mobile capture** (React Native, offline-first) — the web log/gate exists
 - **Velocity Gates open: #1** VisionCAM billing on every site ·
   **#8** Communication Spine welcome letter
-- **#5 EH discount gate — enforced, not yet closable.** The gate ships and is
-  configured on all three centres, but only Gurugram has a `country_head_id`.
-  Until Delhi and Mumbai have heads assigned, nobody at L2 can approve their
-  discounts. A data task, not a code one.
+
+> **#5 closed 2026-07-30.** All three centres have a Country Head, a threshold,
+> and a live discount queue. A harness check asserts the closing condition, so
+> adding a centre without a head fails the build and reopens the gate loudly;
+> in the running portal, leadership sees a banner naming any unguarded centre.
 
 **Known issues.** See §7.
 
@@ -147,7 +148,7 @@ lib/services/*      ALL business logic + SQL (the read/write surface)
 lib/db              query() / withUserContext() over PGlite (dev) / Postgres (prod)
 lib/auth            getCurrentUser, session
 db/*.sql            Additive numbered migrations, listed in db/lib.mjs DEFAULT_FILES
-db/validate.mjs     In-process PGlite harness (110 checks) — the schema contract
+db/validate.mjs     In-process PGlite harness (112 checks) — the schema contract
 ```
 
 **Database.** 7 schemas (`public`, `ee`, `eh`, `factory`, `proc`, `portal`, `audit`),
@@ -201,7 +202,7 @@ Newest first. Full detail in [`docs/CHANGELOG.md`](CHANGELOG.md); full history i
 
 **Completed portion.** Phase 4 complete; **all Phase-1 Core screens shipped**; work
 restored and backed up to GitHub. Green baseline re-verified 2026-07-30:
-harness 110/0 · tsc 0 · unit 165/165 · lint clean · build clean.
+harness 112/0 · tsc 0 · unit 165/165 · lint clean · build clean.
 
 **Remaining work.** Phase 2 integrations, and the two open Velocity Gates.
 
@@ -303,7 +304,7 @@ cd frontend && npm run dev    # Next.js on :3000
 
 | Command | Expected |
 |---|---|
-| `node db/validate.mjs` | 110 PASS / 0 FAIL |
+| `node db/validate.mjs` | 112 PASS / 0 FAIL |
 | `cd frontend && npx tsc --noEmit` | exit 0 |
 | `cd frontend && npm run test` | 165 passed, 11 files |
 | `cd frontend && npm run lint` | no warnings or errors |

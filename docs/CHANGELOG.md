@@ -8,6 +8,52 @@
 
 ---
 
+## 2026-07-30 — Velocity Gate 5 CLOSED
+
+Gate 5 reads "EH discount control gate enforced across **all 3** Experience
+Centres". S6 built the gate but left it working at one centre only, so this
+closes it — and makes it unable to reopen quietly.
+
+### Fixed
+- **Delhi and Mumbai had no Country Head**, so their discount queues had nobody
+  at L2 who could clear them. The gate existed there and could not be worked.
+  Both centres now have a head.
+
+### Added
+- **Unguarded-centre detection.** `getExperienceCentre` returns any centre with
+  no Country Head plus the count of discounts stuck behind that gap, and
+  leadership sees a banner naming them: *"Velocity Gate 5 is open: … has no
+  Country Head assigned."* A gap you cannot see is a gap you cannot fix
+  (ADR-HS-01). The banner is leadership-only — a Country Head cannot assign
+  someone to another centre, so it is not their alarm to carry.
+- Live discount queues at Delhi and Mumbai, so the gate is exercised at every
+  centre rather than only at the flagship.
+
+### Database
+- Fixtures only. No migration — db/029 already carried the schema.
+
+### Tests
+- **The gate's closing condition is now asserted, not claimed:** every centre
+  has a head, every head is L2 or above (and so holds the `approve` grant),
+  every centre has a threshold, and a discount above threshold exists at all
+  three. Add a fourth centre without a head and this check fails — the gate
+  reopens loudly.
+- A second check proves the per-centre threshold changes the answer rather than
+  decorating the table: Delhi's 14% needs sign-off, Mumbai's 12% does not.
+- Two earlier checks rescoped to Gurugram. They asserted global counts that
+  silently described one centre's fixture, so they broke the moment another
+  centre gained a discount. Rescoped rather than loosened.
+- Harness **110 → 112**.
+
+### Notes
+- Country Heads are dev fixtures. In production they arrive through the Keka
+  identity sync; the closing condition is the same either way — every centre
+  has someone who can work its gate.
+- **Velocity Gates: 6 of 8 passed.** Open: #1 VisionCAM billing on every site,
+  #8 Communication Spine welcome letter.
+
+---
+
 ## 2026-07-30 — S6 · essentia home, Experience Centre + discount control gate
 
 Completes the Phase-1 Core screens (S2–S6).
@@ -64,9 +110,9 @@ Completes the Phase-1 Core screens (S2–S6).
   while it kept reading "Communicated early" — history is not rewritten.
 - Checked at 320/768/1440: no page-level horizontal scroll; tables scroll in
   their own containers.
-- **Gate 5 is enforced but not yet closable.** Only Gurugram has a
-  `country_head_id`; Delhi and Mumbai have none, so no L2 can approve their
-  discounts today. Assigning those two heads is a data task, not a code one.
+- **Gate 5 was enforced but not yet closable at this commit.** Only Gurugram had
+  a `country_head_id`; Delhi and Mumbai had none, so no L2 could approve their
+  discounts. Closed immediately after — see the entry above.
 
 ---
 

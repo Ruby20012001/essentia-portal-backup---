@@ -12,16 +12,35 @@ export function ExperienceCentreView({
   ec,
   canApprove,
   canSeeFinancials,
+  isLeadership = false,
 }: {
   ec: ExperienceCentre;
   canApprove: boolean;
   canSeeFinancials: boolean;
+  /** Leadership owns the assignment of Country Heads, so only they see §Gate-5 gaps. */
+  isLeadership?: boolean;
 }) {
   const s = ec.summary;
   const breaches = [...ec.pending, ...ec.settled].filter((r) => r.communicatedBeforeApproval);
 
   return (
     <div>
+      {/* Velocity Gate 5 is open wherever a centre has no Country Head. */}
+      {isLeadership && ec.unguarded.length > 0 ? (
+        <div role="alert" className="mb-6 rounded-lg border-l-4 border-error bg-error/5 px-5 py-3">
+          <p className="font-body text-sm font-bold text-error">
+            Velocity Gate 5 is open:{" "}
+            {ec.unguarded.map((u) => u.name).join(", ")}{" "}
+            {ec.unguarded.length === 1 ? "has" : "have"} no Country Head assigned.
+          </p>
+          <p className="mt-0.5 font-body text-xs font-light text-secondary">
+            The discount gate cannot be worked there —{" "}
+            {ec.unguarded.reduce((n, u) => n + u.awaiting, 0)} discount
+            {ec.unguarded.reduce((n, u) => n + u.awaiting, 0) === 1 ? "" : "s"} awaiting approval with
+            nobody able to give it. Assign a head to close the gate.
+          </p>
+        </div>
+      ) : null}
       {/* The violation banner — named advisors, exact discounts. */}
       {breaches.length > 0 ? (
         <div role="alert" className="mb-6 rounded-lg border-l-4 border-error bg-error/5 px-5 py-3">

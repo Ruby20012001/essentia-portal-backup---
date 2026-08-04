@@ -47,8 +47,18 @@ export type CentreTarget = {
   pctOfTarget: number;
 };
 
+/**
+ * A centre with no Country Head. Velocity Gate 5 is only closed while EVERY
+ * centre has someone who can work its gate — a headless centre still collects
+ * discounts and has nobody at L2 able to approve them, so the queue silently
+ * grows. Surfaced rather than assumed away (ADR-HS-01).
+ */
+export type UnguardedCentre = { id: string; name: string; city: string | null; awaiting: number };
+
 export type ExperienceCentre = {
   centre: { id: string; code: string; name: string; city: string | null; thresholdPct: number };
+  /** Non-empty means Gate 5 is open somewhere. Rendered for leadership. */
+  unguarded: UnguardedCentre[];
   summary: {
     monthToDate: number;
     target: number;
@@ -181,6 +191,25 @@ export async function getExperienceCentre(user: SessionUser, ecId: string): Prom
         ORDER BY ec.name`,
     );
 
+    // Gate 5's own health check: any centre with no Country Head, and how many
+    // discounts sit there with nobody at L2 able to clear them. eh.sales is
+    // RLS-fenced, so `awaiting` is only non-zero for a viewer who can read
+    // those rows (leadership); the centre itself is always nameable, which is
+    // the part that matters — you cannot fix a gap you cannot see.
+    const unguardedRows = await q<{ id: string; name: string; city: string | null; awaiting: string | null }>(
+      `SELECT ec.id, ec.name, ec.city,
+              COUNT(s.id) FILTER (
+                WHERE s.discount_approved_at IS NULL
+                  AND s.discount_pct > 0
+                  AND s.discount_pct >= ec.discount_threshold_pct
+              ) AS awaiting
+         FROM eh.experience_centres ec
+         LEFT JOIN eh.sales s ON s.ec_id = ec.id
+        WHERE ec.country_head_id IS NULL
+        GROUP BY ec.id, ec.name, ec.city
+        ORDER BY ec.name`,
+    );
+
     const [chk] = await q<{ all_complete: boolean; items: unknown; created_at: string | null }>(
       `SELECT all_complete, items, created_at::text AS created_at
          FROM eh.daily_checklist
@@ -192,6 +221,12 @@ export async function getExperienceCentre(user: SessionUser, ecId: string): Prom
 
     return {
       centre: { id: ec.id, code: ec.code, name: ec.name, city: ec.city, thresholdPct },
+      unguarded: unguardedRows.map((u) => ({
+        id: u.id,
+        name: u.name,
+        city: u.city,
+        awaiting: Number(u.awaiting ?? 0),
+      })),
       summary: {
         monthToDate,
         target,

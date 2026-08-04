@@ -1560,20 +1560,30 @@ if (!failed) {
       // pending queue, and two of them are LOGGED BREACHES — communicated to
       // the family before sign-off. The breach is recorded, not prevented
       // (ADR-HS-01): a CHECK forcing FALSE would make it unrecordable.
+      // Scoped to the flagship, whose fixture this describes. Delhi and Mumbai
+      // carry their own queues (see the Gate 5 check), so a global count here
+      // would assert two unrelated things at once and break on every new seed.
       name: "eh: discount gate — pending queue + breaches recorded, not suppressed",
       sql: `SELECT (
               (SELECT COUNT(*) FROM eh.sales s
                  JOIN eh.experience_centres ec ON ec.id = s.ec_id
-                WHERE s.discount_approved_at IS NULL
+                WHERE ec.code='gurugram_hq'
+                  AND s.discount_approved_at IS NULL
                   AND s.discount_pct >= ec.discount_threshold_pct
                   AND s.discount_pct > 0) = 3
-              AND (SELECT COUNT(*) FROM eh.sales
-                     WHERE discount_communicated_before_approval) = 2
-              AND (SELECT COUNT(*) FROM eh.sales
-                     WHERE discount_communicated_before_approval
-                       AND discount_approved_at IS NULL) = 2
-              AND (SELECT COUNT(*) FROM eh.sales
-                     WHERE discount_approved_at IS NOT NULL) = 1
+              AND (SELECT COUNT(*) FROM eh.sales s
+                     JOIN eh.experience_centres ec ON ec.id = s.ec_id
+                    WHERE ec.code='gurugram_hq'
+                      AND s.discount_communicated_before_approval) = 2
+              AND (SELECT COUNT(*) FROM eh.sales s
+                     JOIN eh.experience_centres ec ON ec.id = s.ec_id
+                    WHERE ec.code='gurugram_hq'
+                      AND s.discount_communicated_before_approval
+                      AND s.discount_approved_at IS NULL) = 2
+              AND (SELECT COUNT(*) FROM eh.sales s
+                     JOIN eh.experience_centres ec ON ec.id = s.ec_id
+                    WHERE ec.code='gurugram_hq'
+                      AND s.discount_approved_at IS NOT NULL) = 1
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
@@ -1583,7 +1593,8 @@ if (!failed) {
       sql: `SELECT (
               (SELECT COUNT(*) FROM eh.sales s
                  JOIN eh.experience_centres ec ON ec.id = s.ec_id
-                WHERE s.discount_pct > 0
+                WHERE ec.code='gurugram_hq'
+                  AND s.discount_pct > 0
                   AND s.discount_pct < ec.discount_threshold_pct) = 1
             )::TEXT AS v`,
       ok: (v) => v === "true",
@@ -1595,6 +1606,47 @@ if (!failed) {
       // A gate nobody can pass is not a gate. The Country Head is the actor
       // §28 names, so L2 must hold approve + financial_access on eh_sales —
       // while pio.approve stays denied at L2, which is a different rule (§26).
+      // VELOCITY GATE 5 — the closing condition, asserted rather than claimed.
+      // "Enforced across all 3 ECs" means: every centre has a threshold, every
+      // centre has a Country Head who can work its gate, and the gate is
+      // actually exercised at each — not just at the flagship. If anyone adds a
+      // fourth centre without a head, this check fails and the gate reopens.
+      name: "eh: VELOCITY GATE 5 — every centre has a head, a threshold and a live gate",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM eh.experience_centres) = 3
+              AND (SELECT COUNT(*) FROM eh.experience_centres
+                     WHERE country_head_id IS NULL) = 0
+              AND (SELECT COUNT(*) FROM eh.experience_centres
+                     WHERE discount_threshold_pct IS NULL) = 0
+              -- every head is L2+ and therefore holds the approve grant
+              AND (SELECT COUNT(*) FROM eh.experience_centres ec
+                     JOIN public.users u ON u.id = ec.country_head_id
+                    WHERE u.access_level IN ('L0','L1','L2')) = 3
+              -- the gate is exercised at all three, not only the flagship
+              AND (SELECT COUNT(DISTINCT s.ec_id) FROM eh.sales s
+                     JOIN eh.experience_centres ec ON ec.id = s.ec_id
+                    WHERE s.discount_pct >= ec.discount_threshold_pct
+                      AND s.discount_pct > 0) = 3
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Per-centre thresholds must give DIFFERENT answers, or the column is
+      // decoration: Mumbai's 12% is exempt where Delhi's 14% is not.
+      name: "eh: the same discount resolves differently per centre",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM eh.sales s
+                 JOIN eh.experience_centres ec ON ec.id = s.ec_id
+                WHERE ec.code='sultanpur_delhi' AND s.discount_pct=14.00
+                  AND s.discount_pct >= ec.discount_threshold_pct) = 1
+              AND (SELECT COUNT(*) FROM eh.sales s
+                     JOIN eh.experience_centres ec ON ec.id = s.ec_id
+                    WHERE ec.code='mumbai_lower_parel' AND s.discount_pct=12.00
+                      AND s.discount_pct < ec.discount_threshold_pct) = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
       name: "eh: the Country Head (L2) can actually work the gate",
       sql: `SELECT (
               (SELECT allowed FROM public.permissions

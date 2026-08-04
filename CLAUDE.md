@@ -187,4 +187,4 @@ Reading order for a cold start: **CLAUDE.md → docs/PROJECT_MEMORY.md → RUNBO
   (renamed from `essentia-portal-`; the URL was corrected 2026-07-28).
 - **Canonical working copy:** `C:\Users\Ai-01\Desktop\ruby crm\essentia-portal`.
 - **Two npm workspaces** — install in **both** `db/` and `frontend/`.
-- Green baseline: harness 105/0 · `tsc` 0 · unit 155/155 · lint clean.
+- Green baseline: harness 112/0 · `tsc` 0 · unit 165/165 · lint clean.

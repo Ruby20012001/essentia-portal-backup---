@@ -36,9 +36,9 @@ cd frontend && npm run dev    # the app on :3000
 Verify — all four should pass:
 
 ```bash
-node db/validate.mjs                    # 105 PASS / 0 FAIL
+node db/validate.mjs                    # 112 PASS / 0 FAIL
 cd frontend && npx tsc --noEmit         # exit 0
-cd frontend && npm run test             # 155 passed
+cd frontend && npm run test             # 165 passed
 cd frontend && npm run lint             # clean
 ```
 
@@ -48,8 +48,8 @@ cd frontend && npm run lint             # clean
 
 **Phase 1 core screens** — the platform foundation, the workflow engine and all its
 screens, Project Hub, WIO/PIO Hub, Design Room and VisionCAM are built.
-**5 of the 8 Velocity Gates pass.** Open: VisionCAM billing (#1), the EH discount
-gate (#5), the Communication Spine welcome letter (#8).
+**6 of the 8 Velocity Gates pass.** Open: VisionCAM billing (#1) and the
+Communication Spine welcome letter (#8).
 
 Current detail: [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md).
 

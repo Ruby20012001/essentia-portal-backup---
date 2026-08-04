@@ -288,7 +288,14 @@ VALUES
   ('00000000-0000-4000-8000-000000000007', 'dev.ca.priya@essentia.in',
    'Dev Client Advisor Priya', 'Dev CA P', 'L3', NULL, 'Client Advisor, EH (dev fixture)'),
   ('00000000-0000-4000-8000-000000000008', 'dev.ca.rahul@essentia.in',
-   'Dev Client Advisor Rahul', 'Dev CA R', 'L3', NULL, 'Client Advisor, EH (dev fixture)')
+   'Dev Client Advisor Rahul', 'Dev CA R', 'L3', NULL, 'Client Advisor, EH (dev fixture)'),
+  -- Velocity Gate 5 closes only when EVERY centre has an approver. Delhi and
+  -- Mumbai were headless, so their discount queues had nobody at L2 who could
+  -- clear them — the gate existed there but could not be worked.
+  ('00000000-0000-4000-8000-000000000009', 'dev.echead.delhi@essentia.in',
+   'Dev Country Head — Delhi', 'Dev EC Delhi', 'L2', NULL, 'Country Head — Delhi (dev fixture)'),
+  ('00000000-0000-4000-8000-00000000000a', 'dev.echead.mumbai@essentia.in',
+   'Dev Country Head — Mumbai', 'Dev EC Mumbai', 'L2', NULL, 'Country Head — Mumbai (dev fixture)')
 ON CONFLICT (email) DO NOTHING;
 
 -- The shared dev hash is applied near the top of this file, before these three
@@ -309,11 +316,13 @@ UPDATE eh.experience_centres SET
 WHERE code = 'gurugram_hq';
 
 UPDATE eh.experience_centres SET
+  country_head_id        = '00000000-0000-4000-8000-000000000009',
   target_monthly         = 7000000.00,
   discount_threshold_pct = 10.00
 WHERE code = 'sultanpur_delhi';
 
 UPDATE eh.experience_centres SET
+  country_head_id        = '00000000-0000-4000-8000-00000000000a',
   target_monthly         = 7000000.00,
   discount_threshold_pct = 15.00
 WHERE code = 'mumbai_lower_parel';
@@ -352,15 +361,22 @@ CROSS JOIN (VALUES
 WHERE ec.code = 'gurugram_hq'
   AND NOT EXISTS (SELECT 1 FROM eh.sales x WHERE x.invoice_number = v.invoice_number);
 
--- Delhi and Mumbai carry month-to-date revenue so the tracker shows all three.
+-- Delhi and Mumbai carry month-to-date revenue so the tracker shows all three,
+-- AND a live discount queue each — Velocity Gate 5 is "enforced across all 3
+-- ECs", so the gate must actually be exercised at every centre, not only at
+-- the flagship. Mumbai's 12% sits BELOW its 15% threshold while Delhi's 14%
+-- sits ABOVE its 10% one: the same discount, a different answer per centre.
 INSERT INTO eh.sales (ec_id, sale_date, invoice_number, ca_id, gross_amount, discount_pct, net_amount)
 SELECT ec.id, CURRENT_DATE - 1, v.invoice_number,
-       '00000000-0000-4000-8000-000000000007'::uuid, v.gross_amount, 0.00, v.net_amount
+       '00000000-0000-4000-8000-000000000007'::uuid, v.gross_amount, v.discount_pct, v.net_amount
 FROM eh.experience_centres ec
 CROSS JOIN (VALUES
-  ('sultanpur_delhi',    'EH/DEL/26-27/0094', 6200000.00, 6200000.00),
-  ('mumbai_lower_parel', 'EH/MUM/26-27/0071', 3800000.00, 3800000.00)
-) AS v(ec_code, invoice_number, gross_amount, net_amount)
+  ('sultanpur_delhi',    'EH/DEL/26-27/0094', 6200000.00,  0.00, 6200000.00),
+  ('sultanpur_delhi',    'EH/DEL/26-27/0095',  400000.00, 14.00,  344000.00),
+  ('mumbai_lower_parel', 'EH/MUM/26-27/0071', 3800000.00,  0.00, 3800000.00),
+  ('mumbai_lower_parel', 'EH/MUM/26-27/0072',  500000.00, 20.00,  400000.00),
+  ('mumbai_lower_parel', 'EH/MUM/26-27/0073',  250000.00, 12.00,  220000.00)
+) AS v(ec_code, invoice_number, gross_amount, discount_pct, net_amount)
 WHERE ec.code::text = v.ec_code
   AND NOT EXISTS (SELECT 1 FROM eh.sales x WHERE x.invoice_number = v.invoice_number);
 
