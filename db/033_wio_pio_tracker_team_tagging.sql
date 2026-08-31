@@ -116,6 +116,9 @@ UPDATE ee.tracker_wios SET team_code = 'dipmallya', updated_at = NOW()
 -- still read 'dipmallya' from db/032's backfill and nobody would notice,
 -- so this fails the migration loudly instead.
 -- ---------------------------------------------------------------------
+--   Scoped to the 37 rows THIS migration names, not to the whole table: later
+--   migrations legitimately add WIOs (db/034 does), and a global count would
+--   turn every future addition into a failed re-run of this file.
 DO $$
 DECLARE
   n_dip INTEGER;
@@ -124,12 +127,22 @@ BEGIN
   SELECT COUNT(*) FILTER (WHERE team_code = 'dipmallya'),
          COUNT(*) FILTER (WHERE team_code = 'neeraj')
     INTO n_dip, n_nee
-    FROM ee.tracker_wios;
+    FROM ee.tracker_wios
+   WHERE wio_number IN (
+     'ED/25-26/172','ED/25-26/173','ED/26-27/088','ED/26-27/098','ED/26-27/109',
+     'ED/26-27/120','ED/26-27/081','ED/26-27/099','ED/26-27/018','ED/26-27/122',
+     'ED/26-27/057','ED/26-27/053','ED/26-27/119','ED/26-27/091','ED/26-27/127',
+     'ED/26-27/128','ED/26-27/100','ED/26-27/039','ED/26-27/136','ED/26-27/137',
+     'ED/26-27/133','— no WIO number —',
+     'ED/26-27/089','ED/26-27/090','ED/26-27/046','ED/26-27/121','ED/26-27/130',
+     'ED/26-27/118','ED/26-27/129','ED/26-27/092','ED/26-27/106','ED/26-27/084',
+     'ED/26-27/083','ED/26-27/086','ED/26-27/111','ED/26-27/097','ED/26-27/015'
+   );
 
   IF n_dip <> 22 OR n_nee <> 15 THEN
     RAISE EXCEPTION
-      'Team tagging is off: expected 22 dipmallya / 15 neeraj, got % / %. '
-      'A WIO was added or renamed since the 2026-08-31 standup — tag it '
-      'explicitly rather than letting it inherit a team.', n_dip, n_nee;
+      'Team tagging is off: expected 22 dipmallya / 15 neeraj across the 37 rows '
+      'this migration names, got % / %. A seeded WIO was renamed or removed — '
+      'tag it explicitly rather than letting it inherit a team.', n_dip, n_nee;
   END IF;
 END $$;

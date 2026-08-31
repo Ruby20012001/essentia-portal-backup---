@@ -213,23 +213,22 @@ harness clean · tsc 0 · unit 221/221 · lint clean.
 **Blockers.** None technical. Three decisions are open:
 1. Whether `essentia-portal-backup---` is the permanent GitHub home given its name.
 2. Whether `main` should be fast-forwarded to `platform-baseline-v1` (§7).
-3. **Four standup items are not yet on the board, and three PIO conversions are
-   unapplied.** From Ruby's 2026-08-31 standup:
-   - WIOs reported but absent from the board: `ED/26-27/104` (Dipmallya),
-     `ED/26-27/077`, `/107`, `/132` (Neeraj). Adding them means choosing a
-     `stage` and a `since` — the two fields the entire board derives from — so
-     they wait for Ruby rather than being guessed.
-   - PIOs reported converted today: `ED/26-27/257` (Design Democracy Hyderabad),
-     `/254` (Ridhima Jain), `/248` (Panchsheel Park). Marking a row Released
-     takes it off the clock, and `257` is claimed by **both** teams for
-     different scopes (Dipmallya: wardrobe; Neeraj: doll bar 2 nos), so none
-     were applied.
-   - Four rows were tagged `neeraj` by **inference**, not statement —
-     `ED/26-27/086`, `/111`, `/097`, `/015`. Worth a glance. See `db/033`.
-
-   Team tagging itself is DONE: `db/033` splits the board 22 Dipmallya / 15
-   Neeraj from the standup's explicit per-team sections, with a migration-level
-   assertion on those counts.
+3. **Small follow-ups on the S4b board — nothing blocking.**
+   The 2026-08-31 standup is fully applied (`db/033` tagging, `db/034` the day's
+   changes). Board stands at **41 rows, 23 Dipmallya / 18 Neeraj, 38 running**.
+   What remains:
+   - **The board is stamped 2026-08-25, not today.** So "PIOs released today"
+     reads 0 while three rows say "PIO released". Stale, not wrong — re-stamping
+     is the team's daily act on the Setup screen, deliberately not automated.
+   - **Four rows tagged `neeraj` by inference**, not by statement —
+     `ED/26-27/086`, `/111`, `/097`, `/015`. Worth a glance; each is a
+     one-dropdown fix. See `db/033`.
+   - **The Design Democracy Hyderabad doll bar has no row.** It converted under
+     PIO `/257` without ever being tracked; it needs a real WIO number and issue
+     date if it should appear.
+   - **`ED/26-27/018` is described two ways** in the standup (7 wardrobes /
+     vanities / mirrors vs 84 furniture for N44). The seeded note already flags
+     it: "Reported twice with different scopes — confirm."
 
    > **Correction (2026-08-31).** `db/032`'s header claimed
    > `WIO-to-PIO-Tracker_neeraj.xlsx` was "a copy of the same sheet, not

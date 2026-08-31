@@ -8,6 +8,39 @@
 
 ---
 
+## 2026-08-31 — S4b · the day's standup, applied
+
+Ruby's 2026-08-31 standup, with every judgement call confirmed by her before
+the migration was written. Nothing was inferred from prose.
+
+### db/034
+- **4 WIOs added** that the standup reported but the board did not carry:
+  `ED/26-27/104` (Dipmallya), `/077`, `/107`, `/132` (Neeraj), at the stages
+  Ruby confirmed. `wio_issued` left NULL for all four — the standup reports
+  their drawing state, not the date a WIO was issued, and inventing one would
+  start a 15-day clock that never really started. They read "Not tracked" until
+  the real date is entered, which is the board asking for it.
+- **3 PIO conversions marked released** — `/254` → `ED/26-27/136`, `/248` →
+  `ED/26-27/018`, `/257` → the Design Democracy row. Stage deliberately left
+  where it stood: moving it would re-stamp `since` and rewrite how long the row
+  actually sat there, which is history, not status.
+- Both changes asserted in the migration. A missed release would leave a
+  converted WIO on the clock accruing lateness it does not deserve.
+
+Board: 37 → **41 rows**, 23 Dipmallya / 18 Neeraj, 38 running.
+
+### Not done, deliberately
+- **The board was not re-stamped.** It still reads against 2026-08-25, so the
+  "PIOs released today" tile shows 0 while three rows say "PIO released". Stale,
+  not wrong — the stamp is the team's own daily act (Setup, one click), and
+  moving everyone's reading date is not a migration's business.
+- **No row was created for the Design Democracy Hyderabad doll bar.** It has
+  already converted; a row created only to be marked released the same instant
+  would put a line on a WIO→PIO tracker that never spent a day in the window.
+  It needs a real WIO number and issue date, entered on the WIOs screen.
+
+---
+
 ## 2026-08-31 — S4b · the board split by team
 
 Ruby's daily standup reports the two teams separately, which partitions the
