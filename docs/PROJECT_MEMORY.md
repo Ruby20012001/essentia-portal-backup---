@@ -213,22 +213,33 @@ harness clean · tsc 0 · unit 221/221 · lint clean.
 **Blockers.** None technical. Three decisions are open:
 1. Whether `essentia-portal-backup---` is the permanent GitHub home given its name.
 2. Whether `main` should be fast-forwarded to `platform-baseline-v1` (§7).
-3. **Neeraj's team has no data yet.** Ruby confirmed (2026-08-31) one shared
-   board with a team column — built and shipped as `db/032`; all 37 seeded rows
-   are tagged `dipmallya` and `neeraj` exists with zero rows.
+3. **Four standup items are not yet on the board, and three PIO conversions are
+   unapplied.** From Ruby's 2026-08-31 standup:
+   - WIOs reported but absent from the board: `ED/26-27/104` (Dipmallya),
+     `ED/26-27/077`, `/107`, `/132` (Neeraj). Adding them means choosing a
+     `stage` and a `since` — the two fields the entire board derives from — so
+     they wait for Ruby rather than being guessed.
+   - PIOs reported converted today: `ED/26-27/257` (Design Democracy Hyderabad),
+     `/254` (Ridhima Jain), `/248` (Panchsheel Park). Marking a row Released
+     takes it off the clock, and `257` is claimed by **both** teams for
+     different scopes (Dipmallya: wardrobe; Neeraj: doll bar 2 nos), so none
+     were applied.
+   - Four rows were tagged `neeraj` by **inference**, not statement —
+     `ED/26-27/086`, `/111`, `/097`, `/015`. Worth a glance. See `db/033`.
 
-   The file supplied as Neeraj's export
-   (`\\Manager\Only Crm\Ruby Nesrwal\M2.) MISC\Trackers\WIO-to-PIO-Tracker_neeraj.xlsx`)
-   was **not** seeded, because it is not a second dataset: its 15 WIOs are
-   Dipmallya's **first 15 in identical sheet order with byte-identical field
-   values**, its 11 delays likewise, its people list is a strict subset, and its
-   stamped date is 2026-08-24 — one day before Dipmallya's 2026-08-25. That is a
-   copy of the same sheet taken a day earlier, not Neeraj's board. Seeding it
-   would have duplicated 15 rows under the wrong team (and the `wio_number`
-   unique constraint would have rejected them anyway).
+   Team tagging itself is DONE: `db/033` splits the board 22 Dipmallya / 15
+   Neeraj from the standup's explicit per-team sections, with a migration-level
+   assertion on those counts.
 
-   **Needed:** Neeraj's genuinely distinct rows. Once supplied, the seed is one
-   migration (`db/033`) tagging them `neeraj`; no code change.
+   > **Correction (2026-08-31).** `db/032`'s header claimed
+   > `WIO-to-PIO-Tracker_neeraj.xlsx` was "a copy of the same sheet, not
+   > Neeraj's board", because its 15 rows are the 37-row export's first 15 in
+   > identical order with identical values. The comparison was right; the
+   > conclusion was wrong. The standup shows 11 of those 15 are Neeraj's and
+   > **none** are Dipmallya's — the 37-row export is the COMBINED board with
+   > Neeraj's rows listed first, so that file was his slice all along.
+   > Declining to seed it was still correct (its rows were already present;
+   > importing would have duplicated them). The right action was tagging.
 
 **Next action.** Build **S6 EH · Experience Centre** on a `feat/*` branch, or pick an
 open Velocity Gate (#1, #5, #8). See §9.

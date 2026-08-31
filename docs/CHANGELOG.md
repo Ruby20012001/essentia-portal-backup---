@@ -8,6 +8,46 @@
 
 ---
 
+## 2026-08-31 — S4b · the board split by team
+
+Ruby's daily standup reports the two teams separately, which partitions the
+board explicitly. Checked before use: the two lists share no WIO number.
+
+### Added
+- **db/033** — every row tagged: **22 Dipmallya / 15 Neeraj**, with a
+  migration-level assertion on those counts. A row added or renamed later fails
+  the migration loudly rather than silently inheriting a team from db/032's
+  backfill. Delays follow their WIO (13 / 11).
+- Tags are written as explicit WIO-number lists, never "everything else", so a
+  future row cannot be swept into a team by omission.
+
+### Correction
+`db/032` claimed `WIO-to-PIO-Tracker_neeraj.xlsx` was "a copy of the same sheet,
+not Neeraj's board" — its 15 rows being the 37-row export's first 15 in
+identical order with identical values. **The comparison was right; the
+conclusion was wrong.** The standup shows 11 of those 15 are Neeraj's and *none*
+are Dipmallya's: the 37-row export is the COMBINED board with Neeraj's rows
+listed first, so the file was his slice all along. Declining to seed it was
+still correct — its rows were already present and importing would have
+duplicated them. The right action was always to tag, which db/033 does.
+
+### Stated vs inferred — kept apart
+33 rows are tagged from the standup directly (or, for the unnumbered Design
+Democracy row, matched on scope). **Four are inferred** — `ED/26-27/086`,
+`/111`, `/097`, `/015` — absent from today's standup but present in Neeraj's own
+workbook, which contains zero Dipmallya rows; two corroborated by project.
+Tagged `neeraj` rather than left alone because "left alone" is not neutral: they
+would keep db/032's `dipmallya` backfill, which is the *weaker* guess. db/033
+names all four for checking.
+
+### Not applied — needs Ruby
+4 standup WIOs are not on the board (`ED/26-27/104`, `/077`, `/107`, `/132`) —
+adding them means inventing a stage and a `since`. 3 reported PIO conversions
+(`/257`, `/254`, `/248`) are unapplied — marking a row Released takes it off the
+clock, and `/257` is claimed by both teams for different scopes.
+
+---
+
 ## 2026-08-31 — S4b · the two WIO teams
 
 Ruby confirmed Dipmallya and Neeraj run two teams inside the WIO team
@@ -28,13 +68,9 @@ they share **one board with a team column**.
   that read as a clear day (ADR-HS-01).
 
 ### Deliberately NOT done
-- **Neeraj's supplied export was not seeded.** `WIO-to-PIO-Tracker_neeraj.xlsx`
-  is not a second dataset: its 15 WIOs are Dipmallya's first 15 in identical
-  sheet order with byte-identical values, its 11 delays likewise, its people
-  list a strict subset, and its stamp 2026-08-24 — one day before Dipmallya's.
-  That is a copy of the same sheet, not Neeraj's board. Seeding it would have
-  duplicated 15 rows under the wrong team. Neeraj's team is seeded with zero
-  rows and the board is ready for the real export.
+- **Neeraj's supplied export was not seeded.** Its 15 rows are already on the
+  board — importing would have duplicated them. (The right action turned out to
+  be tagging; see the correction in the next entry.)
 
 ### Access — unchanged, deliberately
 The team column does not gate anything. Both teams sit in `DRAFTING` and both

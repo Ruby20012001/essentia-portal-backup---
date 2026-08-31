@@ -44,6 +44,7 @@ export const DEFAULT_FILES = [
   "030_wio_pio_tracker.sql",
   "031_wio_pio_tracker_seed.sql",
   "032_wio_pio_tracker_teams.sql",
+  "033_wio_pio_tracker_team_tagging.sql",
   "900_dev_fixtures.sql",
 ];
 
