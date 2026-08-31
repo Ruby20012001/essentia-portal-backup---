@@ -215,14 +215,35 @@ CREATE INDEX IF NOT EXISTS idx_tracker_delays_wio_open
 --      here. Without these rows Monica's dashboard would read empty — the
 --      exact trap db/029 hit with the Country Head.
 --
--- ⚠ PENDING CONFIRMATION (Ruby): "Dipmallya's team" and "Neeraj's team" do not
---   map to a single seeded department. The grants below name the five design /
---   drawing departments that actually own the stage chain in
---   ee.tracker_stages (PD team → DRAFTING, Design team → INTERIOR,
---   Architecture team → ARCH, Design Room → 3D, Finishes → FFE). If Dipmallya
---   and Neeraj head different or fewer departments, this is a one-statement
---   retune — no code change:
+-- WHO THE OWNING TEAM IS (Ruby, confirmed 2026-08-31):
+--   "dipmallya and neeraj have two teams in wio team, both handle the projects
+--    of dhruv's team (dipmallya) and neeru's team (neeraj)"
 --
+--   So the owning department is exactly ONE — DRAFTING, 'WIO / GFC Drafting'
+--   (§30, Jyoti Yadav's team). Dipmallya and Neeraj run two teams INSIDE it,
+--   split by whose project portfolio they serve:
+--
+--       Dipmallya's team  →  Dhruv Kelaya's CRM projects
+--       Neeraj's team     →  Neeru Bajaj's CRM projects
+--
+--   Dhruv and Neeru are the two CRM Team Leads in CRM_EE (§26/§39), which is
+--   why CRM gets the view tier below: they own the projects these WIOs serve,
+--   so they must see where each one is standing — and why they cannot move it.
+--
+--   An earlier draft of this file granted edit to five departments (DRAFTING,
+--   INTERIOR, ARCH, 3D, FFE) on the assumption that everyone named in the stage
+--   chain owned the board. That was wrong and is corrected here: INTERIOR,
+--   ARCH, 3D and FFE appear in ee.tracker_stages.waiting_on because they HOLD
+--   stages. Holding a stage is being tracked BY this board, not owning it.
+--   Waiting-on is not a grant.
+--
+--   The two teams are not modelled as separate departments because they are not
+--   separate departments — they are two teams within DRAFTING, and the portal's
+--   org model stops at department. If the board ever needs to say WHICH of the
+--   two a row belongs to, that is a column on ee.tracker_wios, not a split in
+--   these grants.
+--
+--   Retuning stays a one-statement job — no code change:
 --     DELETE FROM public.permissions WHERE resource_type = 'wio_tracker'
 --       AND department_id IS NOT NULL;
 --     -- then re-run the two INSERTs below with the correct codes.
@@ -244,28 +265,30 @@ VALUES
   ('L1', 'wio_tracker', 'export', TRUE, 'all', NULL)
 ON CONFLICT (access_level, department_id, resource_type, action_code) DO NOTHING;
 
--- Tier 1 — the owning departments: full working control, at both L2 and L3.
+-- Tier 1 — the WIO team: full working control, at both L2 and L3.
 -- L3 is granted edit on purpose. The person who moves a WIO along the chain
 -- every morning is a team member, not the HOD; a board only a TL can touch is
--- a board that goes stale by Wednesday.
+-- a board that goes stale by Wednesday. Both Dipmallya's and Neeraj's teams sit
+-- inside DRAFTING, so one department code covers both.
 INSERT INTO public.permissions (access_level, department_id, resource_type, action_code, allowed, scope, notes)
 SELECT lvl.level::access_level, d.id, 'wio_tracker', act.code, TRUE, 'own_dept',
-       'Tracker-owning department (Ruby, 2026-08-31): Dipmallya + Neeraj teams see all and edit'
+       'WIO team (Ruby, 2026-08-31): Dipmallya''s and Neeraj''s teams both sit in DRAFTING — they see all and edit'
 FROM public.departments d
 CROSS JOIN (VALUES ('L2'), ('L3')) AS lvl(level)
 CROSS JOIN (VALUES ('read'), ('create'), ('edit'), ('delete'), ('export')) AS act(code)
-WHERE d.code IN ('DRAFTING', 'INTERIOR', 'ARCH', '3D', 'FFE')
+WHERE d.code = 'DRAFTING'
 ON CONFLICT (access_level, department_id, resource_type, action_code) DO NOTHING;
 
--- Tier 2 — CRM: read only. The explicit allowed=FALSE rows are not noise;
--- they are the policy written down. A missing row also denies, but says
--- nothing about whether anyone decided. These say someone decided.
+-- Tier 2 — CRM (Dhruv's and Neeru's teams): read only. The explicit
+-- allowed=FALSE rows are not noise; they are the policy written down. A missing
+-- row also denies, but says nothing about whether anyone decided. These say
+-- someone decided.
 INSERT INTO public.permissions (access_level, department_id, resource_type, action_code, allowed, scope, notes)
 SELECT lvl.level::access_level, d.id, 'wio_tracker', act.code, act.ok, 'own_dept', act.note
 FROM public.departments d
 CROSS JOIN (VALUES ('L2'), ('L3')) AS lvl(level)
 CROSS JOIN (VALUES
-  ('read',   TRUE,  'CRM view-only (Ruby, 2026-08-31): CRM is named at four stages and must see where a WIO stands'),
+  ('read',   TRUE,  'CRM view-only (Ruby, 2026-08-31): Dhruv''s and Neeru''s teams own the projects these WIOs serve, and CRM is named at four stages — they must see where a WIO stands'),
   ('create', FALSE, 'SECURITY RULE: the board is not CRM''s to add to — raise it with the owning team'),
   ('edit',   FALSE, 'SECURITY RULE: CRM may not move a stage or re-stamp `since`'),
   ('delete', FALSE, 'SECURITY RULE: view-only')
@@ -308,12 +331,20 @@ ON CONFLICT (access_level, department_id, resource_type, action_code) DO NOTHING
 -- `done_by` day or the 15-day window is a policy change, not a daily edit.
 INSERT INTO portal.app_config (key, value, category, description) VALUES
   ('tracker.owning_departments',
-   '["DRAFTING", "INTERIOR", "ARCH", "3D", "FFE"]',
+   '["DRAFTING"]',
    'delivery',
-   'Departments that own the WIO → PIO Tracker board (read + edit). Mirrors the '
-   'department-scoped rows in public.permissions for resource_type wio_tracker — '
-   'update BOTH together. Pending Ruby''s confirmation of Dipmallya''s and '
-   'Neeraj''s actual department codes.'),
+   'Departments that own the WIO → PIO Tracker board (read + edit). The WIO team '
+   '— Dipmallya''s and Neeraj''s teams both sit inside DRAFTING (Ruby, confirmed '
+   '2026-08-31). Mirrors the department-scoped rows in public.permissions for '
+   'resource_type wio_tracker — update BOTH together.'),
+  ('tracker.teams',
+   '[{"team": "Dipmallya", "serves_crm_tl": "Dhruv Kelaya"},'
+   ' {"team": "Neeraj",    "serves_crm_tl": "Neeru Bajaj"}]',
+   'delivery',
+   'The two teams inside the WIO team, and whose CRM project portfolio each '
+   'serves (Ruby, 2026-08-31). Recorded because the portal''s org model stops at '
+   'department and cannot otherwise express this split. Read by nothing yet — '
+   'it becomes load-bearing only if the board grows a per-WIO team column.'),
   ('tracker.setup_min_level', '"L2"', 'delivery',
    'Minimum access level permitted to edit the stage chain, window days and '
    'at-risk threshold on the Setup screen. Moving a done_by day is policy.')

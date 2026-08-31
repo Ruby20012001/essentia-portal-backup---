@@ -90,22 +90,44 @@ a code edit.
 
 | Who | Board | Delay log |
 |---|---|---|
-| Owning departments (`DRAFTING`, `INTERIOR`, `ARCH`, `3D`, `FFE`), L2 **and L3** | read · create · edit · delete | yes |
-| CRM (`CRM_EE`), L2/L3 | **read only** (explicit `allowed=FALSE` rows) | yes |
+| **The WIO team** (`DRAFTING`), L2 **and L3** | read · create · edit · delete | yes |
+| **CRM** (`CRM_EE`), L2/L3 | **read only** (explicit `allowed=FALSE` rows) | yes |
 | L0 / L1 — Monica, Hardesh, leadership | **read** | yes |
 | Everyone else | nothing | nothing |
 
 L3 holds edit on purpose: the person who moves a WIO each morning is a team
 member, not the HOD. A board only a TL can touch is stale by Wednesday.
 
+### Who the owning team is
+
+Confirmed by Ruby, 2026-08-31. The owning department is exactly one —
+`DRAFTING`, *"WIO / GFC Drafting"* (§30, Jyoti Yadav's team). **Dipmallya and
+Neeraj run two teams inside it**, split by whose project portfolio they serve:
+
+| Team | Serves |
+|---|---|
+| Dipmallya's | Dhruv Kelaya's CRM projects |
+| Neeraj's | Neeru Bajaj's CRM projects |
+
+Dhruv and Neeru are the two CRM Team Leads in `CRM_EE` (§26/§39) — which is
+exactly why CRM holds the view tier: they own the projects these WIOs serve, so
+they must see where each one stands, and may not move it.
+
+The two teams are **not** separate departments, because they are not: the
+portal's org model stops at department. If the board ever needs to say which of
+the two a row belongs to, that is a column on `ee.tracker_wios`, not a split in
+these grants. The pairing is recorded in `portal.app_config` under
+`tracker.teams`, read by nothing yet.
+
+> **Corrected during build.** An earlier draft granted edit to five departments
+> (`DRAFTING`, `INTERIOR`, `ARCH`, `3D`, `FFE`) on the assumption that everyone
+> named in the stage chain owned the board. Wrong: `INTERIOR`, `ARCH`, `3D` and
+> `FFE` appear in `tracker_stages.waiting_on` because they **hold stages** —
+> they are tracked *by* this board, not owners of it. Waiting-on is not a grant.
+
 Logging a delay additionally requires **read on the board** — enforced in the
 service, since a permission row governs only one resource. Without it a
 department fenced out of the tracker could still write onto it.
-
-> ⚠ **Needs Ruby's confirmation.** "Dipmallya's team" and "Neeraj's team" do not
-> map to one seeded department, so the grants name the five design/drawing
-> departments that own the stage chain. Correcting it is one statement — see the
-> header of `db/030_wio_pio_tracker.sql`. No code change.
 
 ---
 

@@ -213,11 +213,14 @@ harness clean · tsc 0 · unit 221/221 · lint clean.
 **Blockers.** None technical. Three decisions are open:
 1. Whether `essentia-portal-backup---` is the permanent GitHub home given its name.
 2. Whether `main` should be fast-forwarded to `platform-baseline-v1` (§7).
-3. **Which departments Dipmallya and Neeraj actually head.** S4b's edit grants
-   currently name the five design/drawing departments that own the stage chain
-   (`DRAFTING`, `INTERIOR`, `ARCH`, `3D`, `FFE`) as a standing assumption from
-   Ruby's 2026-08-31 ruling. Retuning is one SQL statement against
-   `public.permissions` — no code change. See the header of `db/030`.
+3. **Whether the S4b board should carry a per-WIO team column.** Ruby confirmed
+   (2026-08-31) that Dipmallya and Neeraj run two teams inside the WIO team
+   (`DRAFTING`), serving Dhruv's and Neeru's CRM portfolios respectively. Access
+   is settled — one department covers both. What is not settled is whether the
+   two teams share ONE board (which then needs a team column to tell rows apart,
+   and a `team_name` that no longer reads "Dipmallya's team") or keep separate
+   boards. The seeded data is Dipmallya's workbook only. See
+   `portal.app_config → tracker.teams`.
 
 **Next action.** Build **S6 EH · Experience Centre** on a `feat/*` branch, or pick an
 open Velocity Gate (#1, #5, #8). See §9.

@@ -53,7 +53,7 @@ holding this, and for how long*. Neither owns the other's rows.
   db/029 hit with the Country Head.
 
 ### Access (Ruby's ruling, 2026-08-31)
-Owning design/drawing departments read + edit at **L2 and L3** — the person who
+The **WIO team** (`DRAFTING`) reads and edits at **L2 and L3** — the person who
 moves a WIO each morning is a team member, not the HOD, and a board only a TL
 can touch is stale by Wednesday. CRM is read-only, with explicit
 `allowed = FALSE` rows so the policy is written down rather than merely absent.
@@ -61,9 +61,18 @@ L0/L1 read, which **Monica's dashboard depends on**: db/004 generates L0/L1
 grants by CROSS JOIN *at that time*, so a resource type added later gets nothing
 unless granted explicitly.
 
-> ⚠ The five owning departments are a **standing assumption pending Ruby's
-> confirmation** of Dipmallya's and Neeraj's actual department codes. Retuning
-> is one SQL statement — see the header of `db/030_wio_pio_tracker.sql`.
+Dipmallya and Neeraj run **two teams inside `DRAFTING`**, split by whose project
+portfolio they serve — Dipmallya's serves Dhruv Kelaya's CRM projects, Neeraj's
+serves Neeru Bajaj's. That is why CRM holds the view tier: Dhruv and Neeru own
+the projects these WIOs serve. The pairing is recorded in `portal.app_config`
+under `tracker.teams`; the two teams are not separate departments because the
+portal's org model stops at department.
+
+> **Corrected before merge.** A first draft granted edit to five departments on
+> the assumption that everyone named in the stage chain owned the board. Wrong:
+> `INTERIOR`, `ARCH`, `3D` and `FFE` appear in `tracker_stages.waiting_on`
+> because they **hold stages** — they are tracked *by* the board, not owners of
+> it. Waiting-on is not a grant. Verified: those four now hold zero rows.
 
 ### Fixed during build
 - Logging a delay checked only the delay grant, so a department fenced out of
