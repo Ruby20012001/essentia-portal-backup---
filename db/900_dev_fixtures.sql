@@ -398,3 +398,38 @@ SELECT ec.id, CURRENT_DATE, '00000000-0000-4000-8000-000000000006', TRUE,
 FROM eh.experience_centres ec
 WHERE ec.code = 'gurugram_hq'
 ON CONFLICT (ec_id, check_date) DO NOTHING;
+
+-- ---------------------------------------------------------------------
+-- WIO → PIO TRACKER (db/030-031) — the board's own personas.
+--
+-- Without these nobody can WORK the tracker in dev. Every existing fixture is
+-- either L0/L1 (read-only on this board by Ruby's ruling), CRM_EE (view-only),
+-- SITE, or department-less — so the stage dropdown would render disabled for
+-- every one of them and the module would look broken rather than fenced.
+-- Same trap db/029 hit with the Country Head: a gate nobody present can work.
+--
+--   dev.tracker@essentia.in   L2, DRAFTING — owns the board, full edit
+--   dev.tracker.member@…      L3, DRAFTING — moves stages daily (the L3 grant
+--                             in db/030 exists precisely for this person)
+-- The CRM TL fixture (…0001, L2 CRM_EE) already covers the view-only tier, and
+-- Dev Founder (…0002, L0) covers Monica's read.
+-- ---------------------------------------------------------------------
+INSERT INTO public.users (id, email, full_name, display_name, access_level, department_id, job_title)
+VALUES
+  ('00000000-0000-4000-8000-00000000000b', 'dev.tracker@essentia.in',
+   'Dev Tracker Lead', 'Dev Tracker TL', 'L2',
+   (SELECT id FROM public.departments WHERE code = 'DRAFTING'),
+   'WIO → PIO Tracker owner (dev fixture)'),
+  ('00000000-0000-4000-8000-00000000000c', 'dev.tracker.member@essentia.in',
+   'Dev Tracker Member', 'Dev Tracker', 'L3',
+   (SELECT id FROM public.departments WHERE code = 'DRAFTING'),
+   'Moves WIOs along the chain (dev fixture)')
+ON CONFLICT (email) DO NOTHING;
+
+-- Same dev password as every other fixture ('essentia-dev-2026'). The UPDATE
+-- earlier in this file ran before these rows existed, so it is repeated here.
+UPDATE public.users
+SET password_hash = 'a2f7c19640a4db2124f52271b1b379f8:4280680cec56f9f76cd3f1e0f372a3f6345619ccc5a1a5ad750cbcab490e1cb6597f42fc860dc04961d37b15aa84af49fb7dc2780120bc5c34669e143927dd8a',
+    auth_provider = 'local'
+WHERE email IN ('dev.tracker@essentia.in', 'dev.tracker.member@essentia.in')
+  AND password_hash IS NULL;

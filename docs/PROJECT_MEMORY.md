@@ -11,8 +11,8 @@
 > [`DEVELOPER_HANDOVER.md`](DEVELOPER_HANDOVER.md) — it teaches the domain
 > vocabulary this file assumes, and ends with a handover checklist.
 >
-> **Last verified:** 2026-07-30 · **Baseline:** `platform-baseline-v1`
-> **Green:** DB harness 112/0 · tsc 0 · unit 165/165 · lint clean · build clean *(observed)*
+> **Last verified:** 2026-08-31 · **Baseline:** `platform-baseline-v1`
+> **Green:** DB harness clean · tsc 0 · unit 221/221 · lint clean *(observed)*
 
 ---
 
@@ -198,17 +198,26 @@ Newest first. Full detail in [`docs/CHANGELOG.md`](CHANGELOG.md); full history i
 
 ## 5. Current work
 
-**Current task.** None in flight — paused awaiting a screen decision.
+**Current task.** **S4b · WIO → PIO Tracker** — built on branch
+`claude/wio-pio-tracker-integration-768c58`, running and verified in the browser
+against the seeded board. Not yet merged to `platform-baseline-v1`.
+See [`WIO_PIO_TRACKER.md`](WIO_PIO_TRACKER.md) for the module's own docs.
 
 **Completed portion.** Phase 4 complete; **all Phase-1 Core screens shipped**; work
-restored and backed up to GitHub. Green baseline re-verified 2026-07-30:
-harness 112/0 · tsc 0 · unit 165/165 · lint clean · build clean.
+restored and backed up to GitHub. S4b adds db/030–031, `/wio-tracker`, and 56
+unit tests. Green baseline re-verified 2026-08-31:
+harness clean · tsc 0 · unit 221/221 · lint clean.
 
 **Remaining work.** Phase 2 integrations, and the two open Velocity Gates.
 
-**Blockers.** None technical. Two decisions are open:
+**Blockers.** None technical. Three decisions are open:
 1. Whether `essentia-portal-backup---` is the permanent GitHub home given its name.
 2. Whether `main` should be fast-forwarded to `platform-baseline-v1` (§7).
+3. **Which departments Dipmallya and Neeraj actually head.** S4b's edit grants
+   currently name the five design/drawing departments that own the stage chain
+   (`DRAFTING`, `INTERIOR`, `ARCH`, `3D`, `FFE`) as a standing assumption from
+   Ruby's 2026-08-31 ruling. Retuning is one SQL statement against
+   `public.permissions` — no code change. See the header of `db/030`.
 
 **Next action.** Build **S6 EH · Experience Centre** on a `feat/*` branch, or pick an
 open Velocity Gate (#1, #5, #8). See §9.

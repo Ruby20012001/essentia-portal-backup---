@@ -8,6 +8,76 @@
 
 ---
 
+## 2026-08-31 — S4b · WIO → PIO Tracker
+
+Dipmallya's team's Excel tracker, rebuilt as a native portal module with a real
+backend and the team's live board carried over intact. It sits **beside** the S4
+WIO/PIO Hub, not inside it: same §30 window, different cut — S4 runs the
+department conversion checklist, S4b walks the stage chain and answers *who is
+holding this, and for how long*. Neither owns the other's rows.
+
+### Added
+- **`/wio-tracker` (S4b)** — four screens over one shared dataset: Today
+  (read-only board + roll-ups), WIOs (the working table), Delays (the log),
+  Setup (the chain and the date stamp).
+- **The derivation is pure and stored nowhere.**
+  `lib/services/wio-tracker-logic.ts` holds every computed field — days left,
+  days here, late-here, overdue, accountability, next stage, priority — with no
+  database, clock or environment. A stored status goes stale the moment nobody
+  updates it, and a board that quietly claims to be on time is worse than no
+  board (ADR-HS-01).
+- **The stage/since pairing is now one action.** Changing a WIO's stage
+  re-stamps `since` server-side in the same write, and the banner says so. In
+  the workbook that was two manual steps and the second got forgotten, which
+  made "days at this stage" quietly wrong and the whole board with it.
+- **"Today" is a stamped shared row, never `CURRENT_DATE`.** One value for
+  everyone, so nobody disagrees about what is overdue and a screenshot taken at
+  11pm reads the same as one taken at 9am. That property is why this left the
+  spreadsheet.
+- **Red stays rare.** Reserved for LATE HERE and OVERDUE only, resolved through
+  one component, asserted by test. The team explicitly rejected an earlier
+  build of this tool that turned most rows red.
+
+### Database
+- **db/030** — six `ee.tracker_*` tables, the RBAC rows, config. The stage
+  chain, window, at-risk threshold and delay reasons are ROWS, not constants
+  (ADR-EP-01): the team retunes the workflow with an UPDATE, never a deploy.
+- **db/031** — the real board: 37 WIOs, 24 open delays, 10 stages, 28 delay
+  reasons, 31 names. Verbatim and idempotent. The stamped date 2026-08-25 is
+  *derived, not guessed* — all 24 delay rows satisfy
+  `days_lost = 2026-08-25 − started`, with no exceptions. 33 of the 37 rows
+  carry no WIO issue date, and the board says so rather than reading "On track".
+- **db/900** — two dev personas in DRAFTING. Without them no fixture user could
+  work the board (every existing one is L0/L1, CRM, SITE or department-less),
+  so the module would have looked broken rather than fenced — the same trap
+  db/029 hit with the Country Head.
+
+### Access (Ruby's ruling, 2026-08-31)
+Owning design/drawing departments read + edit at **L2 and L3** — the person who
+moves a WIO each morning is a team member, not the HOD, and a board only a TL
+can touch is stale by Wednesday. CRM is read-only, with explicit
+`allowed = FALSE` rows so the policy is written down rather than merely absent.
+L0/L1 read, which **Monica's dashboard depends on**: db/004 generates L0/L1
+grants by CROSS JOIN *at that time*, so a resource type added later gets nothing
+unless granted explicitly.
+
+> ⚠ The five owning departments are a **standing assumption pending Ruby's
+> confirmation** of Dipmallya's and Neeraj's actual department codes. Retuning
+> is one SQL statement — see the header of `db/030_wio_pio_tracker.sql`.
+
+### Fixed during build
+- Logging a delay checked only the delay grant, so a department fenced out of
+  the tracker entirely (Site) could still write rows onto it. Both delay writes
+  now require read on the board first.
+
+### Tests
+- 56 unit tests pinning every rule to the spec — including that exactly two
+  statuses map to red, that LATE HERE outranks At risk, that a released row
+  carries no urgency score, and that a retuned `done_by` moves the line with no
+  code change. Suite 165 → **221/221**. Harness clean · tsc 0 · lint clean.
+
+---
+
 ## 2026-07-30 — Velocity Gate 5 CLOSED
 
 Gate 5 reads "EH discount control gate enforced across **all 3** Experience
