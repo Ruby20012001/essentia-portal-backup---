@@ -14,6 +14,7 @@ const dateField = z
 
 const patchSchema = z
   .object({
+    teamCode: z.string().min(1).max(40).optional(),
     project: z.string().max(200).nullable().optional(),
     scope: z.string().max(2000).nullable().optional(),
     raisedBy: z.string().max(120).nullable().optional(),

@@ -43,6 +43,7 @@ export const DEFAULT_FILES = [
   "029_eh_experience_centre.sql",
   "030_wio_pio_tracker.sql",
   "031_wio_pio_tracker_seed.sql",
+  "032_wio_pio_tracker_teams.sql",
   "900_dev_fixtures.sql",
 ];
 

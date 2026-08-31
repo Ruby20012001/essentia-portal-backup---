@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { TrackerBoard } from "@/lib/services/wio-tracker";
+import { forTeam } from "@/lib/services/wio-tracker-logic";
 
 /**
  * Screen 3 — the delay log.
@@ -21,11 +22,13 @@ type Scope = "open" | "closed" | "all";
 
 export function DelaysView({
   board,
+  team,
   busyId,
   onCreate,
   onPatch,
 }: {
   board: TrackerBoard;
+  team: string | null;
   busyId: string | null;
   onCreate: (input: Record<string, unknown>) => Promise<boolean>;
   onPatch: (id: string, patch: Record<string, unknown>) => void;
@@ -34,15 +37,18 @@ export function DelaysView({
   const [wioFilter, setWioFilter] = useState<string>("");
   const [adding, setAdding] = useState(false);
 
+  const teamDelays = useMemo(() => forTeam(board.delays, team), [board.delays, team]);
+  const teamWios = useMemo(() => forTeam(board.wios, team), [board.wios, team]);
+
   const rows = useMemo(
     () =>
-      board.delays
+      teamDelays
         .filter((d) => (scope === "all" ? true : scope === "open" ? d.status === "Open" : d.status === "Closed"))
         .filter((d) => (wioFilter === "" ? true : d.wioId === wioFilter)),
-    [board.delays, scope, wioFilter],
+    [teamDelays, scope, wioFilter],
   );
 
-  const openCount = board.delays.filter((d) => d.status === "Open").length;
+  const openCount = teamDelays.filter((d) => d.status === "Open").length;
 
   return (
     <div>
@@ -50,8 +56,8 @@ export function DelaysView({
         {(
           [
             ["open", "Open", openCount],
-            ["closed", "Closed", board.delays.length - openCount],
-            ["all", "All", board.delays.length],
+            ["closed", "Closed", teamDelays.length - openCount],
+            ["all", "All", teamDelays.length],
           ] as const
         ).map(([key, label, count]) => (
           <button
@@ -75,7 +81,7 @@ export function DelaysView({
           className="ml-auto rounded border border-line-strong bg-card px-3 py-1.5 font-body text-sm font-light text-ink focus:border-amber-deep focus:outline-none"
         >
           <option value="">Every WIO</option>
-          {board.wios.map((w) => (
+          {teamWios.map((w) => (
             <option key={w.id} value={w.id}>
               {w.wio}
             </option>
@@ -96,6 +102,7 @@ export function DelaysView({
       {adding ? (
         <AddDelayForm
           board={board}
+          team={team}
           busy={busyId === "delay"}
           onCancel={() => setAdding(false)}
           onCreate={async (input) => {
@@ -197,16 +204,21 @@ export function DelaysView({
 
 function AddDelayForm({
   board,
+  team,
   busy,
   onCancel,
   onCreate,
 }: {
   board: TrackerBoard;
+  team: string | null;
   busy: boolean;
   onCancel: () => void;
   onCreate: (input: Record<string, unknown>) => Promise<boolean>;
 }) {
-  const [wioId, setWioId] = useState(board.wios[0]?.id ?? "");
+  // Only offer WIOs from the team in view — logging a delay against a row
+  // that is not on screen is almost always a mis-click.
+  const pickable = forTeam(board.wios, team);
+  const [wioId, setWioId] = useState(pickable[0]?.id ?? "");
   const [why, setWhy] = useState(board.reasons[0]?.reason ?? "");
   const [owner, setOwner] = useState("");
   const [dept, setDept] = useState("");
@@ -249,7 +261,7 @@ function AddDelayForm({
             onChange={(e) => setWioId(e.target.value)}
             className="w-full rounded border border-line-strong bg-canvas px-2.5 py-1.5 font-body text-[13px] font-light text-ink focus:border-amber-deep focus:outline-none"
           >
-            {board.wios.map((w) => (
+            {pickable.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.wio} — {w.stage}
               </option>

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { DayBadge, StatusPill } from "@/components/wio-tracker/StatusPill";
 import type { TrackerBoard } from "@/lib/services/wio-tracker";
-import type { ComputedWio } from "@/lib/services/wio-tracker-logic";
+import { forTeam, type ComputedWio } from "@/lib/services/wio-tracker-logic";
 
 /**
  * Screen 2 — the working table.
@@ -20,26 +20,33 @@ import type { ComputedWio } from "@/lib/services/wio-tracker-logic";
 
 type Filter = "running" | "attention" | "untracked" | "released" | "all";
 
-const FILTERS: { key: Filter; label: string; describe: (b: TrackerBoard) => number }[] = [
-  { key: "running", label: "Running", describe: (b) => b.wios.filter((w) => !w.pioReleased).length },
+/**
+ * Counts are taken over the TEAM-FILTERED rows, not the whole board — a chip
+ * reading "Needs attention 6" while the table below shows 2 is the kind of
+ * quiet disagreement that makes people stop trusting the screen.
+ */
+const FILTERS: { key: Filter; label: string; describe: (rows: ComputedWio[]) => number }[] = [
+  { key: "running", label: "Running", describe: (rows) => rows.filter((w) => !w.pioReleased).length },
   {
     key: "attention",
     label: "Needs attention",
-    describe: (b) => b.wios.filter((w) => w.status === "OVERDUE" || w.status === "LATE HERE" || w.status === "At risk").length,
+    describe: (rows) => rows.filter((w) => w.status === "OVERDUE" || w.status === "LATE HERE" || w.status === "At risk").length,
   },
-  { key: "untracked", label: "No WIO date", describe: (b) => b.wios.filter((w) => !w.pioReleased && !w.wioIssued).length },
-  { key: "released", label: "Released", describe: (b) => b.wios.filter((w) => w.pioReleased).length },
-  { key: "all", label: "All", describe: (b) => b.wios.length },
+  { key: "untracked", label: "No WIO date", describe: (rows) => rows.filter((w) => !w.pioReleased && !w.wioIssued).length },
+  { key: "released", label: "Released", describe: (rows) => rows.filter((w) => w.pioReleased).length },
+  { key: "all", label: "All", describe: (rows) => rows.length },
 ];
 
 export function WiosView({
   board,
+  team,
   busyId,
   onPatch,
   onCreate,
   onDelete,
 }: {
   board: TrackerBoard;
+  team: string | null;
   busyId: string | null;
   onPatch: (id: string, patch: Record<string, unknown>) => void;
   onCreate: (input: Record<string, unknown>) => Promise<boolean>;
@@ -50,9 +57,11 @@ export function WiosView({
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
+  const teamRows = useMemo(() => forTeam(board.wios, team), [board.wios, team]);
+
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return board.wios
+    return teamRows
       .filter((w) => {
         if (filter === "running") return !w.pioReleased;
         if (filter === "released") return Boolean(w.pioReleased);
@@ -68,13 +77,13 @@ export function WiosView({
               .filter(Boolean)
               .some((v) => String(v).toLowerCase().includes(q)),
       );
-  }, [board.wios, filter, search]);
+  }, [teamRows, filter, search]);
 
   return (
     <div>
       <div className="mb-5 flex flex-wrap items-center gap-2">
         {FILTERS.map((f) => {
-          const count = f.describe(board);
+          const count = f.describe(teamRows);
           const active = filter === f.key;
           return (
             <button
@@ -115,6 +124,7 @@ export function WiosView({
       {adding ? (
         <AddWioForm
           board={board}
+          team={team}
           busy={busyId === "create"}
           onCancel={() => setAdding(false)}
           onCreate={async (input) => {
@@ -135,6 +145,7 @@ export function WiosView({
             <thead>
               <tr className="bg-surface text-[11px] uppercase tracking-[0.12em] text-secondary">
                 <th className="px-3 py-2.5 font-bold">WIO</th>
+                {team === null ? <th className="px-3 py-2.5 font-bold">Team</th> : null}
                 <th className="px-3 py-2.5 font-bold">Project / scope</th>
                 <th className="px-3 py-2.5 font-bold">Stage — change this</th>
                 <th className="px-3 py-2.5 font-bold">Day</th>
@@ -154,6 +165,7 @@ export function WiosView({
                     key={w.id}
                     w={w}
                     board={board}
+                    team={team}
                     busy={busy}
                     expanded={expanded}
                     onToggle={() => setOpenRow(expanded ? null : w.id)}
@@ -173,6 +185,7 @@ export function WiosView({
 function FragmentRow({
   w,
   board,
+  team,
   busy,
   expanded,
   onToggle,
@@ -181,6 +194,7 @@ function FragmentRow({
 }: {
   w: ComputedWio;
   board: TrackerBoard;
+  team: string | null;
   busy: boolean;
   expanded: boolean;
   onToggle: () => void;
@@ -199,6 +213,11 @@ function FragmentRow({
             </span>
           ) : null}
         </td>
+        {team === null ? (
+          <td className="whitespace-nowrap px-3 py-2.5 font-light text-muted">
+            {board.teams.find((t) => t.code === w.teamCode)?.name ?? w.teamCode}
+          </td>
+        ) : null}
         <td className="px-3 py-2.5 font-light text-ink">
           {w.project ?? <span className="text-muted">No project named</span>}
           <span className="block text-xs text-muted">{w.scope}</span>
@@ -256,7 +275,7 @@ function FragmentRow({
 
       {expanded ? (
         <tr className="border-t border-line bg-surface">
-          <td colSpan={9} className="px-4 py-4">
+          <td colSpan={team === null ? 10 : 9} className="px-4 py-4">
             <RowDetail w={w} board={board} busy={busy} onPatch={onPatch} onDelete={onDelete} />
           </td>
         </tr>
@@ -335,6 +354,28 @@ function RowDetail({
   return (
     <div>
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <label className="block">
+          <span className="mb-1 block font-body text-[11px] font-light uppercase tracking-[0.14em] text-muted">
+            Team
+          </span>
+          <select
+            value={w.teamCode}
+            disabled={disabled}
+            onChange={(e) => onPatch(w.id, { teamCode: e.target.value })}
+            className="w-full rounded border border-line-strong bg-canvas px-2.5 py-1.5 font-body text-[13px] font-light text-ink focus:border-amber-deep focus:outline-none disabled:opacity-50"
+          >
+            {board.teams.map((t) => (
+              <option key={t.code} value={t.code}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 block font-body text-[11px] font-light text-muted">
+            {board.teams.find((t) => t.code === w.teamCode)?.servesCrmTl
+              ? `Serves ${board.teams.find((t) => t.code === w.teamCode)!.servesCrmTl}'s projects`
+              : "Which WIO team owns this row"}
+          </span>
+        </label>
         <Field
           label="Project"
           value={w.project ?? ""}
@@ -422,16 +463,22 @@ function RowDetail({
 
 function AddWioForm({
   board,
+  team,
   busy,
   onCancel,
   onCreate,
 }: {
   board: TrackerBoard;
+  team: string | null;
   busy: boolean;
   onCancel: () => void;
   onCreate: (input: Record<string, unknown>) => Promise<boolean>;
 }) {
   const first = board.stages[0];
+  // Defaults to the team currently being viewed — adding a WIO while looking at
+  // Neeraj's board almost always means adding it to Neeraj's. Still explicit
+  // and still changeable; never silently guessed when viewing everything.
+  const [teamCode, setTeamCode] = useState(team ?? board.teams[0]?.code ?? "");
   const [wio, setWio] = useState("");
   const [project, setProject] = useState("");
   const [scope, setScope] = useState("");
@@ -448,6 +495,7 @@ function AddWioForm({
         e.preventDefault();
         const ok = await onCreate({
           wio: wio.trim(),
+          teamCode,
           project: blank(project),
           scope: blank(scope),
           raisedBy: blank(raisedBy),
@@ -479,6 +527,23 @@ function AddWioForm({
             placeholder="ED/26-27/138"
             className="w-full rounded border border-line-strong bg-canvas px-2.5 py-1.5 font-body text-[13px] font-light text-ink placeholder:text-muted focus:border-amber-deep focus:outline-none"
           />
+        </label>
+        <label className="block">
+          <span className="mb-1 block font-body text-[11px] font-light uppercase tracking-[0.14em] text-muted">
+            Team *
+          </span>
+          <select
+            required
+            value={teamCode}
+            onChange={(e) => setTeamCode(e.target.value)}
+            className="w-full rounded border border-line-strong bg-canvas px-2.5 py-1.5 font-body text-[13px] font-light text-ink focus:border-amber-deep focus:outline-none"
+          >
+            {board.teams.map((t) => (
+              <option key={t.code} value={t.code}>
+                {t.name}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="block">
           <span className="mb-1 block font-body text-[11px] font-light uppercase tracking-[0.14em] text-muted">

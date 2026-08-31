@@ -14,6 +14,7 @@ import {
   type TodayStats,
   type TrackerSettings,
   type TrackerStage,
+  type TrackerTeam,
   type TrackerWioInput,
 } from "@/lib/services/wio-tracker-logic";
 
@@ -26,12 +27,18 @@ import {
  * different ways in three places, which is how the spreadsheet drifted.
  *
  * ACCESS (Ruby, 2026-08-31 — rows in public.permissions, db/030):
- *   the owning design/drawing departments  read + create + edit + delete
- *   CRM                                    read only
+ *   the WIO team (DRAFTING)                read + create + edit + delete
+ *   CRM (Dhruv's and Neeru's teams)        read only
  *   L0 / L1 (Monica, Hardesh, leadership)  read
  * Logging a delay is gated separately (wio_tracker_delay) so the person who
  * knows WHY something is stuck can record it without being able to move the
  * board.
+ *
+ * THE TEAM COLUMN IS A LENS, NOT A FENCE (db/032). Dipmallya's and Neeraj's
+ * teams both sit in DRAFTING and both work the whole board; `team_code` only
+ * says whose row it is. Nothing here filters by it — filtering is the reader's
+ * choice, made in the UI, because the WIO team covering for itself is the
+ * reason they share one board.
  *
  * There is no RLS on these tables and that is deliberate: the board is one
  * shared object, not a set of per-row-owned records. Everyone who may read it
@@ -45,6 +52,8 @@ export type TrackerDelay = {
   date: string;
   wioId: string;
   wio: string;
+  /** Carried from the WIO so the Delays tab filters by the same team lens. */
+  teamCode: string;
   why: string;
   cause: string;
   source: string;
@@ -68,6 +77,8 @@ export type TrackerBoard = {
   delays: TrackerDelay[];
   reasons: DelayReason[];
   people: string[];
+  /** The two WIO teams. A lens for filtering, not an access fence (db/032). */
+  teams: TrackerTeam[];
   /** What this viewer may actually do — the UI renders from this, not a guess. */
   can: { edit: boolean; create: boolean; delete: boolean; logDelay: boolean };
 };
@@ -132,6 +143,7 @@ async function listWioInputs(): Promise<TrackerWioInput[]> {
   const rows = await query<{
     id: string;
     wio_number: string;
+    team_code: string;
     project: string | null;
     scope: string | null;
     raised_by: string | null;
@@ -142,7 +154,7 @@ async function listWioInputs(): Promise<TrackerWioInput[]> {
     pio_released: string | null;
     pio_no: string | null;
   }>(
-    `SELECT id, wio_number, project, scope, raised_by,
+    `SELECT id, wio_number, team_code, project, scope, raised_by,
             wio_issued::text AS wio_issued, stage_id, since::text AS since,
             notes, pio_released::text AS pio_released, pio_no
        FROM ee.tracker_wios`,
@@ -150,6 +162,7 @@ async function listWioInputs(): Promise<TrackerWioInput[]> {
   return rows.map((r) => ({
     id: r.id,
     wio: r.wio_number,
+    teamCode: r.team_code,
     project: r.project,
     scope: r.scope,
     raisedBy: r.raised_by,
@@ -162,12 +175,29 @@ async function listWioInputs(): Promise<TrackerWioInput[]> {
   }));
 }
 
+export async function listTeams(): Promise<TrackerTeam[]> {
+  const rows = await query<{
+    code: string;
+    name: string;
+    serves_crm_tl: string | null;
+  }>(
+    `SELECT code, name, serves_crm_tl
+       FROM ee.tracker_teams WHERE is_active ORDER BY sort_order`,
+  );
+  return rows.map((r) => ({
+    code: r.code,
+    name: r.name,
+    servesCrmTl: r.serves_crm_tl,
+  }));
+}
+
 export async function listDelays(): Promise<TrackerDelay[]> {
   const rows = await query<{
     id: string;
     log_date: string;
     wio_id: string;
     wio_number: string;
+    team_code: string;
     why: string;
     cause: string;
     source: string;
@@ -179,7 +209,7 @@ export async function listDelays(): Promise<TrackerDelay[]> {
     status: "Open" | "Closed";
     remark: string | null;
   }>(
-    `SELECT d.id, d.log_date::text AS log_date, d.wio_id, w.wio_number,
+    `SELECT d.id, d.log_date::text AS log_date, d.wio_id, w.wio_number, w.team_code,
             d.why, d.cause, d.source, d.owner, d.dept,
             d.started::text AS started, d.ended::text AS ended,
             d.days_lost, d.status, d.remark
@@ -192,6 +222,7 @@ export async function listDelays(): Promise<TrackerDelay[]> {
     date: toDayString(r.log_date)!,
     wioId: r.wio_id,
     wio: r.wio_number,
+    teamCode: r.team_code,
     why: r.why,
     cause: r.cause,
     source: r.source,
@@ -223,13 +254,14 @@ async function listPeople(): Promise<string[]> {
 export async function getBoard(user: SessionUser): Promise<TrackerBoard> {
   await requirePermission(user, "read", "wio_tracker");
 
-  const [settings, stages, wios, delays, reasons, people] = await Promise.all([
+  const [settings, stages, wios, delays, reasons, people, teams] = await Promise.all([
     getSettings(),
     listStages(),
     listWioInputs(),
     listDelays(),
     listReasons(),
     listPeople(),
+    listTeams(),
   ]);
 
   const openDelaysByWio = new Map<string, number>();
@@ -260,6 +292,7 @@ export async function getBoard(user: SessionUser): Promise<TrackerBoard> {
     delays,
     reasons,
     people,
+    teams,
     can: { edit, create, delete: del, logDelay },
   };
 }
@@ -283,6 +316,8 @@ async function allowed(
 
 export type CreateWioInput = {
   wio: string;
+  /** Which of the two WIO teams owns it. Required — see createTrackerWio. */
+  teamCode: string;
   project?: string | null;
   scope?: string | null;
   raisedBy?: string | null;
@@ -316,6 +351,19 @@ export async function createTrackerWio(
       );
     }
 
+    // Team is required, never defaulted. Guessing it would quietly file a row
+    // under the wrong team, and a mis-filed row is worse than a refused one:
+    // it looks handled on somebody else's board.
+    const [team] = await q<{ code: string }>(
+      `SELECT code FROM ee.tracker_teams WHERE code = $1 AND is_active`,
+      [input.teamCode],
+    );
+    if (!team) {
+      throw new BlockingRuleError(
+        "Pick which team this WIO belongs to — Dipmallya's or Neeraj's. Every row on the board has an owner.",
+      );
+    }
+
     const [existing] = await q<{ wio_number: string }>(
       `SELECT wio_number FROM ee.tracker_wios WHERE wio_number = $1`,
       [wioNumber],
@@ -330,11 +378,12 @@ export async function createTrackerWio(
     // today has been at its first stage since today, by the board's reckoning.
     const [row] = await q<{ id: string }>(
       `INSERT INTO ee.tracker_wios
-         (wio_number, project, scope, raised_by, wio_issued, stage_id, since, notes)
-       VALUES ($1, $2, $3, $4, $5::date, $6, $7::date, $8)
+         (wio_number, team_code, project, scope, raised_by, wio_issued, stage_id, since, notes)
+       VALUES ($1, $2, $3, $4, $5, $6::date, $7, $8::date, $9)
        RETURNING id`,
       [
         wioNumber,
+        input.teamCode,
         input.project ?? null,
         input.scope ?? null,
         input.raisedBy ?? null,
@@ -353,13 +402,19 @@ export async function createTrackerWio(
     action: "WIO_TRACKER_CREATED",
     resourceType: "wio_tracker",
     resourceId: id,
-    newValues: { wio: wioNumber, stageId: input.stageId, wioIssued: input.wioIssued ?? null },
+    newValues: {
+      wio: wioNumber,
+      teamCode: input.teamCode,
+      stageId: input.stageId,
+      wioIssued: input.wioIssued ?? null,
+    },
   });
 
   return id;
 }
 
 export type UpdateWioPatch = Partial<{
+  teamCode: string;
   project: string | null;
   scope: string | null;
   raisedBy: string | null;
@@ -417,6 +472,18 @@ export async function updateTrackerWio(
       }
     }
 
+    if (patch.teamCode !== undefined) {
+      const [team] = await q<{ code: string }>(
+        `SELECT code FROM ee.tracker_teams WHERE code = $1 AND is_active`,
+        [patch.teamCode],
+      );
+      if (!team) {
+        throw new BlockingRuleError(
+          "That is not one of the WIO teams. Pick Dipmallya's or Neeraj's.",
+        );
+      }
+    }
+
     const movingStage =
       patch.stageId !== undefined && patch.stageId !== before.stage_id;
     const since =
@@ -433,6 +500,7 @@ export async function updateTrackerWio(
       sets.push(`${column} = $${values.length}${cast}`);
     };
 
+    if (patch.teamCode !== undefined) set("team_code", patch.teamCode);
     if (patch.project !== undefined) set("project", patch.project);
     if (patch.scope !== undefined) set("scope", patch.scope);
     if (patch.raisedBy !== undefined) set("raised_by", patch.raisedBy);

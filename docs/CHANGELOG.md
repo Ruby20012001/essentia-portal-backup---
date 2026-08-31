@@ -8,6 +8,43 @@
 
 ---
 
+## 2026-08-31 — S4b · the two WIO teams
+
+Ruby confirmed Dipmallya and Neeraj run two teams inside the WIO team
+(`DRAFTING`), serving Dhruv Kelaya's and Neeru Bajaj's CRM portfolios — and that
+they share **one board with a team column**.
+
+### Added
+- **db/032** — `ee.tracker_teams` + `ee.tracker_wios.team_code` (backfilled to
+  `dipmallya`, then set NOT NULL: a row that cannot say whose it is is a row
+  nobody owns). Board renamed from "Dipmallya's team" to "WIO team".
+- **The team lens.** A chip row above the tabs narrows Today, WIOs and Delays
+  together, so no two screens disagree about what a team holds. Team roll-ups
+  run through the same pure `todayStats` / `holdingByStage` over
+  `forTeam(rows, code)` — filtering is never a second implementation, and a test
+  asserts the parts sum to the whole. `forTeam` fails closed: an unknown team
+  shows nothing, never everything.
+- A team with no rows says so **in words**, rather than showing eight zero tiles
+  that read as a clear day (ADR-HS-01).
+
+### Deliberately NOT done
+- **Neeraj's supplied export was not seeded.** `WIO-to-PIO-Tracker_neeraj.xlsx`
+  is not a second dataset: its 15 WIOs are Dipmallya's first 15 in identical
+  sheet order with byte-identical values, its 11 delays likewise, its people
+  list a strict subset, and its stamp 2026-08-24 — one day before Dipmallya's.
+  That is a copy of the same sheet, not Neeraj's board. Seeding it would have
+  duplicated 15 rows under the wrong team. Neeraj's team is seeded with zero
+  rows and the board is ready for the real export.
+
+### Access — unchanged, deliberately
+The team column does not gate anything. Both teams sit in `DRAFTING` and both
+work the whole board; mutual cover is the reason they share one.
+
+### Tests
+227/227 (+6). Harness clean · tsc 0 · lint clean.
+
+---
+
 ## 2026-08-31 — S4b · WIO → PIO Tracker
 
 Dipmallya's team's Excel tracker, rebuilt as a native portal module with a real

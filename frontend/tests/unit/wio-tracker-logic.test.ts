@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  forTeam,
   addDays,
   computeBoard,
   computeWio,
@@ -48,6 +49,7 @@ function wio(over: Partial<TrackerWioInput> = {}): TrackerWioInput {
   return {
     id: "w1",
     wio: "ED/26-27/100",
+    teamCode: "dipmallya",
     project: "Test Residence",
     scope: "Test scope",
     raisedBy: "Nimisha",
@@ -394,6 +396,59 @@ describe("who is holding what", () => {
     const bom = holding.find((h) => h.stage === "BOM")!;
     expect(bom.count).toBe(0);
     expect(bom.longestWio).toBeNull();
+  });
+});
+
+describe("the team lens", () => {
+  const rows: TrackerWioInput[] = [
+    wio({ id: "a", wio: "A", teamCode: "dipmallya", wioIssued: "2026-08-05", stageId: "s5", since: "2026-08-20" }),
+    wio({ id: "b", wio: "B", teamCode: "dipmallya", wioIssued: "2026-08-20", stageId: "s10", since: "2026-08-25" }),
+    wio({ id: "c", wio: "C", teamCode: "neeraj", wioIssued: "2026-08-15", stageId: "s10", since: "2026-08-24" }),
+  ];
+  const board = computeBoard(rows, STAGES, SETTINGS, new Map());
+
+  it("null shows the whole board", () => {
+    expect(forTeam(board, null)).toHaveLength(3);
+  });
+
+  it("narrows to one team", () => {
+    expect(forTeam(board, "dipmallya").map((r) => r.wio)).toEqual(["A", "B"]);
+    expect(forTeam(board, "neeraj").map((r) => r.wio)).toEqual(["C"]);
+  });
+
+  it("an unknown team shows nothing rather than everything", () => {
+    // Fail closed. Silently falling back to the whole board would show one
+    // team another team's rows under that team's own label.
+    expect(forTeam(board, "nobody")).toHaveLength(0);
+  });
+
+  it("roll-ups over a team are the same arithmetic, not a second implementation", () => {
+    const all = todayStats(board, SETTINGS);
+    const dip = todayStats(forTeam(board, "dipmallya"), SETTINGS);
+    const nee = todayStats(forTeam(board, "neeraj"), SETTINGS);
+
+    expect(all.overdue).toBe(1); // A
+    expect(dip.overdue).toBe(1);
+    expect(nee.overdue).toBe(0);
+
+    // Every count partitions cleanly: the parts sum to the whole.
+    expect(dip.running + nee.running).toBe(all.running);
+    expect(dip.overdue + nee.overdue).toBe(all.overdue);
+    expect(dip.noWioDate + nee.noWioDate).toBe(all.noWioDate);
+  });
+
+  it("the stage roll-up narrows with the team and still lists every stage", () => {
+    const nee = holdingByStage(forTeam(board, "neeraj"), STAGES);
+    expect(nee).toHaveLength(STAGES.length);
+    expect(nee.find((h) => h.stage === "PIO")!.count).toBe(1);
+    expect(nee.find((h) => h.stage === "GFC")!.count).toBe(0);
+  });
+
+  it("a team with no rows yet reports zero, not the whole board", () => {
+    const empty = forTeam(board, "neeraj").filter(() => false);
+    const stats = todayStats(empty, SETTINGS);
+    expect(stats.running).toBe(0);
+    expect(stats.overdue).toBe(0);
   });
 });
 

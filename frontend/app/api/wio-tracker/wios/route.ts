@@ -14,6 +14,9 @@ const dateField = z
 
 const createSchema = z.object({
   wio: z.string().min(1).max(40),
+  // Required, never defaulted: a mis-filed row looks handled on somebody
+  // else's board, which is worse than a refused one.
+  teamCode: z.string().min(1).max(40),
   project: z.string().max(200).nullable().optional(),
   scope: z.string().max(2000).nullable().optional(),
   raisedBy: z.string().max(120).nullable().optional(),

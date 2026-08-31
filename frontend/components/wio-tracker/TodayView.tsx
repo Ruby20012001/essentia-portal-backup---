@@ -3,15 +3,31 @@
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { DayBadge, StatusPill } from "@/components/wio-tracker/StatusPill";
 import type { TrackerBoard } from "@/lib/services/wio-tracker";
+import { forTeam, holdingByStage, todayStats } from "@/lib/services/wio-tracker-logic";
 
 /**
  * Screen 1 — Today. Read-only by design: this is the screen the team stands
  * in front of, and the founders read on their own portal. Nothing here can be
  * changed by accident because nothing here can be changed at all.
+ *
+ * The roll-ups are recomputed here for the selected team rather than read off
+ * the server's whole-board totals. Same pure functions the server calls, over
+ * fewer rows — so a team view can never disagree with the "All" view about
+ * what is overdue. Filtering must not become a second implementation.
  */
-export function TodayView({ board }: { board: TrackerBoard }) {
-  const { settings, stats, holding, wios } = board;
+export function TodayView({
+  board,
+  team,
+}: {
+  board: TrackerBoard;
+  team: string | null;
+}) {
+  const { settings, stages } = board;
+  const wios = forTeam(board.wios, team);
+  const stats = todayStats(wios, settings);
+  const holding = holdingByStage(wios, stages);
   const running = wios.filter((w) => !w.pioReleased);
+  const teamName = team ? board.teams.find((t) => t.code === team)?.name : null;
 
   return (
     <div>
@@ -50,6 +66,18 @@ export function TodayView({ board }: { board: TrackerBoard }) {
             Their 15-day clock has never started, so they cannot be late — they
             are simply untracked. Add the WIO date on the WIOs tab to put them
             on the clock.
+          </p>
+        </div>
+      ) : null}
+
+      {/* A team with no rows on the board yet. Said plainly, because an empty
+          set of tiles reading 0 across the board looks like a healthy day. */}
+      {teamName && wios.length === 0 ? (
+        <div className="mb-8 rounded-lg border border-dashed border-line-strong bg-card px-6 py-8 text-center">
+          <p className="font-body text-sm font-light text-secondary">
+            <span className="font-bold text-ink">{teamName}</span> has no WIOs on
+            the board yet — every figure above is zero because there is nothing
+            to count, not because the day is clear.
           </p>
         </div>
       ) : null}
@@ -123,6 +151,9 @@ export function TodayView({ board }: { board: TrackerBoard }) {
                 <th className="px-3 py-2.5 font-bold">Raised by</th>
                 <th className="px-3 py-2.5 font-bold">Project / scope</th>
                 <th className="px-3 py-2.5 font-bold">WIO</th>
+                {/* Only when looking at the whole board — under a team filter
+                    every row would repeat the same value. */}
+                {team === null ? <th className="px-3 py-2.5 font-bold">Team</th> : null}
                 <th className="px-3 py-2.5 font-bold">Day</th>
                 <th className="px-3 py-2.5 font-bold">Stage</th>
                 <th className="px-3 py-2.5 font-bold">Accountability</th>
@@ -152,6 +183,12 @@ export function TodayView({ board }: { board: TrackerBoard }) {
                   <td className="whitespace-nowrap px-3 py-2.5 font-bold text-ink">
                     {w.wio}
                   </td>
+                  {team === null ? (
+                    <td className="whitespace-nowrap px-3 py-2.5 font-light text-muted">
+                      {board.teams.find((t) => t.code === w.teamCode)?.name ??
+                        w.teamCode}
+                    </td>
+                  ) : null}
                   <td className="px-3 py-2.5">
                     <DayBadge
                       label={w.dayLabel}

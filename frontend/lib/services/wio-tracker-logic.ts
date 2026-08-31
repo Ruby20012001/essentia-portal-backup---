@@ -45,10 +45,22 @@ export type TrackerSettings = {
   stampedAt: string | null;
 };
 
+/**
+ * One of the two teams inside the WIO team (db/032). A LENS, not a fence —
+ * both teams work the whole board; the team only says whose row it is.
+ */
+export type TrackerTeam = {
+  code: string;
+  name: string;
+  servesCrmTl: string | null;
+};
+
 /** The stored half of a row — exactly what a person edits. */
 export type TrackerWioInput = {
   id: string;
   wio: string;
+  /** Which of the two WIO teams owns this row. Stored, never derived. */
+  teamCode: string;
   project: string | null;
   scope: string | null;
   raisedBy: string | null;
@@ -286,6 +298,21 @@ export function toneFor(status: TrackerStatus): TrackerTone {
     case "Not tracked":
       return "neutral";
   }
+}
+
+/**
+ * Narrow a board to one team, or `null` for all of it.
+ *
+ * Every roll-up on the Today screen runs through this, so a team view is the
+ * same arithmetic over fewer rows — never a second implementation. That is
+ * what stops "Neeraj: 4 overdue" and "All: 6 overdue" from being computed two
+ * different ways and disagreeing.
+ */
+export function forTeam<T extends { teamCode: string }>(
+  rows: T[],
+  teamCode: string | null,
+): T[] {
+  return teamCode === null ? rows : rows.filter((r) => r.teamCode === teamCode);
 }
 
 /** The whole board, worst first. */

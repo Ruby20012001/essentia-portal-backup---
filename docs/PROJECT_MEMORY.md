@@ -213,14 +213,22 @@ harness clean · tsc 0 · unit 221/221 · lint clean.
 **Blockers.** None technical. Three decisions are open:
 1. Whether `essentia-portal-backup---` is the permanent GitHub home given its name.
 2. Whether `main` should be fast-forwarded to `platform-baseline-v1` (§7).
-3. **Whether the S4b board should carry a per-WIO team column.** Ruby confirmed
-   (2026-08-31) that Dipmallya and Neeraj run two teams inside the WIO team
-   (`DRAFTING`), serving Dhruv's and Neeru's CRM portfolios respectively. Access
-   is settled — one department covers both. What is not settled is whether the
-   two teams share ONE board (which then needs a team column to tell rows apart,
-   and a `team_name` that no longer reads "Dipmallya's team") or keep separate
-   boards. The seeded data is Dipmallya's workbook only. See
-   `portal.app_config → tracker.teams`.
+3. **Neeraj's team has no data yet.** Ruby confirmed (2026-08-31) one shared
+   board with a team column — built and shipped as `db/032`; all 37 seeded rows
+   are tagged `dipmallya` and `neeraj` exists with zero rows.
+
+   The file supplied as Neeraj's export
+   (`\\Manager\Only Crm\Ruby Nesrwal\M2.) MISC\Trackers\WIO-to-PIO-Tracker_neeraj.xlsx`)
+   was **not** seeded, because it is not a second dataset: its 15 WIOs are
+   Dipmallya's **first 15 in identical sheet order with byte-identical field
+   values**, its 11 delays likewise, its people list is a strict subset, and its
+   stamped date is 2026-08-24 — one day before Dipmallya's 2026-08-25. That is a
+   copy of the same sheet taken a day earlier, not Neeraj's board. Seeding it
+   would have duplicated 15 rows under the wrong team (and the `wio_number`
+   unique constraint would have rejected them anyway).
+
+   **Needed:** Neeraj's genuinely distinct rows. Once supplied, the seed is one
+   migration (`db/033`) tagging them `neeraj`; no code change.
 
 **Next action.** Build **S6 EH · Experience Centre** on a `feat/*` branch, or pick an
 open Velocity Gate (#1, #5, #8). See §9.

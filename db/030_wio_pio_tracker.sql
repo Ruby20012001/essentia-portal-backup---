@@ -337,14 +337,8 @@ INSERT INTO portal.app_config (key, value, category, description) VALUES
    '— Dipmallya''s and Neeraj''s teams both sit inside DRAFTING (Ruby, confirmed '
    '2026-08-31). Mirrors the department-scoped rows in public.permissions for '
    'resource_type wio_tracker — update BOTH together.'),
-  ('tracker.teams',
-   '[{"team": "Dipmallya", "serves_crm_tl": "Dhruv Kelaya"},'
-   ' {"team": "Neeraj",    "serves_crm_tl": "Neeru Bajaj"}]',
-   'delivery',
-   'The two teams inside the WIO team, and whose CRM project portfolio each '
-   'serves (Ruby, 2026-08-31). Recorded because the portal''s org model stops at '
-   'department and cannot otherwise express this split. Read by nothing yet — '
-   'it becomes load-bearing only if the board grows a per-WIO team column.'),
+  -- The two teams inside DRAFTING are modelled properly in db/032
+  -- (ee.tracker_teams + ee.tracker_wios.team_code), not as config.
   ('tracker.setup_min_level', '"L2"', 'delivery',
    'Minimum access level permitted to edit the stage chain, window days and '
    'at-risk threshold on the Setup screen. Moving a done_by day is policy.')

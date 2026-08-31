@@ -98,6 +98,26 @@ a code edit.
 L3 holds edit on purpose: the person who moves a WIO each morning is a team
 member, not the HOD. A board only a TL can touch is stale by Wednesday.
 
+### The team lens
+
+Every WIO carries `team_code` (`db/032`) — Dipmallya's or Neeraj's. A chip row
+above the tabs narrows Today, WIOs and Delays together, so no two screens can
+disagree about what a team is holding.
+
+It is a **lens, not a fence**. Both teams sit in `DRAFTING` and both work the
+whole board; the column only says whose row it is. Dipmallya's team can see and
+fix a row of Neeraj's — that mutual cover is the reason they share one board. If
+it ever must become a fence, that is an RLS policy on `team_code`, not a change
+to the grants.
+
+Team roll-ups go through the same pure `todayStats` / `holdingByStage` the
+server calls, over `forTeam(rows, code)` — filtering is never a second
+implementation, and a test asserts the parts sum to the whole. `forTeam` fails
+closed: an unknown team shows nothing, never everything.
+
+> **Neeraj's team has no rows yet.** The board says so in words rather than
+> showing eight zero tiles, which would read as a clear day.
+
 ### Who the owning team is
 
 Confirmed by Ruby, 2026-08-31. The owning department is exactly one —

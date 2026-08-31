@@ -29,6 +29,13 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
   const [tab, setTab] = useState<Tab>("today");
   const [banner, setBanner] = useState<Banner | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  /**
+   * Which team's rows to show — null is the whole board, and it is the default
+   * on purpose. Both teams work the whole board (db/032); the filter is a lens
+   * someone chooses, not a fence they are put behind, so the board opens
+   * showing everything and narrows only when asked.
+   */
+  const [team, setTeam] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const response = await fetch("/api/wio-tracker");
@@ -148,11 +155,48 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
         </span>
       </div>
 
-      {tab === "today" ? <TodayView board={board} /> : null}
+      {/* The team lens. Sits above the tabs because it applies to all of them —
+          Today, WIOs and Delays all narrow together, so a person looking at
+          "Neeraj" never has one screen disagree with another. */}
+      {tab !== "setup" && board.teams.length > 1 ? (
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <span className="font-body text-[11px] font-light uppercase tracking-[0.14em] text-muted">
+            Team
+          </span>
+          <TeamChip
+            label="All"
+            count={board.wios.length}
+            active={team === null}
+            onClick={() => setTeam(null)}
+          />
+          {board.teams.map((t) => {
+            const count = board.wios.filter((w) => w.teamCode === t.code).length;
+            return (
+              <TeamChip
+                key={t.code}
+                label={t.name}
+                count={count}
+                active={team === t.code}
+                onClick={() => setTeam(t.code)}
+                title={t.servesCrmTl ? `Serves ${t.servesCrmTl}'s projects` : undefined}
+              />
+            );
+          })}
+          {team !== null ? (
+            <span className="font-body text-xs font-light text-muted">
+              Showing one team. Both teams work the whole board — this is a
+              filter, not a fence.
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      {tab === "today" ? <TodayView board={board} team={team} /> : null}
 
       {tab === "wios" ? (
         <WiosView
           board={board}
+          team={team}
           busyId={busyId}
           onPatch={patchWio}
           onCreate={(input) =>
@@ -177,6 +221,7 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
       {tab === "delays" ? (
         <DelaysView
           board={board}
+          team={team}
           busyId={busyId}
           onCreate={(input) =>
             call(
@@ -222,5 +267,37 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
         />
       ) : null}
     </div>
+  );
+}
+
+function TeamChip({
+  label,
+  count,
+  active,
+  title,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  title?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={`rounded border px-3 py-1.5 font-body text-xs font-bold transition-colors ${
+        active
+          ? "border-line-strong bg-selected text-white"
+          : "border-line bg-card text-secondary hover:bg-hover"
+      }`}
+    >
+      {label}
+      {/* An em dash, not 0 — a team with no rows yet reads as "nothing here",
+          which is true, rather than as a suspicious zero. */}
+      <span className="ml-2 font-light text-muted">{count === 0 ? "—" : count}</span>
+    </button>
   );
 }
