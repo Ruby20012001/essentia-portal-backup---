@@ -19,9 +19,16 @@ export const dynamic = "force-dynamic";
  * rather than an empty board, because an empty board looks like good news.
  */
 export default async function WioTrackerPage() {
+  // DATABASE_URL is the only hard requirement. DEV_USER_ID is asked for ONLY
+  // when the dev bootstrap is switched on — in production the acting user comes
+  // from a real session, and the portal layout has already redirected anyone
+  // without one to /login. Demanding it unconditionally (as the older screens
+  // still do) makes a correctly-configured production deploy render
+  // "Database not connected" to a properly signed-in user.
+  const devBootstrap = process.env.AUTH_ALLOW_DEV_LOGIN === "true";
   const missing = [
     !process.env.DATABASE_URL && "DATABASE_URL",
-    !process.env.DEV_USER_ID && "DEV_USER_ID",
+    devBootstrap && !process.env.DEV_USER_ID && "DEV_USER_ID",
   ].filter((v): v is string => typeof v === "string");
 
   if (missing.length > 0) {
