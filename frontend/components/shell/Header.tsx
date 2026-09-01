@@ -4,13 +4,15 @@ import { UserMenu } from "@/components/shell/UserMenu";
 import { MobileNav } from "@/components/shell/MobileNav";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import type { SessionUser } from "@/lib/auth/session";
+import { homeHref } from "@/lib/portal-mode";
 
 export function Header({ user }: { user: SessionUser }) {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-3 bg-espresso px-4 md:px-6">
       <div className="flex min-w-0 items-center gap-2">
         <MobileNav />
-        <Link href="/dashboard" aria-label="essentia portal home" className="shrink-0">
+        {/* Home is the deployment's home, not always the dashboard. */}
+        <Link href={homeHref()} aria-label="essentia portal home" className="shrink-0">
           {/* CLAUDE.md: logo always an image, header height exactly 20px */}
           <Image
             src="/brand/logo-dark.png"

@@ -127,14 +127,33 @@ do what is an `UPDATE`, never a deploy.
 
 ---
 
-## Showing only the tracker at first
+## Launching with only the tracker
 
-The nav is a plain list in `frontend/components/shell/nav.ts`. To launch with
-just this screen, filter that list — the other routes still exist but are
-unlinked. **Unlinked is not access control:** anyone who guesses a URL reaches
-them, and they will render whatever their own permissions allow. If those
-screens must be genuinely closed, remove their permission rows rather than
-hiding the links.
+Set one variable:
+
+```
+NEXT_PUBLIC_PORTAL_MODE=tracker
+```
+
+The deployment then serves the tracker and nothing else. Everything else
+redirects to `/wio-tracker`; other modules' APIs return 404. The sidebar lists
+one entry. `/` goes to the tracker rather than the dashboard.
+
+**This is real, not cosmetic.** It is enforced in `middleware.ts`, so a closed
+screen is unreachable by typing its URL — hiding nav links alone would not be.
+
+To hand the team the tracker now and open the rest later, change the value to
+`full` (or unset it) and rebuild. There is no fork, no second database and no
+merge: it is the same codebase, which is exactly why "merge it in later" costs
+nothing.
+
+> **What this is not.** Launch mode decides which screens a *deployment* serves.
+> It does not decide who may see what — that is RBAC (`public.permissions`) and
+> RLS, which still apply underneath. A screen closed by this flag is closed by
+> configuration, not by permission.
+
+It is inlined at build time, so a change requires a rebuild. That is deliberate:
+which screens a deployment serves should not be flippable at runtime.
 
 ---
 
