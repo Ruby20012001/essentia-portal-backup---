@@ -29,6 +29,16 @@ nothing installed and no login — you can mail it, put it on the share, or host
 it. Nothing is ever uploaded anywhere by the tool itself; images are downscaled
 inside the browser (visuals to 1500px, plans to 2400px).
 
+**The deck is written out as a finished document, not as a script that draws
+one.** Every space — its dimensions, its line, its paragraph, its quotable and
+all its images — is in the file as plain markup. With JavaScript blocked,
+disabled, or simply never run (an email attachment viewer, a file manager, a
+phone that gives up on a large page) the whole deck still reads top to bottom,
+as a lookbook. The script only adds the tapping: it hides the long-form
+sections, inserts the card grid, and opens the panels. Each picture is stored
+exactly once — the interactive layer harvests the images back out of the markup
+rather than shipping a second copy.
+
 ### Working sequence
 
 1. **Client & cover** — project name, project code (`ED/YY-YY/NNN`), Client

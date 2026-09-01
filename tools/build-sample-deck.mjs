@@ -20,6 +20,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 
 const [tool, imgDir, logoPath, out] = process.argv.slice(2);
 const src = fs.readFileSync(tool, 'utf8');
@@ -244,6 +245,24 @@ const state = {
   },
 };
 
+/* Run the configurator's own viewer to write the document out, exactly as
+   "Export deck" does in the browser — so the sample cannot drift from what the
+   tool produces. The deck must read with the script blocked or never run. */
+const sandbox = { window: {}, document: { getElementById: () => null } };
+sandbox.globalThis = sandbox;
+vm.runInNewContext(viewer, sandbox);
+const deck = sandbox.window.EssentiaDeck;
+if (!deck || typeof deck.html !== 'function') throw new Error('viewer did not expose EssentiaDeck.html');
+
+const prerendered = deck.html(state, { noIndex: true });
+
+/* the state alongside it carries no image data — every picture is in the
+   markup once already, and mount() harvests it back out of the DOM */
+const slim = JSON.parse(JSON.stringify(state));
+slim.logo = '';
+slim.plates.forEach((p) => { p.src = ''; });
+slim.spaces.forEach((s) => (s.images || []).forEach((im) => { im.src = ''; }));
+
 const html =
 `<!doctype html>
 <html lang="en">
@@ -258,8 +277,8 @@ const html =
 <style>${core}</style>
 </head>
 <body class="deck-scope">
-<div id="deck-root"></div>
-<script>window.__DECK__=${JSON.stringify(state).replace(/<\//g, '<\\/')};<\/script>
+<div id="deck-root" data-prerendered="1">${prerendered}</div>
+<script>window.__DECK__=${JSON.stringify(slim).replace(/<\//g, '<\\/')};<\/script>
 <script>${viewer}<\/script>
 </body>
 </html>
@@ -267,7 +286,11 @@ const html =
 
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, html);
+const imgCopies = (html.match(/data:image\/[a-z]+;base64,/g) || []).length;
 console.log('wrote', out, (html.length / 1048576).toFixed(2) + ' MB');
 console.log('spaces:', state.spaces.length,
   '· with visuals:', state.spaces.filter((s) => s.images.length).length,
   '· empty:', state.spaces.filter((s) => !s.images.length).map((s) => s.name).join(', '));
+console.log('images embedded:', imgCopies,
+  '· expected:', 2 + state.spaces.reduce((n, s) => n + s.images.length, 0),
+  '· readable without JS:', /class="deck-print-space"/.test(html));

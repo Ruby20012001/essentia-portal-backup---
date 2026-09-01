@@ -83,7 +83,12 @@
   display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;
   transition:background-color .15s,transform .15s}
 .deck-pin:hover,.deck-pin:focus-visible{background:var(--amber);outline:none;transform:translate(-50%,-50%) scale(1.12)}
-.deck-hint{margin:14px 0 0;font-size:12px;color:var(--faint)}
+/* the tap hint only makes sense once the interactive layer is running; until
+   then the deck says what it actually is — every space, in full, further down */
+.deck-hint,.deck-hint-static{margin:14px 0 0;font-size:12px;color:var(--faint)}
+.deck-hint{display:none}
+.js-on .deck-hint{display:block}
+.js-on .deck-hint-static{display:none}
 
 /* space index */
 .deck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px}
@@ -166,15 +171,22 @@
 
 /* print — the deck folds back into a flat lookbook, one space per page */
 @media print{
-  .deck-sheet,.deck-hint,.deck-floors{display:none !important}
+  .deck-sheet,.deck-hint,.deck-hint-static,.deck-floors{display:none !important}
   .deck-scope{font-size:11pt}
   .deck{max-width:none;padding:0}
   .deck-sec{page-break-inside:avoid}
   .deck-print-space{page-break-before:always;padding-top:22px}
   .deck-print-space img{max-width:100%;height:auto}
 }
-.deck-print-space{display:none}
-@media print{.deck-print-space{display:block}}
+/* The no-JavaScript deck. Every space, in full, written into the file itself —
+   so an email viewer, a file manager, or a phone that never runs the script
+   still shows the whole thing instead of a blank page. Hidden the moment the
+   interactive layer takes over; always printed. */
+.deck-print-space{display:block;padding-top:26px;border-top:1px solid var(--rule);margin-top:26px}
+/* these render on screen now, not only on paper — they must fit the phone */
+.deck-print-space img{display:block;max-width:100%;height:auto}
+.js-on .deck-print-space{display:none}
+@media print{.deck-print-space{display:block !important;border-top:0;margin-top:0}}
 </style>
 
 <style id="editor">
@@ -500,7 +512,7 @@ button,input,textarea,select{font:inherit;color:inherit}
     var p = state.project || {};
     var spaces = live(state);
     var logo = state.logo
-      ? '<img class="deck-logo" src="' + state.logo + '" alt="essentia">'
+      ? '<img class="deck-logo" data-logo src="' + state.logo + '" alt="essentia">'
       : '<span class="deck-logo--fallback">essentia</span>';
     var rows = [
       ['Client', p.client],
@@ -550,22 +562,26 @@ button,input,textarea,select{font:inherit;color:inherit}
           'title="' + esc(s.name) + '" aria-label="' + esc(s.no + ' ' + s.name) + '">' + esc(s.no) + '</button>';
       }).join('');
       return '<div class="deck-plate" data-plate-panel="' + i + '"' + (i === 0 ? '' : ' hidden') + '>' +
-        '<img src="' + pl.src + '" alt="' + esc(pl.label || 'Layout') + '">' + pins + '</div>';
+        '<img data-plate-img="' + i + '" src="' + pl.src + '" alt="' + esc(pl.label || 'Layout') + '">' +
+        pins + '</div>';
     }).join('');
     return '<section class="deck-sec"><span class="deck-eyebrow">01 The plan</span>' +
       '<h2>Every marked space opens.</h2>' + tabs + plateEls +
-      '<p class="deck-hint">Tap a number to open that space — its size, and what it is for.</p></section>';
+      '<p class="deck-hint">Tap a number to open that space — its size, and what it is for.</p>' +
+      '<p class="deck-hint-static">Every space is set out in full below, in the order it is numbered.</p>' +
+      '</section>';
   }
 
   function indexHtml(state) {
     var spaces = live(state);
     if (!spaces.length) return '';
-    return '<section class="deck-sec"><span class="deck-eyebrow">02 The spaces</span>' +
+    return '<section class="deck-sec deck-index"><span class="deck-eyebrow">02 The spaces</span>' +
       '<h2>' + spaces.length + ' spaces in this home.</h2><div class="deck-grid">' +
       spaces.map(function (s) {
         var hero = (s.images && s.images[0]) ? s.images[0].src : '';
         return '<button class="deck-card" data-space="' + esc(s.id) + '">' +
-          (hero ? '<span class="deck-card-img"><img src="' + hero + '" alt="' + esc(s.name) + '"></span>'
+          (hero ? '<span class="deck-card-img"><img loading="lazy" decoding="async" src="' + hero +
+                  '" alt="' + esc(s.name) + '"></span>'
                 : '<span class="deck-card-img deck-card-img--none"><span>No visual yet</span></span>') +
           '<span class="deck-card-body">' +
             '<span class="deck-card-no">' + esc(s.no) + (s.floor ? ' · ' + esc(s.floor) : '') + '</span>' +
@@ -584,7 +600,9 @@ button,input,textarea,select{font:inherit;color:inherit}
       nl2p(n.body) + '</section>';
   }
 
-  /* flat lookbook fallback — only visible when printed */
+  /* The whole deck as plain document: what prints, and what anyone sees when
+     the script does not run. Each image is tagged so the interactive layer can
+     pick it back up out of the DOM instead of the file carrying it twice. */
   function printHtml(state) {
     return live(state).map(function (s) {
       return '<section class="deck-print-space">' +
@@ -594,10 +612,32 @@ button,input,textarea,select{font:inherit;color:inherit}
         (s.summary ? '<p class="deck-sheet-summary">' + esc(s.summary) + '</p>' : '') +
         nl2p(s.body) +
         (s.quote ? '<p class="deck-sheet-quote">' + esc(s.quote) + '</p>' : '') +
-        (s.images || []).map(function (im) {
-          return '<img src="' + im.src + '" alt="' + esc(s.name) + '" style="margin-top:10px">';
+        (s.images || []).map(function (im, k) {
+          return '<img loading="lazy" decoding="async" data-sp="' + esc(s.id) + '" data-ix="' + k +
+            '" src="' + im.src + '" alt="' + esc(s.name) + '" style="margin-top:10px">';
         }).join('') + '</section>';
     }).join('');
+  }
+
+  /* Pull the image data back out of pre-rendered markup into the state, so the
+     exported file stores every picture exactly once. */
+  function harvest(el, state) {
+    var lg = el.querySelector('[data-logo]');
+    if (lg && !state.logo) state.logo = lg.getAttribute('src');
+    el.querySelectorAll('[data-plate-img]').forEach(function (img) {
+      var pl = (state.plates || [])[+img.getAttribute('data-plate-img')];
+      if (pl && !pl.src) pl.src = img.getAttribute('src');
+    });
+    var byId = {};
+    (state.spaces || []).forEach(function (s) { byId[String(s.id)] = s; });
+    el.querySelectorAll('[data-sp]').forEach(function (img) {
+      var s = byId[img.getAttribute('data-sp')];
+      if (!s) return;
+      var k = +img.getAttribute('data-ix');
+      s.images = s.images || [];
+      if (!s.images[k]) s.images[k] = { src: '', w: 0, h: 0 };
+      if (!s.images[k].src) s.images[k].src = img.getAttribute('src');
+    });
   }
 
   function footHtml(state) {
@@ -613,8 +653,12 @@ button,input,textarea,select{font:inherit;color:inherit}
       '</dl></footer>';
   }
 
-  function deckHtml(state) {
-    return '<article class="deck">' + coverHtml(state) + planHtml(state) + indexHtml(state) +
+  /* opts.noIndex leaves out the card grid: its thumbnails are the same files
+     the space sections already carry, and the export must not ship them twice.
+     mount() puts the grid in once the interactive layer is running. */
+  function deckHtml(state, opts) {
+    return '<article class="deck">' + coverHtml(state) + planHtml(state) +
+      ((opts && opts.noIndex) ? '' : indexHtml(state)) +
       noteHtml(state) + printHtml(state) + footHtml(state) + '</article>' +
       '<div class="deck-sheet" data-sheet><div class="deck-sheet-veil" data-sheet-close></div>' +
       '<div class="deck-sheet-body" role="dialog" aria-modal="true"><div data-sheet-in></div></div></div>';
@@ -647,7 +691,23 @@ button,input,textarea,select{font:inherit;color:inherit}
   }
 
   function mount(el, state) {
-    el.innerHTML = deckHtml(state);
+    /* An exported deck arrives already written out as a document. Take the
+       images back out of it and enhance in place rather than rebuilding — a
+       phone should not have to decode every picture a second time. */
+    var pre = el.getAttribute('data-prerendered');
+    if (pre) {
+      el.removeAttribute('data-prerendered');
+      harvest(el, state);
+      var plan = el.querySelector('.deck-sec');
+      var grid = document.createElement('div');
+      grid.innerHTML = indexHtml(state);
+      if (grid.firstChild && plan && plan.parentNode) {
+        plan.parentNode.insertBefore(grid.firstChild, plan.nextSibling);
+      }
+    } else {
+      el.innerHTML = deckHtml(state);
+    }
+    el.classList.add('js-on');
     var spaces = live(state);
     var sheet = el.querySelector('[data-sheet]');
     var sheetIn = el.querySelector('[data-sheet-in]');
@@ -708,7 +768,7 @@ button,input,textarea,select{font:inherit;color:inherit}
     return { open: open, close: close };
   }
 
-  root.EssentiaDeck = { mount: mount, live: live, esc: esc };
+  root.EssentiaDeck = { mount: mount, live: live, esc: esc, html: deckHtml };
 
   if (root.__DECK__ && document.getElementById('deck-root')) {
     mount(document.getElementById('deck-root'), root.__DECK__);
@@ -1310,6 +1370,20 @@ function exportDeck() {
   var core = document.getElementById('core').textContent;
   var viewer = document.getElementById('viewer').textContent;
   var title = (S.project.name || 'Concept deck') + ' · concept deck';
+
+  /* The deck is written into the file as a finished document, so it reads with
+     the script blocked, disabled, or simply never run — an email attachment
+     viewer, a file manager, a slow phone. The script only adds tapping.
+     The state that ships alongside it carries no image data: every picture is
+     already in the markup once, and mount() harvests it back out. */
+  var pre = window.EssentiaDeck.html(S, { noIndex: true });
+  var slim = JSON.parse(JSON.stringify(S));
+  slim.logo = '';
+  slim.plates.forEach(function (p) { p.src = ''; });
+  slim.spaces.forEach(function (s) {
+    (s.images || []).forEach(function (im) { im.src = ''; });
+  });
+
   var html =
 '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n' +
 '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' +
@@ -1318,11 +1392,12 @@ function exportDeck() {
 '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
 '<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">\n' +
 '<style>html,body{margin:0;padding:0;background:#fff}</style>\n' +
-'<style>' + core + '</style>\n</head>\n<body class="deck-scope">\n<div id="deck-root"></div>\n' +
-'<script>window.__DECK__=' + JSON.stringify(S).replace(/<\//g, '<\\/') + ';<\/script>\n' +
+'<style>' + core + '</style>\n</head>\n<body class="deck-scope">\n' +
+'<div id="deck-root" data-prerendered="1">' + pre + '</div>\n' +
+'<script>window.__DECK__=' + JSON.stringify(slim).replace(/<\//g, '<\\/') + ';<\/script>\n' +
 '<script>' + viewer + '<\/script>\n</body>\n</html>\n';
   download(slug(S.project.code || S.project.name) + '-concept-deck.html', new Blob([html], { type: 'text/html' }));
-  toast('Deck exported — ' + Math.round(html.length / 1024) + ' KB, one file, works offline.');
+  toast('Deck exported — ' + (html.length / 1048576).toFixed(1) + ' MB. Readable with or without scripts.');
 }
 
 /* ── wiring ───────────────────────────────────────────────────────────── */
