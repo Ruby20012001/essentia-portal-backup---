@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { next?: string };
+  searchParams: { next?: string; error?: string };
 }) {
   const entraConfigured = Boolean(process.env.ENTRA_TENANT_ID);
   const devLogin = process.env.AUTH_ALLOW_DEV_LOGIN === "true";
@@ -29,6 +29,14 @@ export default function LoginPage({
           </p>
         </div>
 
+        {searchParams.error ? (
+          <p
+            role="alert"
+            className="mb-4 rounded border-l-4 border-alert bg-alert/5 px-3 py-2 font-body text-xs font-bold text-alert"
+          >
+            {searchParams.error}
+          </p>
+        ) : null}
         {entraConfigured ? (
           <a
             href="/api/auth/entra/start"

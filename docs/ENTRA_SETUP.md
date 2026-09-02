@@ -6,12 +6,10 @@ The WIO team is on Microsoft 365, so staff sign in with their existing
 This page is the request to hand to whoever administers the essentia Microsoft
 tenant. It needs no knowledge of the portal.
 
-> **Status:** the portal's redirect to Microsoft is built; the **callback that
-> completes sign-in is not yet implemented** (A-16 in
-> `docs/ASSUMPTIONS_DECISIONS.md`). The registration below is required either
-> way and can be done in parallel — but sign-in will not work until that code
-> lands. Do not schedule the team's first day on the tracker against the
-> registration alone.
+> **Status:** sign-in is implemented end to end — authorization-code flow with
+> PKCE, ID-token verification against the tenant JWKS, nonce replay protection
+> and the claims-to-account mapping. It is unverified against a real tenant
+> until the values below arrive, which is the last remaining step.
 
 ---
 
@@ -107,21 +105,27 @@ Adding someone later is one row, not a code change. Removing someone is
 
 ---
 
-## What still has to be built (A-16)
+## How sign-in works
 
-`lib/auth/providers/entra.ts` → `completeCallback()` currently throws. To
-finish it:
+`lib/auth/providers/entra.ts` runs the authorization-code flow with PKCE:
 
-1. **Exchange the code** at
-   `https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token`.
-2. **Validate the ID token** against the tenant JWKS — signature, `iss`, `aud`,
-   `exp`, and a `nonce` bound to the login attempt. This is the security of the
-   whole thing; it should not be hand-rolled or skipped.
-3. **Add PKCE** to the authorization request.
-4. **Map claims to a user** — match `oid` against `users.microsoft_oid`, else
-   fall back to `lower(email)` and store the `oid` on first sign-in.
-   **Never auto-create a user**: an unknown-but-valid Microsoft account must be
-   refused, or the provisioning model above means nothing.
+1. **/api/auth/entra/start** mints a state, a nonce and a PKCE verifier, and
+   keeps all three in one httpOnly cookie. Only the state, nonce and the
+   hashed challenge go to Microsoft — the verifier never leaves the server.
+2. **/api/auth/entra/callback** checks the returned state against the cookie,
+   exchanges the code for an ID token, then verifies that token against the
+   tenant's published signing keys — signature, issuer, audience, expiry — and
+   checks the nonce matches. Verification uses the `jose` library; RS256 and
+   JWKS rotation are not hand-rolled.
+3. **Claims map to an account** by `oid` (immutable) first, falling back to
+   email only for an account not yet linked, then storing the `oid`. Email can
+   be reassigned to a new joiner; `oid` cannot.
+4. **No account is ever created.** An unknown or inactive account is refused
+   and the attempt is written to the audit trail.
 
-Steps 1–3 need the tenant values to be verified end to end. Step 4's logic can
-be built and tested before the tenant exists.
+Failures redirect back to `/login` with the reason shown, rather than leaving
+the user on a blank JSON error page.
+
+Claim mapping and the tenant check are unit-tested
+(`tests/unit/entra-claims.test.ts`). The cryptographic half can only be proven
+against a real tenant — that is what the values above unblock.
