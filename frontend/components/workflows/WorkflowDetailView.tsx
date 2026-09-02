@@ -4,18 +4,13 @@ import { useCallback, useState } from "react";
 import type { TimelineApprover, TimelineGroup, WorkflowDetail } from "@/lib/services/workflow-detail";
 import type { WorkflowAuditEntry, WorkflowAuditKind } from "@/lib/services/workflow-audit";
 
-type Tab = "timeline" | "advisory" | "audit";
+type Tab = "timeline" | "audit";
 
-type Advisory = {
-  slaRisk?: { level: string; hoursRemaining: number | null };
-  ai?: { available: boolean; summary?: string; reason?: string; provider?: string; model?: string };
-  disclaimer?: string;
-};
 
 /**
  * Workflow Detail — the operating screen for one instance. Header, a vertical
  * approval timeline (with parallel cards, quorum, conditional skips, delegation
- * chains and SLA badges), the read-only AI advisory, and the cross-event audit.
+ * chains and SLA badges), and the cross-event audit.
  * Reuses the portal design system throughout; adds no new visual language.
  */
 export function WorkflowDetailView({
@@ -28,16 +23,7 @@ export function WorkflowDetailView({
   showAudit: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("timeline");
-  const [advisory, setAdvisory] = useState<Advisory | "loading" | null>(null);
 
-  const loadAdvisory = useCallback(async () => {
-    setTab("advisory");
-    if (advisory) return;
-    setAdvisory("loading");
-    const res = await fetch(`/api/workflows/${detail.instanceId}/advisory`);
-    const data = await res.json().catch(() => ({}));
-    setAdvisory(res.ok ? data : { ai: { available: false, reason: data.error ?? "Advisory unavailable" } });
-  }, [advisory, detail.instanceId]);
 
   return (
     <div>
@@ -47,9 +33,6 @@ export function WorkflowDetailView({
         <TabButton active={tab === "timeline"} onClick={() => setTab("timeline")}>
           Timeline
         </TabButton>
-        <TabButton active={tab === "advisory"} onClick={loadAdvisory}>
-          AI Advisory
-        </TabButton>
         {showAudit ? (
           <TabButton active={tab === "audit"} onClick={() => setTab("audit")}>
             Audit
@@ -58,7 +41,6 @@ export function WorkflowDetailView({
       </div>
 
       {tab === "timeline" ? <Timeline groups={detail.groups} /> : null}
-      {tab === "advisory" ? <AdvisoryPanel advisory={advisory} /> : null}
       {tab === "audit" && showAudit ? <AuditTab entries={audit} /> : null}
     </div>
   );
@@ -206,38 +188,6 @@ function ApproverIdentity({ approver }: { approver: TimelineApprover }) {
       {approver.actedBy && approver.actedAt ? (
         <p className="mt-0.5 font-body text-xs font-light text-muted">
           {approver.actedBy} · {approver.actedAt.slice(0, 16).replace("T", " ")}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-/* ── AI Advisory (read-only) ────────────────────────────────────────────── */
-function AdvisoryPanel({ advisory }: { advisory: Advisory | "loading" | null }) {
-  if (advisory === null || advisory === "loading") {
-    return <Panel>{advisory === "loading" ? "Loading advisory…" : "Advisory not loaded."}</Panel>;
-  }
-  return (
-    <div className="rounded-lg border border-line bg-card p-5">
-      <p className="font-body text-[11px] font-bold uppercase tracking-[0.16em] text-muted">AI Advisory</p>
-
-      {advisory.slaRisk ? (
-        <p className="mt-3 font-body text-sm text-secondary">
-          <span className="font-bold text-white">SLA risk:</span> {advisory.slaRisk.level}
-          {advisory.slaRisk.hoursRemaining != null ? ` · ${advisory.slaRisk.hoursRemaining}h remaining` : ""}
-        </p>
-      ) : null}
-
-      <p className="mt-2 font-body text-sm text-secondary">
-        <span className="font-bold text-white">Summary:</span>{" "}
-        {advisory.ai?.available
-          ? advisory.ai.summary
-          : `unavailable — ${advisory.ai?.reason ?? "not configured"}`}
-      </p>
-
-      {advisory.disclaimer ? (
-        <p className="mt-4 border-t border-line pt-3 font-body text-xs font-light italic text-muted">
-          {advisory.disclaimer}
         </p>
       ) : null}
     </div>

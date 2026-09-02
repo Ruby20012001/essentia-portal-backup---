@@ -15,7 +15,7 @@ export default async function ApprovalsPage() {
         <h1 className="mb-1 font-heading text-4xl text-white">My Approvals</h1>
         <p className="font-body text-sm font-light text-label">
           Your pending decisions across every workflow — approve, reject, or delegate,
-          with SLA and advisory at a glance.
+          with SLA at a glance.
         </p>
       </div>
       <ApprovalsInbox initial={approvals} />

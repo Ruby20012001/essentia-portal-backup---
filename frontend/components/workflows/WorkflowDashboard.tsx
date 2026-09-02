@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { itemSlaRisk, type ApprovalOverviewItem } from "@/lib/services/workflow-oversight";
-import type { SlaRisk } from "@/lib/services/workflow-advisory";
+import type { SlaRisk } from "@/lib/services/workflow-sla-risk";
 
 /**
  * Workflow Dashboard (Phase 4 frontend, screen 1) — every workflow in flight,
