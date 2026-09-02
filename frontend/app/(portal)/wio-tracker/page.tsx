@@ -46,7 +46,7 @@ export default async function WioTrackerPage() {
           <div className="mt-6">
             <EmptyState
               title="You don't have access to this board"
-              message="The WIO → PIO Tracker is held by the team that runs the stage chain, with view access for CRM and leadership. Ask Ruby if you need to be added — access is a permission row, not a code change."
+              message="The WIO → PIO Tracker is held by the team that runs the stage chain, with view access for CRM and leadership. Contact your team lead if you need to be added."
             />
           </div>
         </div>
