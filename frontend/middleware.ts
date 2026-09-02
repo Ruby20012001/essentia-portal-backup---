@@ -1,55 +1,81 @@
 import { NextRequest, NextResponse } from "next/server";
-// Relative, not the "@/" alias, and both targets are dependency-free. The Edge
-// runtime bundles this file separately from the app and rejected the aliased
-// specifiers outright on Vercel — while a local `next build` resolved them
-// without complaint, so the failure only appears on deploy.
-import { SESSION_COOKIE } from "./lib/auth/constants";
-import { homeHref, isRouteAllowed, portalMode } from "./lib/portal-mode";
 
 /**
- * Route gate. Runs on the Edge runtime, so it cannot touch the database —
- * it only checks for the presence of the session cookie. Full validation
- * (expiry, revocation, idle) happens server-side in getCurrentUser() on
- * every page and API call.
+ * Route gate. Runs on the Edge runtime, so it cannot touch the database — it
+ * only checks for the presence of the session cookie. Full validation (expiry,
+ * revocation, idle) happens server-side in getCurrentUser() on every page and
+ * API call, and the portal layout redirects anyone without a live session.
  *
- * When AUTH_ALLOW_DEV_LOGIN=true (development), the gate is permissive so the
- * DEV_USER_ID fallback keeps local work and the preview smooth. In production
- * (dev login off) it redirects unauthenticated page requests to /login and
- * returns 401 for unauthenticated API calls.
+ * SELF-CONTAINED ON PURPOSE — imports nothing but next/server.
+ *
+ * Vercel bundles middleware separately for the Edge runtime and it failed there
+ * twice: first refusing the "@/" alias at build time, then failing at
+ * invocation (MIDDLEWARE_INVOCATION_FAILED) with every route 500ing, while a
+ * local production build served the same routes correctly. Rather than keep
+ * guessing at a runtime we cannot reproduce, the handful of values this needs
+ * are inlined. The Edge bundle now has no local module graph at all, which
+ * removes the entire class of failure.
+ *
+ * The cost is duplication: SESSION_COOKIE and the tracker-mode prefixes also
+ * live in lib/auth/constants.ts and lib/portal-mode.ts, which the app uses.
+ * tests/unit/middleware-contract.test.ts asserts the two copies agree, so a
+ * change to one that is not mirrored fails the suite rather than quietly
+ * opening a route.
  */
 
+/** Mirrors SESSION_COOKIE in lib/auth/constants.ts. */
+const SESSION_COOKIE = "essentia_session";
+
+/** Mirrors TRACKER_MODE_PREFIXES in lib/portal-mode.ts. */
+const TRACKER_MODE_PREFIXES = [
+  "/wio-tracker",
+  "/api/wio-tracker",
+  "/login",
+  "/api/auth",
+  "/api/me",
+  "/notifications",
+  "/api/notifications",
+];
+
 const PUBLIC_PREFIXES = ["/login", "/api/auth"];
+
+function under(pathname: string, prefixes: string[]): boolean {
+  return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Launch-mode gate. Runs BEFORE the dev-login shortcut on purpose: a
-  // tracker-only deployment must serve only the tracker in development too,
-  // or the mode is never actually exercised until it reaches production.
+  // tracker-only deployment must serve only the tracker in development too, or
+  // the mode is never exercised until it reaches production.
   //
   // Enforced here rather than only by hiding nav links, because an unlinked
   // route is not a closed one — anyone who types the URL reaches it.
-  const mode = portalMode();
-  if (mode !== "full" && !isRouteAllowed(pathname, mode)) {
+  if (
+    process.env.NEXT_PUBLIC_PORTAL_MODE === "tracker" &&
+    !under(pathname, TRACKER_MODE_PREFIXES)
+  ) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
-        { error: "This deployment serves the WIO → PIO Tracker only." },
+        { error: "This deployment serves the WIO to PIO Tracker only." },
         { status: 404 },
       );
     }
-    return NextResponse.redirect(new URL(homeHref(mode), request.nextUrl.origin));
+    return NextResponse.redirect(new URL("/wio-tracker", request.nextUrl.origin));
   }
 
   if (process.env.AUTH_ALLOW_DEV_LOGIN === "true") {
     return NextResponse.next();
   }
 
-  if (PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+  if (under(pathname, PUBLIC_PREFIXES)) {
     return NextResponse.next();
   }
 
-  const hasCookie = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
-  if (hasCookie) return NextResponse.next();
+  if (request.cookies.get(SESSION_COOKIE)?.value) {
+    return NextResponse.next();
+  }
 
   if (pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
