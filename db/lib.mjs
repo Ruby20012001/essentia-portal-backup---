@@ -48,6 +48,7 @@ export const DEFAULT_FILES = [
   "034_wio_pio_tracker_standup_2026_08_31.sql",
   "035_wio_team_accounts.sql",
   "036_remove_ai_advisory.sql",
+  "037_wio_team_passwords.sql",
   "900_dev_fixtures.sql",
 ];
 
