@@ -37,16 +37,22 @@ export default function LoginPage({
             {searchParams.error}
           </p>
         ) : null}
+        {/* One way in. Staff accounts carry no password (db/035, auth_provider
+            'entra'), so offering the password form alongside would be a dead
+            control: someone types their email, fails, and concludes the portal
+            is broken. The form stays as the break-glass path for when Entra is
+            not configured — a deployment with no tenant must still be
+            reachable. */}
         {entraConfigured ? (
           <a
             href="/api/auth/entra/start"
-            className="mb-4 block rounded bg-navy px-5 py-2.5 text-center font-body text-sm font-bold text-cream transition-opacity hover:opacity-90"
+            className="block rounded bg-navy px-5 py-2.5 text-center font-body text-sm font-bold text-cream transition-opacity hover:opacity-90"
           >
             Sign in with Microsoft
           </a>
-        ) : null}
-
-        <LoginForm next={searchParams.next} showDevHint={devLogin} />
+        ) : (
+          <LoginForm next={searchParams.next} showDevHint={devLogin} />
+        )}
       </div>
     </div>
   );
