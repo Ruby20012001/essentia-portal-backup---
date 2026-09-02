@@ -83,10 +83,6 @@ export type TrackerBoard = {
   can: { edit: boolean; create: boolean; delete: boolean; logDelay: boolean };
 };
 
-// ---------------------------------------------------------------------
-// Reads
-// ---------------------------------------------------------------------
-
 export async function getSettings(): Promise<TrackerSettings> {
   const [row] = await query<{
     team_name: string;
@@ -309,10 +305,6 @@ async function allowed(
     return false;
   }
 }
-
-// ---------------------------------------------------------------------
-// Writes — WIOs
-// ---------------------------------------------------------------------
 
 export type CreateWioInput = {
   wio: string;
@@ -573,10 +565,6 @@ export async function deleteTrackerWio(user: SessionUser, id: string): Promise<v
   });
 }
 
-// ---------------------------------------------------------------------
-// Writes — delays
-// ---------------------------------------------------------------------
-
 export type CreateDelayInput = {
   wioId: string;
   why: string;
@@ -751,10 +739,6 @@ export async function updateDelay(
     newValues: patch,
   });
 }
-
-// ---------------------------------------------------------------------
-// Writes — settings and the chain
-// ---------------------------------------------------------------------
 
 export type SettingsPatch = Partial<{
   today: string;

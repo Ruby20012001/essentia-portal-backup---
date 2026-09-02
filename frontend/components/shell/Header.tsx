@@ -13,7 +13,7 @@ export function Header({ user }: { user: SessionUser }) {
         <MobileNav />
         {/* Home is the deployment's home, not always the dashboard. */}
         <Link href={homeHref()} aria-label="essentia portal home" className="shrink-0">
-          {/* CLAUDE.md: logo always an image, header height exactly 20px */}
+          {/* Brand rule: logo always an image, header height exactly 20px */}
           <Image
             src="/brand/logo-dark.png"
             alt="essentia"

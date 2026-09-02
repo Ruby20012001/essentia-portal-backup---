@@ -8,7 +8,7 @@ import {
 
 /**
  * Anthropic provider — the default (config `ai.provider` = "anthropic",
- * model from `ai.model`, currently claude-sonnet-4-6 per CLAUDE.md).
+ * model from `ai.model`).
  * Uses the official SDK; it handles retries (429/5xx) and typed errors.
  */
 

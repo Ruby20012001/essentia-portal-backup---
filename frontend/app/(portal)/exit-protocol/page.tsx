@@ -8,7 +8,7 @@ import { listSuccessionPacks } from "@/lib/services/succession-pack";
 export const dynamic = "force-dynamic";
 
 /**
- * S12 · Exit Protocol (CLAUDE.md; Brief §36 · Velocity Gate #4). Every exit and
+ * S12 · Exit Protocol (Brief §36 · Velocity Gate #4). Every exit and
  * the confirmed status of all six removal actions that fire at 11:59pm on the
  * exit date. Gated to hr_access on users — people data is HR / L0-L1 only (§36).
  */

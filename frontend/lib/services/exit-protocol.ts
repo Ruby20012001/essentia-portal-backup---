@@ -3,7 +3,7 @@ import { writeAudit } from "@/lib/services/audit";
 import type { SessionUser } from "@/lib/auth/session";
 
 /**
- * Exit protocol (CLAUDE.md permanent constraint; Brief §36 · Velocity Gate #4).
+ * Exit protocol (permanent constraint; Brief §36 · Velocity Gate #4).
  * "Exit protocol fires at exactly 11:59pm — all 6 removal actions simultaneously."
  *
  * HONESTY RULE (Brief §38, Rahul's critique — the silent-partial-failure mode):
@@ -74,7 +74,7 @@ export async function fireExitProtocol(
 }
 
 async function fireForUser(actor: SessionUser, user: DueExit): Promise<void> {
-  // --- The actions this portal can genuinely perform, now. -----------------
+  // The actions this portal can genuinely perform, now.
   // Deactivating the account is what actually revokes approval authority: an
   // inactive user fails permission resolution and cannot act on any workflow.
   await query(`UPDATE public.users SET is_active = FALSE, updated_at = NOW() WHERE id = $1`, [user.id]);

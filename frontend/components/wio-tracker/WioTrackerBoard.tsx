@@ -22,7 +22,7 @@ type Banner = { tone: "error" | "success"; message: string };
  * exists to prevent.
  *
  * Every refusal surfaces verbatim in the banner. The system never blocks
- * silently (CLAUDE.md).
+ * silently (house rule).
  */
 export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
   const [board, setBoard] = useState(initial);

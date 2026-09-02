@@ -112,9 +112,7 @@ export type ComputedWio = TrackerWioInput & {
   priority: number;
 };
 
-// ---------------------------------------------------------------------
 // Calendar-day arithmetic, timezone-free.
-// ---------------------------------------------------------------------
 
 const MS_PER_DAY = 86_400_000;
 
@@ -149,10 +147,6 @@ export function currentDay(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-// ---------------------------------------------------------------------
-// The chain.
-// ---------------------------------------------------------------------
-
 /**
  * The final stage holds a placeholder in `waiting_on` — it is not a team, it
  * means "whoever raised this WIO". Recognising it by the sentinel rather than
@@ -176,10 +170,6 @@ function holderOf(stage: TrackerStage, raisedBy: string | null): string {
 export function sortStages(stages: TrackerStage[]): TrackerStage[] {
   return [...stages].sort((a, b) => a.position - b.position);
 }
-
-// ---------------------------------------------------------------------
-// The derivation.
-// ---------------------------------------------------------------------
 
 /**
  * Computes one row. `openDelays` is passed in rather than looked up so this
@@ -334,10 +324,6 @@ export function computeBoard(
         a.wio.localeCompare(b.wio),
     );
 }
-
-// ---------------------------------------------------------------------
-// The Today dashboard roll-ups.
-// ---------------------------------------------------------------------
 
 export type TodayStats = {
   wiosIssuedToday: number;
