@@ -1,6 +1,7 @@
 import { SetupNeeded } from "@/components/dashboard/SetupNeeded";
 import { WioPioHub } from "@/components/wio/WioPioHub";
 import { getCurrentUser } from "@/lib/auth/session";
+import { missingPageEnv } from "@/lib/env";
 import { getDepartments } from "@/lib/services/departments";
 import { listPios } from "@/lib/services/pio";
 import { listProjectOptions } from "@/lib/services/projects";
@@ -10,10 +11,7 @@ export const dynamic = "force-dynamic";
 
 /** S4 · WIO/PIO Hub — Brief §29-30 · Velocity Gate 3. */
 export default async function WioPioPage() {
-  const missing = [
-    !process.env.DATABASE_URL && "DATABASE_URL",
-    !process.env.DEV_USER_ID && "DEV_USER_ID",
-  ].filter((v): v is string => typeof v === "string");
+  const missing = missingPageEnv();
 
   if (missing.length > 0) {
     return (

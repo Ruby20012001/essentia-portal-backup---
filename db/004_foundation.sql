@@ -154,14 +154,14 @@ CREATE INDEX IF NOT EXISTS idx_perm_lookup
 DROP TABLE IF EXISTS public.role_permissions;
 
 -- ------------------------------------------------------------------
--- Matrix seeds. L0/L1 generated (see everything, per CLAUDE.md);
+-- Matrix seeds. L0/L1 generated (see everything, per the access model);
 -- L2/L3 explicit rows; the four global security rules (ruling #4)
 -- carry explicit allowed=FALSE rows so the policy is self-documenting.
 -- ------------------------------------------------------------------
 
 -- L0 Founders: unrestricted, except the audit trail is immutable for everyone.
 INSERT INTO public.permissions (access_level, resource_type, action_code, allowed, scope, notes)
-SELECT 'L0', r.code, a.code, TRUE, 'all', 'L0 founders: unrestricted (CLAUDE.md fencing)'
+SELECT 'L0', r.code, a.code, TRUE, 'all', 'L0 founders: unrestricted (access-level fencing)'
 FROM public.resource_types r CROSS JOIN public.permission_actions a
 WHERE NOT (r.code = 'audit_log' AND a.code <> 'read')
 ON CONFLICT (access_level, department_id, resource_type, action_code) DO NOTHING;
@@ -169,7 +169,7 @@ ON CONFLICT (access_level, department_id, resource_type, action_code) DO NOTHING
 -- L1 Senior leadership: read/act on everything; founder brief read-only;
 -- audit read-only.
 INSERT INTO public.permissions (access_level, resource_type, action_code, allowed, scope, notes)
-SELECT 'L1', r.code, a.code, TRUE, 'all', 'L1 senior leadership (CLAUDE.md fencing; §26 Deepak Ji signs PIOs, §36 Amit approves EH discounts)'
+SELECT 'L1', r.code, a.code, TRUE, 'all', 'L1 senior leadership (access-level fencing; §26 Deepak Ji signs PIOs, §36 Amit approves EH discounts)'
 FROM public.resource_types r CROSS JOIN public.permission_actions a
 WHERE NOT (r.code = 'audit_log'     AND a.code <> 'read')
   AND NOT (r.code = 'founder_brief' AND a.code <> 'read')
@@ -399,7 +399,7 @@ INSERT INTO portal.app_config (key, value, category, description) VALUES
   ('ai.provider', '"anthropic"', 'ai',
    'Active AI provider: anthropic | azure_openai | copilot (ruling #5: replaceable)'),
   ('ai.model', '"claude-sonnet-4-6"', 'ai',
-   'Default model for the active provider (CLAUDE.md stack)'),
+   'Default model for the active provider'),
   ('wio.conversion_days', '15', 'delivery', 'Brief §30: WIO → PIO window'),
   ('wio.alert_day', '12', 'delivery', 'Brief §30: day-12 alert'),
   ('ar.escalation_days', '[45, 60, 90]', 'finance', 'Brief §36: TL → Deepak Ji → founders'),
@@ -408,7 +408,7 @@ INSERT INTO portal.app_config (key, value, category, description) VALUES
   ('eh.rimadesio.blocked_departments', '["EH_MUM"]', 'eh',
    'SECURITY RULE (§27): Rimadesio is not sold in Mumbai — the portal blocks Mumbai CAs from generating Rimadesio quotations. Enforced by the EH quote service.'),
   ('exit_protocol.fire_time', '"23:59"', 'people',
-   'CLAUDE.md: all six removal actions fire simultaneously at 11:59pm on exit_date'),
+   'All six removal actions fire simultaneously at 11:59pm on exit_date'),
   ('notifications.enabled_channels', '["app"]', 'notifications',
    'whatsapp/email activate with the Twilio and Microsoft Graph integrations'),
   ('family_profile.red_threshold', '70', 'crm',

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { next?: string };
+  searchParams: { next?: string; error?: string };
 }) {
   const entraConfigured = Boolean(process.env.ENTRA_TENANT_ID);
   const devLogin = process.env.AUTH_ALLOW_DEV_LOGIN === "true";
@@ -29,16 +29,30 @@ export default function LoginPage({
           </p>
         </div>
 
+        {searchParams.error ? (
+          <p
+            role="alert"
+            className="mb-4 rounded border-l-4 border-alert bg-alert/5 px-3 py-2 font-body text-xs font-bold text-alert"
+          >
+            {searchParams.error}
+          </p>
+        ) : null}
+        {/* One way in. Staff accounts carry no password (db/035, auth_provider
+            'entra'), so offering the password form alongside would be a dead
+            control: someone types their email, fails, and concludes the portal
+            is broken. The form stays as the break-glass path for when Entra is
+            not configured — a deployment with no tenant must still be
+            reachable. */}
         {entraConfigured ? (
           <a
             href="/api/auth/entra/start"
-            className="mb-4 block rounded bg-navy px-5 py-2.5 text-center font-body text-sm font-bold text-cream transition-opacity hover:opacity-90"
+            className="block rounded bg-navy px-5 py-2.5 text-center font-body text-sm font-bold text-cream transition-opacity hover:opacity-90"
           >
             Sign in with Microsoft
           </a>
-        ) : null}
-
-        <LoginForm next={searchParams.next} showDevHint={devLogin} />
+        ) : (
+          <LoginForm next={searchParams.next} showDevHint={devLogin} />
+        )}
       </div>
     </div>
   );

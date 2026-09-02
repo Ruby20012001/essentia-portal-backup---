@@ -11,8 +11,8 @@
 > [`DEVELOPER_HANDOVER.md`](DEVELOPER_HANDOVER.md) — it teaches the domain
 > vocabulary this file assumes, and ends with a handover checklist.
 >
-> **Last verified:** 2026-07-30 · **Baseline:** `platform-baseline-v1`
-> **Green:** DB harness 112/0 · tsc 0 · unit 165/165 · lint clean · build clean *(observed)*
+> **Last verified:** 2026-08-31 · **Baseline:** `platform-baseline-v1`
+> **Green:** DB harness clean · tsc 0 · unit 221/221 · lint clean *(observed)*
 
 ---
 
@@ -198,17 +198,47 @@ Newest first. Full detail in [`docs/CHANGELOG.md`](CHANGELOG.md); full history i
 
 ## 5. Current work
 
-**Current task.** None in flight — paused awaiting a screen decision.
+**Current task.** **S4b · WIO → PIO Tracker** — built on branch
+`claude/wio-pio-tracker-integration-768c58`, running and verified in the browser
+against the seeded board. Not yet merged to `platform-baseline-v1`.
+See [`WIO_PIO_TRACKER.md`](WIO_PIO_TRACKER.md) for the module's own docs.
 
 **Completed portion.** Phase 4 complete; **all Phase-1 Core screens shipped**; work
-restored and backed up to GitHub. Green baseline re-verified 2026-07-30:
-harness 112/0 · tsc 0 · unit 165/165 · lint clean · build clean.
+restored and backed up to GitHub. S4b adds db/030–031, `/wio-tracker`, and 56
+unit tests. Green baseline re-verified 2026-08-31:
+harness clean · tsc 0 · unit 221/221 · lint clean.
 
 **Remaining work.** Phase 2 integrations, and the two open Velocity Gates.
 
-**Blockers.** None technical. Two decisions are open:
+**Blockers.** None technical. Three decisions are open:
 1. Whether `essentia-portal-backup---` is the permanent GitHub home given its name.
 2. Whether `main` should be fast-forwarded to `platform-baseline-v1` (§7).
+3. **Small follow-ups on the S4b board — nothing blocking.**
+   The 2026-08-31 standup is fully applied (`db/033` tagging, `db/034` the day's
+   changes). Board stands at **41 rows, 23 Dipmallya / 18 Neeraj, 38 running**.
+   What remains:
+   - **The board is stamped 2026-08-25, not today.** So "PIOs released today"
+     reads 0 while three rows say "PIO released". Stale, not wrong — re-stamping
+     is the team's daily act on the Setup screen, deliberately not automated.
+   - **Four rows tagged `neeraj` by inference**, not by statement —
+     `ED/26-27/086`, `/111`, `/097`, `/015`. Worth a glance; each is a
+     one-dropdown fix. See `db/033`.
+   - **The Design Democracy Hyderabad doll bar has no row.** It converted under
+     PIO `/257` without ever being tracked; it needs a real WIO number and issue
+     date if it should appear.
+   - **`ED/26-27/018` is described two ways** in the standup (7 wardrobes /
+     vanities / mirrors vs 84 furniture for N44). The seeded note already flags
+     it: "Reported twice with different scopes — confirm."
+
+   > **Correction (2026-08-31).** `db/032`'s header claimed
+   > `WIO-to-PIO-Tracker_neeraj.xlsx` was "a copy of the same sheet, not
+   > Neeraj's board", because its 15 rows are the 37-row export's first 15 in
+   > identical order with identical values. The comparison was right; the
+   > conclusion was wrong. The standup shows 11 of those 15 are Neeraj's and
+   > **none** are Dipmallya's — the 37-row export is the COMBINED board with
+   > Neeraj's rows listed first, so that file was his slice all along.
+   > Declining to seed it was still correct (its rows were already present;
+   > importing would have duplicated them). The right action was tagging.
 
 **Next action.** Build **S6 EH · Experience Centre** on a `feat/*` branch, or pick an
 open Velocity Gate (#1, #5, #8). See §9.

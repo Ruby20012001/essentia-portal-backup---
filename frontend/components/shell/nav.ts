@@ -25,6 +25,10 @@ export const NAV: NavGroup[] = [
     items: [
       { label: "Design Room", href: "/design-room", screen: "S5" },
       { label: "WIO / PIO Hub", href: "/wio-pio", screen: "S4" },
+      // S4b sits beside S4, not inside it: same §30 window, different cut.
+      // The Hub runs the department conversion checklist; the Tracker walks
+      // the stage chain and answers who is holding what.
+      { label: "WIO → PIO Tracker", href: "/wio-tracker", screen: "S4b" },
       { label: "VisionCAM", href: "/visioncam", screen: "S3" },
       { label: "Production Facility — NH8", href: "/factory", screen: "S10" },
     ],

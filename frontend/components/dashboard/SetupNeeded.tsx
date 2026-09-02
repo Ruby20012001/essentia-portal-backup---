@@ -1,7 +1,8 @@
 /**
- * Shown when the environment is not configured — a known state, not an
- * error. Real data appears the moment DATABASE_URL points at a Postgres
- * loaded with db/001 (+ seeds); no mock data is ever rendered instead.
+ * Shown when the environment is not configured — a known state, not an error.
+ * Screens render live data only; no placeholder data is ever shown instead.
+ * The missing setting names are listed so an administrator can act, without
+ * printing local setup steps to whoever happens to be looking at the screen.
  */
 export function SetupNeeded({ missing }: { missing: string[] }) {
   return (
@@ -10,7 +11,8 @@ export function SetupNeeded({ missing }: { missing: string[] }) {
         Database not connected
       </h2>
       <p className="mt-2 max-w-xl font-body text-sm font-light text-ink">
-        This dashboard renders live data only. Set{" "}
+        This screen shows live data only, and the connection is not configured.
+        Missing{" "}
         {missing.map((name, i) => (
           <span key={name}>
             {i > 0 ? " and " : ""}
@@ -18,13 +20,8 @@ export function SetupNeeded({ missing }: { missing: string[] }) {
               {name}
             </code>
           </span>
-        ))}{" "}
-        in <code className="rounded bg-surface px-1.5 py-0.5">.env.local</code>{" "}
-        (template in .env.example), load{" "}
-        <code className="rounded bg-surface px-1.5 py-0.5">
-          db/001_essentia_schema.sql
-        </code>{" "}
-        plus seeds into PostgreSQL 15+, then reload.
+        ))}
+        . Please contact your system administrator.
       </p>
     </div>
   );

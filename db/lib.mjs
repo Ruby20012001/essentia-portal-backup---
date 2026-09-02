@@ -41,6 +41,12 @@ export const DEFAULT_FILES = [
   "027_workflow_definition_admin.sql",
   "028_wio_approval.sql",
   "029_eh_experience_centre.sql",
+  "030_wio_pio_tracker.sql",
+  "031_wio_pio_tracker_seed.sql",
+  "032_wio_pio_tracker_teams.sql",
+  "033_wio_pio_tracker_team_tagging.sql",
+  "034_wio_pio_tracker_standup_2026_08_31.sql",
+  "035_wio_team_accounts.sql",
   "900_dev_fixtures.sql",
 ];
 

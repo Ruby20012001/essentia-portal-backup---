@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE } from "@/lib/auth/constants";
+import { homeHref, isRouteAllowed, portalMode } from "@/lib/portal-mode";
 
 /**
  * Route gate. Runs on the Edge runtime, so it cannot touch the database —
@@ -16,11 +17,29 @@ import { SESSION_COOKIE } from "@/lib/auth/constants";
 const PUBLIC_PREFIXES = ["/login", "/api/auth"];
 
 export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Launch-mode gate. Runs BEFORE the dev-login shortcut on purpose: a
+  // tracker-only deployment must serve only the tracker in development too,
+  // or the mode is never actually exercised until it reaches production.
+  //
+  // Enforced here rather than only by hiding nav links, because an unlinked
+  // route is not a closed one — anyone who types the URL reaches it.
+  const mode = portalMode();
+  if (mode !== "full" && !isRouteAllowed(pathname, mode)) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "This deployment serves the WIO → PIO Tracker only." },
+        { status: 404 },
+      );
+    }
+    return NextResponse.redirect(new URL(homeHref(mode), request.nextUrl.origin));
+  }
+
   if (process.env.AUTH_ALLOW_DEV_LOGIN === "true") {
     return NextResponse.next();
   }
 
-  const { pathname } = request.nextUrl;
   if (PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
     return NextResponse.next();
   }

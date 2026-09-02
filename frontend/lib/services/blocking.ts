@@ -1,7 +1,7 @@
 /**
  * A blocking rule refusing an action — the portal's house pattern: the
  * system never blocks silently; it says exactly what is missing and why
- * (CLAUDE.md anti-busy rules, Ruby's session format). Maps to HTTP 422.
+ * (house anti-busy rules). Maps to HTTP 422.
  */
 export class BlockingRuleError extends Error {
   readonly status = 422;

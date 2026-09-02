@@ -13,8 +13,6 @@ out/
 # Next.js generated types
 next-env.d.ts
 
-# Claude Code — local machine settings (shared launch.json is committed)
-.claude/settings.local.json
 
 # Misc
 *.tsbuildinfo
