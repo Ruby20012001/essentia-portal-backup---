@@ -1,3 +1,5 @@
+import { isRouteAllowed, portalMode, type PortalMode } from "@/lib/portal-mode";
+
 /**
  * Portal navigation — the 18-screen information architecture from the
  * Digital Transformation Blueprint (§04), grouped by domain. Role-first:
@@ -67,3 +69,20 @@ export const NAV: NavGroup[] = [
     ],
   },
 ];
+
+/**
+ * The nav for this deployment. Groups that end up empty are dropped, so tracker
+ * mode shows one "Delivery" group with one entry rather than six headings over
+ * nothing.
+ *
+ * Deliberately here rather than in lib/portal-mode.ts: that module is imported
+ * by middleware.ts, which Vercel bundles for the Edge runtime, and pulling this
+ * file's constant in there made the Edge bundle unresolvable.
+ */
+export function visibleNav(mode: PortalMode = portalMode()): NavGroup[] {
+  if (mode === "full") return NAV;
+  return NAV.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => isRouteAllowed(item.href, mode)),
+  })).filter((group) => group.items.length > 0);
+}

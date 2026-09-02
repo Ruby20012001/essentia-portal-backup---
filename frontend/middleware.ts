@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE } from "@/lib/auth/constants";
-import { homeHref, isRouteAllowed, portalMode } from "@/lib/portal-mode";
+// Relative, not the "@/" alias, and both targets are dependency-free. The Edge
+// runtime bundles this file separately from the app and rejected the aliased
+// specifiers outright on Vercel — while a local `next build` resolved them
+// without complaint, so the failure only appears on deploy.
+import { SESSION_COOKIE } from "./lib/auth/constants";
+import { homeHref, isRouteAllowed, portalMode } from "./lib/portal-mode";
 
 /**
  * Route gate. Runs on the Edge runtime, so it cannot touch the database —

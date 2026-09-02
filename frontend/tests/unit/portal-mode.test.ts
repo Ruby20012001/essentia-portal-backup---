@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { NAV } from "@/components/shell/nav";
-import {
-  homeHref,
-  isRouteAllowed,
-  visibleNav,
-  type PortalMode,
-} from "@/lib/portal-mode";
+
+import { homeHref, isRouteAllowed, type PortalMode } from "@/lib/portal-mode";
+import { NAV, visibleNav } from "@/components/shell/nav";
 
 /**
  * Launch mode — serving the tracker on its own subdomain months before the rest

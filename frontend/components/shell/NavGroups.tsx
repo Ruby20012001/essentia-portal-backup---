@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { visibleNav } from "@/lib/portal-mode";
+import { visibleNav } from "@/components/shell/nav";
 
 /**
  * The navigation list itself — shared by the desktop sidebar and the mobile

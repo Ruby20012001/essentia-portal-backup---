@@ -1,5 +1,3 @@
-import { NAV, type NavGroup } from "@/components/shell/nav";
-
 /**
  * Launch mode — which of the portal's screens this deployment actually serves.
  *
@@ -25,6 +23,13 @@ import { NAV, type NavGroup } from "@/components/shell/nav";
  * (middleware.ts), so hidden screens are genuinely unreachable rather than
  * merely unlinked — but a screen closed only by this flag is closed by
  * configuration, not by permission.
+ *
+ * THIS FILE MUST STAY DEPENDENCY-FREE. middleware.ts imports it, and middleware
+ * runs on the Edge runtime, which bundles separately and refuses modules it
+ * cannot resolve. It previously imported the nav constant from components/, and
+ * Vercel rejected the whole middleware for it — a failure a local `next build`
+ * does not reproduce, because local builds resolve those specifiers happily.
+ * The nav-filtering helper that needed it now lives beside the nav itself.
  */
 
 export type PortalMode = "full" | "tracker";
@@ -62,15 +67,4 @@ export function isRouteAllowed(pathname: string, mode: PortalMode = portalMode()
   );
 }
 
-/**
- * The nav for this deployment. Groups that end up empty are dropped, so tracker
- * mode shows one "Delivery" group with one entry rather than six headings over
- * nothing.
- */
-export function visibleNav(mode: PortalMode = portalMode()): NavGroup[] {
-  if (mode === "full") return NAV;
-  return NAV.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => isRouteAllowed(item.href, mode)),
-  })).filter((group) => group.items.length > 0);
-}
+// visibleNav() lives in components/shell/nav.ts — see the note above.
