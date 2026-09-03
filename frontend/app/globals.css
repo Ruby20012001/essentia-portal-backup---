@@ -113,3 +113,38 @@
     margin: 12mm;
   }
 }
+
+/* ---------------------------------------------------------------------
+   Two documents, one print pipeline.
+
+   "Save this view" prints the board as it stands. "Save 1-page summary"
+   prints SummarySheet instead — a different document for a reader who will
+   not open the tracker, not the same one made smaller.
+
+   The mode is on #print-area rather than a body class so that the page and
+   the thing being printed cannot get out of step: React sets it, renders,
+   and only then is print() called.
+   --------------------------------------------------------------------- */
+@media print {
+  /* The summary never prints unless it was asked for. */
+  [data-print="summary"] {
+    display: none !important;
+  }
+
+  #print-area[data-mode="summary"] [data-print="board"] {
+    display: none !important;
+  }
+
+  #print-area[data-mode="summary"] [data-print="summary"] {
+    display: block !important;
+  }
+
+  /* One page is the whole promise of the summary — it must not spill. */
+  #print-area[data-mode="summary"] {
+    font-size: 8pt;
+  }
+
+  #print-area[data-mode="summary"] table {
+    font-size: inherit;
+  }
+}

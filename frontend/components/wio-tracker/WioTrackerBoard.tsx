@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { DelaysView } from "@/components/wio-tracker/DelaysView";
 import { SetupView } from "@/components/wio-tracker/SetupView";
+import { SummarySheet } from "@/components/wio-tracker/SummarySheet";
 import { TodayView } from "@/components/wio-tracker/TodayView";
 import { WiosView } from "@/components/wio-tracker/WiosView";
 import type { TrackerBoard } from "@/lib/services/wio-tracker";
@@ -36,6 +37,20 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
    * showing everything and narrows only when asked.
    */
   const [team, setTeam] = useState<string | null>(null);
+  /**
+   * Which document "Save" hands the print dialog: the view on screen, or the
+   * one-page summary. Held as state rather than a CSS class toggled by hand
+   * because React must have rendered the summary BEFORE window.print() reads
+   * the page — printing in the click handler would print the previous frame.
+   */
+  const [printing, setPrinting] = useState<"view" | "summary" | null>(null);
+
+  useEffect(() => {
+    if (!printing) return;
+    window.print();
+    // The dialog is modal, so this runs once the user has saved or cancelled.
+    setPrinting(null);
+  }, [printing]);
 
   const refresh = useCallback(async () => {
     const response = await fetch("/api/wio-tracker");
@@ -109,7 +124,8 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
   const label = tabs.find((t) => t.key === tab)?.label ?? "";
 
   return (
-    <div id="print-area">
+    <div id="print-area" data-mode={printing ?? "view"}>
+      <div data-print="board">
       {/* Paper needs the heading the screen gets from the shell around it:
           on a printed page there is no header, no nav and no tab strip, so a
           sheet without this says nothing about which board or which day. */}
@@ -173,17 +189,32 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
           ) : null}
         </span>
 
-        {/* Saving is printing: the browser's own "Save as PDF" turns this
-            view into a file, so there is no second rendering of the board to
-            drift from the real one. What you see is exactly what is saved. */}
+        {/* Saving is printing: the browser's own "Save as PDF" writes the
+            file, so what lands on disk is this very view rather than a second
+            rendering of the board that could drift from it.
+
+            Two buttons because they are two documents for two readers. The
+            first is the working sheet — every row, for someone who will act on
+            it. The second is one page for someone who will not open the board
+            at all, and who is worse served by a long table than by six numbers
+            and the names of whoever is holding things up. */}
         {board.can.export ? (
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="ml-3 rounded border border-line-strong bg-canvas px-3 py-1.5 font-body text-xs font-bold text-secondary transition-colors hover:bg-hover hover:text-ink"
-          >
-            Save as PDF
-          </button>
+          <span className="ml-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPrinting("summary")}
+              className="rounded border border-line-strong bg-canvas px-3 py-1.5 font-body text-xs font-bold text-secondary transition-colors hover:bg-hover hover:text-ink"
+            >
+              Save 1-page summary
+            </button>
+            <button
+              type="button"
+              onClick={() => setPrinting("view")}
+              className="rounded border border-line-strong bg-canvas px-3 py-1.5 font-body text-xs font-light text-muted transition-colors hover:bg-hover hover:text-ink"
+            >
+              Save this view
+            </button>
+          </span>
         ) : null}
       </div>
 
@@ -298,6 +329,11 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
           }
         />
       ) : null}
+      </div>
+
+      {/* Never on screen. It exists to be the printed page when Save is asked
+          for the summary — see globals.css. */}
+      <SummarySheet board={board} team={team} />
     </div>
   );
 }
