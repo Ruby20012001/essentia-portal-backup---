@@ -57,7 +57,7 @@ rather than shipping a second copy.
    on a different drawing. A row left blank does not appear to the
    client, so a deck that should carry no money simply carries none.
 
-   **State what the estimate is.**  on the cover prints under
+   **State what the estimate is.** `Estimate basis` on the cover prints under
    the figures on screen, on paper and inside the shared image. A number with
    no basis stated will be read as a quotation sooner or later.
 
