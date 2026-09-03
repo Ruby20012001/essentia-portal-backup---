@@ -268,6 +268,9 @@ vm.runInNewContext(viewer, sandbox);
 const deck = sandbox.window.EssentiaDeck;
 if (!deck || typeof deck.html !== 'function') throw new Error('viewer did not expose EssentiaDeck.html');
 
+state.built = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) +
+  " " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
 const prerendered = deck.html(state, { noIndex: true });
 
 /* the state alongside it carries no image data — every picture is in the

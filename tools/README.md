@@ -75,6 +75,16 @@ the real save. The tool also keeps the *text* of your last session in the
 browser so a crash does not lose the writing, but images are not kept there;
 re-attach them or reopen the draft.
 
+### What is on the page, and what is behind a number
+
+Under the grid of spaces sit two buttons that need no tapping to find:
+**Save all spaces as images** and **Save the whole deck as PDF**. Everything
+else is behind a number.
+
+The deck footer carries a **Deck built** date and time. If a deck is not
+behaving as described here, read that line first — it says which copy is open,
+which matters once a few versions have been saved to the same downloads folder.
+
 ### What a client gets when they open a space
 
 The number on the drawing opens a panel that scrolls: the render, the other

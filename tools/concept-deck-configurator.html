@@ -122,6 +122,7 @@
 .deck-sign dt{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);
   border-top:1px solid var(--rule);padding-top:10px;margin-bottom:6px}
 .deck-sign dd{margin:0;color:var(--ink);font-size:13px}
+.deck-build{margin:18px 0 0;font-size:11px;color:var(--faint)}
 .deck-stamp{display:inline-block;margin-bottom:16px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
   color:var(--amber);border:1px solid var(--amber);padding:5px 10px}
 
@@ -164,8 +165,11 @@
 .deck-spec dt{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:5px}
 .deck-spec dd{margin:0;font-size:15px;color:var(--ink)}
 
-/* the buttons under the writing */
-.deck-actions{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 0;padding-top:18px;border-top:1px solid var(--rule)}
+/* the buttons under the writing — and, on the page itself, under the spaces.
+   They do nothing without the script, so they only appear once it is running. */
+.deck-actions{display:none;flex-wrap:wrap;gap:8px;margin:22px 0 0;padding-top:18px;border-top:1px solid var(--rule)}
+.js-on .deck-actions{display:flex}
+.deck-actions--page{margin-top:30px}
 .deck-btn{font:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
   padding:11px 16px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink);
   cursor:pointer;transition:background-color .15s,border-color .15s}
@@ -662,7 +666,13 @@ button,input,textarea,select{font:inherit;color:inherit}
             '<span class="deck-card-name">' + esc(s.name) + '</span>' +
             (s.dims ? '<span class="deck-card-dims">' + esc(s.dims) + '</span>' : '') +
           '</span></button>';
-      }).join('') + '</div></section>';
+      }).join('') + '</div>' +
+      /* on the page itself, so nothing has to be tapped first to find them */
+      '<div class="deck-actions deck-actions--page">' +
+        '<button class="deck-btn deck-btn--solid" data-jpg-all>Save all spaces as images</button>' +
+        '<button class="deck-btn" data-pdf-all>Save the whole deck as PDF</button>' +
+      '</div>' +
+      '</section>';
   }
 
   function noteHtml(state) {
@@ -927,7 +937,10 @@ button,input,textarea,select{font:inherit;color:inherit}
         (p.designer ? '<div><dt>Principal designer</dt><dd>' + esc(p.designer) + '</dd></div>' : '') +
         (p.contact ? '<div><dt>Client Advisor</dt><dd>' + esc(p.contact) + '</dd></div>' : '') +
         (p.site ? '<div><dt>essentia</dt><dd>' + esc(p.site) + '</dd></div>' : '') +
-      '</dl></footer>';
+      '</dl>' +
+      /* so anyone looking at a saved copy can say which one they are looking at */
+      (state.built ? '<p class="deck-build">Deck built ' + esc(state.built) + '</p>' : '') +
+      '</footer>';
   }
 
   /* opts.noIndex leaves out the card grid: its thumbnails are the same files
@@ -1114,7 +1127,27 @@ button,input,textarea,select{font:inherit;color:inherit}
       setTimeout(function () { pin.classList.remove('deck-pin--found'); }, 2200);
     }
 
+    /* every space as its own picture, one at a time — a browser refuses a burst */
+    function saveAllJpg(btn) {
+      var label = btn.textContent, i = 0;
+      btn.disabled = true;
+      (function next() {
+        if (i >= spaces.length) {
+          btn.disabled = false; btn.textContent = label;
+          return;
+        }
+        var sp = spaces[i++];
+        btn.textContent = 'Saving ' + i + ' of ' + spaces.length + '…';
+        spaceCard(state, sp).then(function (uri) {
+          saveDataUri(cardName(sp), uri);
+          setTimeout(next, 450);
+        }, function () { setTimeout(next, 120); });
+      })();
+    }
+
     el.addEventListener('click', function (e) {
+      var all = e.target.closest('[data-jpg-all]');
+      if (all) { saveAllJpg(all); return; }
       var sh = e.target.closest('[data-share-one]');
       if (sh) { shareSpace(sh.getAttribute('data-share-one'), sh); return; }
       var loc = e.target.closest('[data-locate]');
@@ -1782,6 +1815,8 @@ function exportDeck() {
      viewer, a file manager, a slow phone. The script only adds tapping.
      The state that ships alongside it carries no image data: every picture is
      already in the markup once, and mount() harvests it back out. */
+  S.built = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) +
+    " " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   var pre = window.EssentiaDeck.html(S, { noIndex: true });
   var slim = JSON.parse(JSON.stringify(S));
   slim.logo = '';
