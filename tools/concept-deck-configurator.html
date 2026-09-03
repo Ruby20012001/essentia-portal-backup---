@@ -190,8 +190,17 @@ button.deck-chip:hover{background:var(--wash);border-color:var(--ink)}
   padding:11px 16px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink);
   cursor:pointer;transition:background-color .15s,border-color .15s}
 .deck-btn:hover{background:var(--wash);border-color:var(--ink)}
+.deck-btn--sm{padding:7px 14px;font-size:10px}
 .deck-btn--solid{background:var(--ink);border-color:var(--ink);color:#fff}
 .deck-btn--solid:hover{background:#333;border-color:#333}
+/* Moves on by itself so the client is not tapping Next fifteen times. Off
+   until asked for, because a room being pulled away mid-sentence is worse
+   than a tap. The bar shows the time left, so nothing moves unannounced. */
+.deck-auto{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:14px 22px 0;flex:none}
+.deck-auto-note{font-size:11px;color:var(--faint)}
+.deck-auto-bar{height:2px;background:var(--rule);margin:12px 22px 0;flex:none;overflow:hidden}
+.deck-auto-bar i{display:block;height:100%;width:0;background:var(--amber)}
 .deck-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:14px 22px;border-top:1px solid var(--rule);flex:none;position:sticky;bottom:0;background:var(--paper)}
 .deck-nav button{font:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);
@@ -1059,6 +1068,12 @@ button,input,textarea,select{font:inherit;color:inherit}
           '<button class="deck-btn" data-pdf-all>The whole deck</button>' +
         '</div>' +
       '</div>' +
+      '<div class="deck-auto">' +
+        '<button class="deck-btn deck-btn--sm" data-auto="1">Play</button>' +
+        '<button class="deck-btn deck-btn--sm" data-auto="-1">Reverse</button>' +
+        '<span class="deck-auto-note" data-auto-note></span>' +
+      '</div>' +
+      '<div class="deck-auto-bar"><i data-auto-bar></i></div>' +
       '<div class="deck-nav">' +
         '<button data-prev' + (i === 0 ? ' disabled' : '') + '>&larr; Previous</button>' +
         '<span class="deck-count">' + esc(s.no) + ' / ' + pad2(total) + '</span>' +
@@ -1100,11 +1115,59 @@ button,input,textarea,select{font:inherit;color:inherit}
       sheetIn.parentNode.scrollTop = 0;
       var c = sheetIn.querySelector('[data-sheet-close]');
       if (c) c.focus();
+      armAuto();
+      syncAuto();
     }
-    function close() { sheet.removeAttribute('data-open'); at = -1; }
+    /* ── moving on by itself ──────────────────────────────────────────── */
+    var autoDir = 0, autoTimer = null;
+    var autoSecs = Math.max(3, +((state.project || {}).autoSeconds) || 30);
+
+    function stopAuto() {
+      autoDir = 0;
+      if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+      syncAuto();
+    }
+    function startAuto(d) {
+      autoDir = d;
+      armAuto();
+      syncAuto();
+    }
+    function armAuto() {
+      if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+      if (!autoDir) return;
+      var next = at + autoDir;
+      if (next < 0 || next >= spaces.length) { autoDir = 0; return; }   /* stop at the ends */
+      autoTimer = setTimeout(function () { step(autoDir); }, autoSecs * 1000);
+    }
+    function syncAuto() {
+      var note = sheetIn.querySelector('[data-auto-note]');
+      var bar = sheetIn.querySelector('[data-auto-bar]');
+      sheetIn.querySelectorAll('[data-auto]').forEach(function (b) {
+        var d = +b.getAttribute('data-auto');
+        var on = autoDir === d;
+        b.textContent = on ? 'Pause' : (d > 0 ? 'Play' : 'Reverse');
+        b.classList.toggle('deck-btn--solid', on);
+      });
+      if (note) {
+        note.textContent = autoDir
+          ? (autoDir > 0 ? 'Moving on every ' : 'Going back every ') + autoSecs + ' seconds'
+          : 'Or let it move on its own, every ' + autoSecs + ' seconds';
+      }
+      if (!bar) return;
+      bar.style.transition = 'none';
+      bar.style.width = '0%';
+      void bar.offsetWidth;                       /* let the reset land before animating */
+      if (autoDir && autoTimer) {
+        bar.style.transition = 'width ' + autoSecs + 's linear';
+        bar.style.width = '100%';
+      }
+    }
+
+    function close() { stopAuto(); sheet.removeAttribute('data-open'); at = -1; }
     function step(d) {
       var i = at + d;
       if (i >= 0 && i < spaces.length) open(spaces[i].id);
+      else stopAuto();
     }
 
     /* Save one space as a PDF: put every other space away, mark the target,
@@ -1255,9 +1318,16 @@ button,input,textarea,select{font:inherit;color:inherit}
       if (e.target.closest('[data-pdf-all]')) { close(); setTimeout(function () { window.print(); }, 120); return; }
       var t = e.target.closest('[data-space]');
       if (t) { open(t.getAttribute('data-space')); return; }
+      var au = e.target.closest('[data-auto]');
+      if (au) {
+        var d = +au.getAttribute('data-auto');
+        if (autoDir === d) stopAuto(); else startAuto(d);
+        return;
+      }
       if (e.target.closest('[data-sheet-close]')) { close(); return; }
-      if (e.target.closest('[data-prev]')) { step(-1); return; }
-      if (e.target.closest('[data-next]')) { step(1); return; }
+      /* a hand on the controls means the reader is steering, not watching */
+      if (e.target.closest('[data-prev]')) { stopAuto(); step(-1); return; }
+      if (e.target.closest('[data-next]')) { stopAuto(); step(1); return; }
       var th = e.target.closest('[data-thumb]');
       if (th) {
         var k = +th.getAttribute('data-thumb');
@@ -1284,8 +1354,8 @@ button,input,textarea,select{font:inherit;color:inherit}
     el.addEventListener('keydown', function (e) {
       if (!sheet.hasAttribute('data-open')) return;
       if (e.key === 'Escape') close();
-      else if (e.key === 'ArrowLeft') step(-1);
-      else if (e.key === 'ArrowRight') step(1);
+      else if (e.key === 'ArrowLeft') { stopAuto(); step(-1); }
+      else if (e.key === 'ArrowRight') { stopAuto(); step(1); }
     });
     if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
     return { open: open, close: close };
@@ -1379,7 +1449,7 @@ function blank(type) {
       name: '', client: '', contact: '', address: '', code: '',
       eyebrow: 'CONCEPT DECK · PRIVATE RESIDENCE', slogan: 'different by design', closing: '',
       headline: '', kind: 'Interior Concept Deck',
-      dateLabel: '', confidentiality: 'Confidential', rate: '', estimateBasis: '',
+      dateLabel: '', confidentiality: 'Confidential', rate: '', estimateBasis: '', autoSeconds: '30',
       designer: '', firm: 'essentia environments',
       firmLine: 'essentia Design & Project Partners · Sector 34, Gurugram · Since 1999',
       site: 'essentiaenvironments.com'
@@ -1500,6 +1570,8 @@ function renderCover() {
             ph: 'The last line before the signatures.' }) +
     field({ key: 'headline', label: 'Cover headline', wide: true, area: true, rows: 2,
             ph: 'The plan, in the way you will actually live in it.' }) +
+    field({ key: 'autoSeconds', label: 'Move on after (seconds)', ph: '30',
+            hint: 'The pace of Play and Reverse inside a space. Never starts on its own.' }) +
     field({ key: 'estimateBasis', label: 'Estimate basis', wide: true,
             ph: 'Indicative, at essentia published rates. Not a quotation.',
             hint: 'Printed under the figures. A number with no basis stated will be misread.' }) +
@@ -1509,6 +1581,7 @@ function renderCover() {
     field({ key: 'firm', label: 'Vertical', ph: 'essentia environments' });
   bindFields(host, S.project, function (key, val, w) {
     if (key === 'code') markField(w, val && !CODE_RE.test(val.trim()) ? 'Use ED/YY-YY/NNN — for example ED/26-27/058.' : '');
+    else if (key === 'autoSeconds') markField(w, val && !/^[0-9]*$/.test(val) ? 'Seconds, as a number.' : '');
     else if (key === 'rate') markField(w, val && !/^[0-9.,₹ ]*$/.test(val) ? 'Numbers only — for example 1200.' : '');
     else {
       var h = vocabHits(val);
@@ -1519,7 +1592,7 @@ function renderCover() {
   host.querySelectorAll('[data-f]').forEach(function (w) {
     var k = w.getAttribute('data-f'), v = S.project[k];
     if (k === 'code') markField(w, v && !CODE_RE.test(String(v).trim()) ? 'Use ED/YY-YY/NNN — for example ED/26-27/058.' : '');
-    else if (k === 'rate') markField(w, '');
+    else if (k === 'rate' || k === 'autoSeconds') markField(w, '');
     else { var h = vocabHits(v); markField(w, h.length ? vocabMsg(h[0]) : ''); }
   });
 }

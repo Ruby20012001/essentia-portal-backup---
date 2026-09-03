@@ -221,6 +221,7 @@ const state = {
     kind: 'Interior Concept Deck',
     dateLabel: 'September 2026',
     confidentiality: 'Confidential',
+    autoSeconds: '30',
     /* essentia's own published rate for Interior Design including FF&E, as it
        stands in the Fee Configurator — taken from there, not assumed here. The
        basis line prints under the figures so the number cannot be read as a
