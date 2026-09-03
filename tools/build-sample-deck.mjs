@@ -217,6 +217,12 @@ const state = {
     kind: 'Interior Concept Deck',
     dateLabel: 'September 2026',
     confidentiality: 'Confidential',
+    /* essentia's own published rate for Interior Design including FF&E, as it
+       stands in the Fee Configurator — taken from there, not assumed here. The
+       basis line prints under the figures so the number cannot be read as a
+       quotation; change either and every space reprices. */
+    rate: '1200',
+    estimateBasis: 'Indicative only — at essentia published rate of ₹ 1,200 / sq.ft. Not a quotation.',
     designer: 'Monica Chawla',
     firm: 'essentia environments',
     firmLine: 'essentia Design & Project Partners · Sector 34, Gurugram · Since 1999',
@@ -235,6 +241,7 @@ const state = {
     floor: 'Ground floor',
     dims: s.dims || '',
     area: areaFromDims(s.dims),
+    includes: '',
     estimate: '',            /* a money figure is nobody's to invent — Monica fills these */
     summary: s.summary || '',
     body: s.body || '',

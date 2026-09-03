@@ -57,6 +57,10 @@ rather than shipping a second copy.
    on a different drawing. A row left blank does not appear to the
    client, so a deck that should carry no money simply carries none.
 
+   **State what the estimate is.**  on the cover prints under
+   the figures on screen, on paper and inside the shared image. A number with
+   no basis stated will be read as a quotation sooner or later.
+
    **The estimate is usually one number, not fifteen.** Put a rate in
    `Estimate rate (₹ / sq.ft.)` on the cover and every space that has an area
    prices itself — the same arithmetic the fee proposal already does per
@@ -93,7 +97,10 @@ which matters once a few versions have been saved to the same downloads folder.
 
 The number on the drawing opens a panel that scrolls: the render, the other
 angles as thumbnails, the name, then **size · area · estimate**, then the line,
-the paragraph and the quotable. Under the writing sit five buttons — share,
+the paragraph and the quotable. **Size, area and estimate are chips**, the same
+weight as the buttons beneath them, so the figures are as easy to find as the
+actions; tapping one copies its value. Under them sits the estimate basis, and
+anything entered under **What it includes**. Then five buttons — share,
 save as image, save as PDF, see it on the plan, and the whole deck.
 
 **Share this space** is the one for a phone: it draws the JPG and hands it to

@@ -157,13 +157,22 @@
 .deck-sheet-quote{font-family:var(--display);font-size:17px;line-height:1.5;color:var(--ink);
   border-left:2px solid var(--amber);padding-left:16px;margin:20px 0 0}
 
-/* size · area · estimate — the numbers a client asks for, carried by the space
-   itself so they travel with the deck wherever it is sent */
-.deck-spec{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px 20px;
-  margin:22px 0 0;padding-top:16px;border-top:1px solid var(--rule)}
-.deck-spec div{min-width:0}
-.deck-spec dt{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:5px}
-.deck-spec dd{margin:0;font-size:15px;color:var(--ink)}
+/* size · area · estimate — the numbers a client asks for. Each one is its own
+   bordered chip, the same weight as the actions beneath it, so the figures are
+   as easy to find as the buttons. In the panel a chip copies its value. */
+.deck-spec{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 0;padding-top:16px;
+  border-top:1px solid var(--rule)}
+.deck-chip{display:flex;flex-direction:column;gap:5px;align-items:flex-start;
+  border:1px solid var(--rule-strong);background:transparent;color:inherit;
+  padding:10px 16px;font:inherit;text-align:left;min-width:0}
+button.deck-chip{cursor:pointer;transition:background-color .15s,border-color .15s}
+button.deck-chip:hover{background:var(--wash);border-color:var(--ink)}
+.deck-chip-l{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+.deck-chip-v{font-size:16px;color:var(--ink);white-space:nowrap}
+.deck-chip[data-copied="1"] .deck-chip-l{color:var(--amber)}
+.deck-spec-note{margin:10px 0 0;font-size:12px;color:var(--faint)}
+.deck-includes{margin:20px 0 0;padding-top:16px;border-top:1px solid var(--rule)}
+.deck-includes p{margin:7px 0 0;font-size:14px;color:var(--body);white-space:pre-line}
 
 /* the buttons under the writing — and, on the page itself, under the spaces.
    They do nothing without the script, so they only appear once it is running. */
@@ -551,14 +560,26 @@ button,input,textarea,select{font:inherit;color:inherit}
   }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
-  /* size · area · estimate, in that order, skipping whatever is not filled in */
-  function specHtml(s) {
+  /* size · area · estimate, in that order, skipping whatever is not filled in.
+     Interactive in the panel; a plain chip everywhere a tap means nothing —
+     on paper, and in the copy that reads without any script. */
+  function specHtml(s, interactive, state) {
     var rows = [['Size', s.dims], ['Area', s.area], ['Estimate', s.estimate]]
       .filter(function (r) { return r[1] && String(r[1]).trim(); });
-    if (!rows.length) return '';
-    return '<dl class="deck-spec">' + rows.map(function (r) {
-      return '<div><dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd></div>';
-    }).join('') + '</dl>';
+    var basis = ((state || {}).project || {}).estimateBasis;
+    var incl = (s.includes || '').trim();
+    if (!rows.length && !incl) return '';
+    return (rows.length ? '<div class="deck-spec">' + rows.map(function (r) {
+      var inner = '<span class="deck-chip-l">' + esc(r[0]) + '</span>' +
+                  '<span class="deck-chip-v">' + esc(r[1]) + '</span>';
+      return interactive
+        ? '<button class="deck-chip" data-copy="' + esc(r[1]) + '" title="Copy">' + inner + '</button>'
+        : '<span class="deck-chip">' + inner + '</span>';
+    }).join('') + '</div>' : '') +
+    /* a figure with no basis stated is a figure waiting to be misread */
+    ((s.estimate && basis) ? '<p class="deck-spec-note">' + esc(basis) + '</p>' : '') +
+    (incl ? '<div class="deck-includes"><span class="deck-chip-l">What it includes</span>' +
+            '<p>' + esc(incl) + '</p></div>' : '');
   }
 
   function num(v) {
@@ -697,7 +718,7 @@ button,input,textarea,select{font:inherit;color:inherit}
         (s.summary ? '<p class="deck-sheet-summary">' + esc(s.summary) + '</p>' : '') +
         nl2p(s.body) +
         (s.quote ? '<p class="deck-sheet-quote">' + esc(s.quote) + '</p>' : '') +
-        specHtml(s) +
+        specHtml(s, false, state) +
         (s.images || []).map(function (im, k) {
           return '<img loading="lazy" decoding="async" data-sp="' + esc(s.id) + '" data-ix="' + k +
             '" src="' + im.src + '" alt="' + esc(s.name) + '" style="margin-top:10px">';
@@ -842,22 +863,50 @@ button,input,textarea,select{font:inherit;color:inherit}
           y += 30;
         }
 
+        if ((s.includes || '').trim()) {
+          c.fillStyle = CARD.faint; c.font = CARD.font(400, 18);
+          tracked(c, 'WHAT IT INCLUDES', PAD, y + 16, 3);
+          y += 44;
+          c.fillStyle = CARD.body; c.font = CARD.font(300, 26);
+          wrap(c, s.includes, CW).forEach(function (ln) { y += 40; if (ln) c.fillText(ln, PAD, y); });
+          y += 20;
+        }
+
         var spec = [['Size', s.dims], ['Area', s.area], ['Estimate', s.estimate]]
           .filter(function (r) { return r[1] && String(r[1]).trim(); });
         if (spec.length) {
           y += 14;
           c.strokeStyle = CARD.rule;
           c.beginPath(); c.moveTo(PAD, y + 0.5); c.lineTo(W - PAD, y + 0.5); c.stroke();
-          y += 40;
-          var colW = CW / spec.length;
-          spec.forEach(function (r, i) {
-            var x = PAD + i * colW;
+          y += 34;
+          /* the same chips the panel shows, drawn as boxes so the picture
+             carries the figures as plainly as the screen does */
+          var padX = 22, padY = 18, gap = 12, chipH = 92;
+          var cx = PAD, rowTop = y;
+          spec.forEach(function (r) {
+            c.font = CARD.font(300, 30);
+            var vw = c.measureText(String(r[1])).width;
+            c.font = CARD.font(400, 18);
+            var lw = c.measureText(r[0].toUpperCase()).width + r[0].length * 3;
+            var wBox = Math.max(vw, lw) + padX * 2;
+            if (cx + wBox > W - PAD && cx > PAD) { cx = PAD; rowTop += chipH + gap; }
+            c.strokeStyle = CARD.rule;
+            c.strokeRect(cx + 0.5, rowTop + 0.5, wBox, chipH);
             c.fillStyle = CARD.faint; c.font = CARD.font(400, 18);
-            tracked(c, r[0].toUpperCase(), x, y, 3);
+            tracked(c, r[0].toUpperCase(), cx + padX, rowTop + padY + 14, 3);
             c.fillStyle = CARD.ink; c.font = CARD.font(300, 30);
-            c.fillText(String(r[1]), x, y + 42);
+            c.fillText(String(r[1]), cx + padX, rowTop + chipH - padY - 6);
+            cx += wBox + gap;
           });
-          y += 70;
+          y = rowTop + chipH + 30;
+
+          /* a shared picture must carry the basis with the figure */
+          var basis = ((state.project || {}).estimateBasis || '').trim();
+          if (s.estimate && basis) {
+            c.fillStyle = CARD.faint; c.font = CARD.font(300, 21);
+            wrap(c, basis, CW).forEach(function (ln) { c.fillText(ln, PAD, y); y += 30; });
+            y += 8;
+          }
         }
 
         y += 30;
@@ -967,7 +1016,7 @@ button,input,textarea,select{font:inherit;color:inherit}
       '<div class="deck-sheet-body" role="dialog" aria-modal="true"><div data-sheet-in></div></div></div>';
   }
 
-  function sheetHtml(s, i, total) {
+  function sheetHtml(s, i, total, state) {
     var imgs = s.images || [];
     var hero = imgs[0]
       ? '<img src="' + imgs[0].src + '" alt="' + esc(s.name) + '" data-hero>'
@@ -985,7 +1034,7 @@ button,input,textarea,select{font:inherit;color:inherit}
         (s.summary ? '<p class="deck-sheet-summary">' + esc(s.summary) + '</p>' : '') +
         '<div class="deck-sheet-body-copy">' + esc(s.body || '') + '</div>' +
         (s.quote ? '<p class="deck-sheet-quote">' + esc(s.quote) + '</p>' : '') +
-        specHtml(s) +
+        specHtml(s, true, state) +
         '<div class="deck-actions">' +
           '<button class="deck-btn deck-btn--solid" data-share-one="' + esc(s.id) + '">Share this space</button>' +
           '<button class="deck-btn" data-jpg-one="' + esc(s.id) + '">Save as image</button>' +
@@ -1030,7 +1079,7 @@ button,input,textarea,select{font:inherit;color:inherit}
       var i = spaces.findIndex(function (s) { return String(s.id) === String(id); });
       if (i < 0) return;
       at = i;
-      sheetIn.innerHTML = sheetHtml(spaces[i], i, spaces.length);
+      sheetIn.innerHTML = sheetHtml(spaces[i], i, spaces.length, state);
       sheet.setAttribute('data-open', '1');
       sheetIn.parentNode.scrollTop = 0;
       var c = sheetIn.querySelector('[data-sheet-close]');
@@ -1146,7 +1195,37 @@ button,input,textarea,select{font:inherit;color:inherit}
       })();
     }
 
+    /* a figure is worth nothing if it cannot be lifted out of the page */
+    function copyChip(btn) {
+      var v = btn.getAttribute('data-copy') || '';
+      var label = btn.querySelector('.deck-chip-l');
+      var was = label ? label.textContent : '';
+      var mark = function () {
+        if (!label) return;
+        btn.setAttribute('data-copied', '1');
+        label.textContent = 'Copied';
+        setTimeout(function () { label.textContent = was; btn.removeAttribute('data-copied'); }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(v).then(mark, function () { legacyCopy(v, mark); });
+      } else {
+        legacyCopy(v, mark);
+      }
+    }
+    function legacyCopy(v, done) {
+      var ta = document.createElement('textarea');
+      ta.value = v;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); done(); } catch (err) { /* nothing to be done */ }
+      ta.remove();
+    }
+
     el.addEventListener('click', function (e) {
+      var chip = e.target.closest('[data-copy]');
+      if (chip) { copyChip(chip); return; }
       var all = e.target.closest('[data-jpg-all]');
       if (all) { saveAllJpg(all); return; }
       var sh = e.target.closest('[data-share-one]');
@@ -1284,7 +1363,7 @@ function blank(type) {
       name: '', client: '', contact: '', address: '', code: '',
       eyebrow: 'CONCEPT DECK · PRIVATE RESIDENCE',
       headline: '', kind: 'Interior Concept Deck',
-      dateLabel: '', confidentiality: 'Confidential', rate: '',
+      dateLabel: '', confidentiality: 'Confidential', rate: '', estimateBasis: '',
       designer: '', firm: 'essentia environments',
       firmLine: 'essentia Design & Project Partners · Sector 34, Gurugram · Since 1999',
       site: 'essentiaenvironments.com'
@@ -1401,6 +1480,9 @@ function renderCover() {
     field({ key: 'dateLabel', label: 'Date label', ph: 'September 2026' }) +
     field({ key: 'headline', label: 'Cover headline', wide: true, area: true, rows: 2,
             ph: 'The plan, in the way you will actually live in it.' }) +
+    field({ key: 'estimateBasis', label: 'Estimate basis', wide: true,
+            ph: 'Indicative, at essentia published rates. Not a quotation.',
+            hint: 'Printed under the figures. A number with no basis stated will be misread.' }) +
     field({ key: 'rate', label: 'Estimate rate (₹ / sq.ft.)', ph: '1200',
             hint: 'Fills the estimate on every space that has an area. A space with its own estimate keeps it.' }) +
     field({ key: 'designer', label: 'Principal designer', ph: 'Monica Chawla' }) +
@@ -1541,6 +1623,8 @@ function renderSpaces() {
             '<input type="text" data-k="summary" data-i="' + i + '" value="' + esc(s.summary || '') + '"><span class="f-err" hidden></span></div>' +
           '<div class="f f--wide"><label>Why it sits there</label>' +
             '<textarea rows="3" data-k="body" data-i="' + i + '">' + esc(s.body || '') + '</textarea><span class="f-err" hidden></span></div>' +
+          '<div class="f f--wide"><label>What it includes</label>' +
+            '<textarea rows="2" placeholder="Wardrobe, dresser, full length mirror, art" data-k="includes" data-i="' + i + '">' + esc(s.includes || '') + '</textarea><span class="f-err" hidden></span></div>' +
           '<div class="f f--wide"><label>Quotable — the line that stays with them</label>' +
             '<input type="text" data-k="quote" data-i="' + i + '" value="' + esc(s.quote || '') + '"><span class="f-err" hidden></span></div>' +
         '</div>' +
@@ -1879,7 +1963,7 @@ $('#bAddPlate').addEventListener('click', function () {
 });
 $('#bAddSpace').addEventListener('click', function () {
   S.spaces.push({ id: uid(), include: true, name: '', floor: (S.plates[0] || {}).label || '',
-    dims: '', area: '', estimate: '', summary: '', body: '', quote: '', plate: 0, x: null, y: null, images: [] });
+    dims: '', area: '', estimate: '', includes: '', summary: '', body: '', quote: '', plate: 0, x: null, y: null, images: [] });
   renderAll();
   var rows = $('#spaces').querySelectorAll('[data-space-row]');
   var last = rows[rows.length - 1];
