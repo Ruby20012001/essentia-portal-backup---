@@ -54,7 +54,7 @@ rather than shipping a second copy.
    client, so a deck that should carry no money simply carries none.
 
    **The estimate is usually one number, not fifteen.** Put a rate in
-    on the cover and every space that has an area
+   `Estimate rate (₹ / sq.ft.)` on the cover and every space that has an area
    prices itself — the same arithmetic the fee proposal already does per
    sq.ft. An estimate typed against a single space overrides the rate for that
    space. The running total sits on the Spaces card as you work.
