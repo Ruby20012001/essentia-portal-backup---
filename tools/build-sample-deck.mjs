@@ -74,7 +74,7 @@ const SPACES = [
       "as the shoe rack, so nothing has to be carried further in than the door. Art sits on the wall " +
       "you face rather than the wall you pass, and the distribution board is set into the return, out " +
       "of the eyeline.",
-    quote: 'A house should let you put your bag down before it asks anything of you.',
+    quote: 'The first room should ask nothing of you. It should simply receive you.',
   },
   {
     name: 'formal living area', dims: "32'-3\" x 14'-7\"", x: 0.555, y: 0.329, imgs: [1, 4, 5, 6],
@@ -84,7 +84,7 @@ const SPACES = [
       "and 14'-7\" across. The mini bar sits on the kitchen side so service never crosses the seating. " +
       "The wall it shares with the kid's bedroom is a lego wall — the children are in the room without " +
       "being underfoot.",
-    quote: 'A long room only reads as long if you make the eye walk it in a straight line.',
+    quote: 'Length is not a measurement. It is a distance the eye is allowed to travel.',
   },
   {
     name: 'kitchen', dims: "10'-10\" x 12'-10\"", x: 0.559, y: 0.822, imgs: [20, 21],
@@ -93,7 +93,7 @@ const SPACES = [
       "Prep counter to both sides of the hob with the chimney above it, so the working triangle closes " +
       "without a step wasted. The microwave and oven stack into one tall unit instead of eating the " +
       "counter. Storage below, storage overhead, and the utility door within reach of the sink.",
-    quote: 'Count the steps between the sink and the hob. That number is the kitchen.',
+    quote: 'A kitchen is measured in steps taken, not in square feet drawn.',
   },
   {
     name: 'utility', dims: "5'-6\" x 7'-11\"", x: 0.737, y: 0.873, imgs: ['ext_utility.jpg'],
@@ -102,7 +102,7 @@ const SPACES = [
       "It sits behind the kitchen and takes its own door, so laundry never travels through the house. " +
       "The machine is built in below a working counter rather than left standing, which keeps a folding " +
       "surface at hand and the floor clear.",
-    quote: 'The rooms nobody photographs are the rooms that decide whether a house works.',
+    quote: 'A house is judged by its quiet rooms long after the grand ones are admired.',
   },
   {
     name: 'store room', dims: "4'-4\" x 4'-2\"", x: 0.392, y: 0.669, imgs: ['ext_store.jpg'],
@@ -111,7 +111,7 @@ const SPACES = [
       "A dedicated store off the bedroom passage, fitted out floor to ceiling so the depth is used " +
       "rather than stacked. It takes what a house accumulates — luggage, seasonal linen, the spare of " +
       "everything — out of the wardrobes that are meant for clothes.",
-    quote: 'Storage that is planned is silent. Storage that is improvised is visible for years.',
+    quote: 'Storage that is planned goes unnoticed. Storage that is improvised is noticed for years.',
   },
   {
     name: 'powder washroom', dims: "6'-10\" x 4'-2\"", x: 0.790, y: 0.704, imgs: [22, 23],
@@ -119,7 +119,7 @@ const SPACES = [
     body:
       "Placed so a guest reaches it from the entrance without entering the house proper. The floor is " +
       "set 10 mm down, which keeps water where it belongs without a threshold to catch a heel.",
-    quote: 'A guest should never have to ask where it is.',
+    quote: 'Hospitality is answering the question before it is asked.',
   },
   {
     name: 'master bedroom', dims: "9'-1\" x 15'-7\"", x: 0.205, y: 0.390, imgs: [15],
@@ -128,7 +128,7 @@ const SPACES = [
       "The long wall carries the wardrobe run — storage above, drawer storage below — which lets the bed " +
       "face the balcony rather than the storage. A full length mirror sits at the dressing end and art " +
       "on the head wall.",
-    quote: 'The last thing you see at night should not be a cupboard door.',
+    quote: 'The last thing seen at night deserves more thought than a cupboard door.',
   },
   {
     name: 'master bathroom', dims: "6'-0\" x 6'-5\"", x: 0.139, y: 0.685, imgs: [16, 17],
@@ -136,7 +136,7 @@ const SPACES = [
     body:
       "The shower is stepped 20 mm up rather than kerbed, so there is nothing to trip on and nothing to " +
       "clean around. A stone niche is cut into the shower wall so bottles do not stand on the floor.",
-    quote: 'Twenty millimetres is the difference between a wet floor and a dry one.',
+    quote: 'Twenty millimetres, well placed, is the whole difference between a wet floor and a dry one.',
   },
   {
     name: 'bedroom-2', dims: "10'-1\" x 11'-7\"", x: 0.311, y: 0.320, imgs: [10, 11],
@@ -145,7 +145,7 @@ const SPACES = [
       "It shares the long north balcony with the master bedroom, so it gets the planting and the light " +
       "without borrowing anything from the other room. Wardrobe on the inner wall, mirror at full length " +
       "beside it, art above the bed.",
-    quote: 'A second bedroom that opens to the outside stops being a spare room.',
+    quote: 'Give a second bedroom a door to the light and it ceases to be a spare room.',
   },
   {
     name: 'bath-2', dims: "6'-4\" x 5'-10\"", x: 0.282, y: 0.707, imgs: [13, 14],
@@ -154,7 +154,7 @@ const SPACES = [
       "Entered off the passage rather than through the bedroom, which means the second bedroom and the " +
       "rest of the floor never wait on each other. The shower takes the far corner, keeping the vanity " +
       "dry.",
-    quote: 'A shared bathroom works when nobody has to knock.',
+    quote: 'A shared bathroom succeeds on the day nobody has to knock.',
   },
   {
     name: "kid's bedroom", dims: "10'-0\" across", x: 0.782, y: 0.318, imgs: [7, 8],
@@ -163,7 +163,7 @@ const SPACES = [
       "Open storage where a child can get to it, overhead storage above for everything else — the things " +
       "used every day are the things within reach. The wall it shares with the formal living area is " +
       "surfaced for lego, so play happens where the family already is.",
-    quote: 'Put the storage where the child can reach it and the room tidies itself.',
+    quote: "Set the storage at a child's height and the room begins to keep itself.",
   },
   {
     name: "kid's bath", dims: "4'-8\" x 4'-10\"", x: 0.891, y: 0.343, imgs: [9],
@@ -172,7 +172,7 @@ const SPACES = [
       "Three steps from the bed and no corridor in between, which is the whole point at two in the " +
       "morning. The shower is dropped 30 mm and a counter niche holds what would otherwise sit on the " +
       "floor.",
-    quote: "Measure a child's bathroom from the bed, not from the door.",
+    quote: "A child's bathroom is measured from the bed, never from the door.",
   },
   {
     name: 'balcony', dims: "20'-3\" x 5'-7\"", x: 0.326, y: 0.124, imgs: [12],
@@ -181,7 +181,7 @@ const SPACES = [
       "The long balcony runs the full face of the two bedrooms and is planted along its length, so the " +
       "first thing either room sees is green rather than parapet. A sculptural bench sits at the centre — " +
       "somewhere to sit that is not furniture anyone has to move.",
-    quote: 'A balcony is a room. It is only a ledge if you furnish it like one.',
+    quote: 'A balcony is a room. It becomes a ledge only when it is furnished as one.',
   },
   {
     name: 'balcony', dims: "9'-10\" x 3'-10\"", x: 0.294, y: 0.808, imgs: [12],
@@ -189,7 +189,7 @@ const SPACES = [
     body:
       "It sits at the far end of the plan and carries the same planting as the long balcony, so the view " +
       "out of the bathrooms and the passage is a garden edge rather than a blank one.",
-    quote: 'Even the side of a house nobody visits should be worth looking at.',
+    quote: 'Even the quiet side of a house deserves something worth looking at.',
   },
   {
     name: 'home office', dims: "5'-6\" x 9'-10\"", x: 0.892, y: 0.746, imgs: [18, 19],
@@ -198,7 +198,7 @@ const SPACES = [
       "Placed beyond the powder washroom rather than off the living area, so a call does not have to " +
       "compete with the house and the house does not have to go quiet for a call. Storage runs the full " +
       "length of one wall.",
-    quote: 'Work belongs in a room with a door.',
+    quote: 'Work is far easier to set down in a room that can be closed.',
   },
 ];
 

@@ -83,6 +83,8 @@
   display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;
   transition:background-color .15s,transform .15s}
 .deck-pin:hover,.deck-pin:focus-visible{background:var(--amber);outline:none;transform:translate(-50%,-50%) scale(1.12)}
+/* held for a moment after "See it on the plan", so the eye finds the number */
+.deck-pin--found{background:var(--amber);transform:translate(-50%,-50%) scale(1.25)}
 /* the tap hint only makes sense once the interactive layer is running; until
    then the deck says what it actually is — every space, in full, further down */
 .deck-hint,.deck-hint-static{margin:14px 0 0;font-size:12px;color:var(--faint)}
@@ -554,10 +556,30 @@ button,input,textarea,select{font:inherit;color:inherit}
     }).join('') + '</dl>';
   }
 
-  /* spaces that are switched on, in order, renumbered 01.. */
+  function num(v) {
+    var n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.]/g, ''));
+    return isFinite(n) ? n : 0;
+  }
+  function rupees(n) {
+    return '₹ ' + Math.round(n).toLocaleString('en-IN');
+  }
+
+  /* Spaces that are switched on, in order, renumbered 01..
+     An estimate typed against a space always wins. Otherwise it is the
+     project's rate times that space's area — the same arithmetic the fee
+     proposal does per sq.ft., so no figure is ever invented for a room. */
   function live(state) {
+    var rate = num((state.project || {}).rate);
     return (state.spaces || []).filter(function (s) { return s.include !== false; })
-      .map(function (s, i) { s = Object.assign({}, s); s.no = pad2(i + 1); return s; });
+      .map(function (s, i) {
+        s = Object.assign({}, s);
+        s.no = pad2(i + 1);
+        if (!String(s.estimate || '').trim() && rate > 0 && num(s.area) > 0) {
+          s.estimate = rupees(num(s.area) * rate);
+          s.estimateDerived = true;
+        }
+        return s;
+      });
   }
 
   function coverHtml(state) {
@@ -855,6 +877,18 @@ button,input,textarea,select{font:inherit;color:inherit}
       .replace(/^-|-$/g, '').slice(0, 48) || 'space';
   }
 
+  /* base64 → Blob by hand. fetch() would do it in one line, but the deck is
+     meant to contain no network primitive at all, and this works the same on
+     a file opened straight off the share. */
+  function dataUriToBlob(uri) {
+    var parts = String(uri).split(',');
+    var mime = (/:(.*?);/.exec(parts[0]) || [, 'application/octet-stream'])[1];
+    var bin = atob(parts[1]);
+    var n = bin.length, u8 = new Uint8Array(n);
+    while (n--) u8[n] = bin.charCodeAt(n);
+    return new Blob([u8], { type: mime });
+  }
+
   function saveDataUri(name, uri) {
     var a = document.createElement('a');
     a.href = uri; a.download = name;
@@ -939,9 +973,11 @@ button,input,textarea,select{font:inherit;color:inherit}
         (s.quote ? '<p class="deck-sheet-quote">' + esc(s.quote) + '</p>' : '') +
         specHtml(s) +
         '<div class="deck-actions">' +
-          '<button class="deck-btn deck-btn--solid" data-jpg-one="' + esc(s.id) + '">Save as image</button>' +
+          '<button class="deck-btn deck-btn--solid" data-share-one="' + esc(s.id) + '">Share this space</button>' +
+          '<button class="deck-btn" data-jpg-one="' + esc(s.id) + '">Save as image</button>' +
           '<button class="deck-btn" data-pdf-one="' + esc(s.id) + '">Save as PDF</button>' +
-          '<button class="deck-btn" data-pdf-all>Whole deck</button>' +
+          '<button class="deck-btn" data-locate="' + esc(s.id) + '">See it on the plan</button>' +
+          '<button class="deck-btn" data-pdf-all>The whole deck</button>' +
         '</div>' +
       '</div>' +
       '<div class="deck-nav">' +
@@ -1029,7 +1065,60 @@ button,input,textarea,select{font:inherit;color:inherit}
       });
     }
 
+    function cardName(s) {
+      var p = state.project || {};
+      return slugify(p.code || p.name) + '-' + s.no + '-' + slugify(s.name) + '.jpg';
+    }
+
+    /* On a phone this hands the picture straight to the share sheet, which is
+       how it reaches WhatsApp without ever becoming a file anyone has to find.
+       Where sharing a file is not offered, it saves instead. */
+    function shareSpace(id, btn) {
+      var s = spaces.filter(function (x) { return String(x.id) === String(id); })[0];
+      if (!s) return;
+      var label = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Preparing…';
+      spaceCard(state, s).then(function (uri) {
+        var name = cardName(s);
+        var file = null;
+        try { file = new File([dataUriToBlob(uri)], name, { type: 'image/jpeg' }); } catch (err) { file = null; }
+        var can = file && navigator.canShare && navigator.canShare({ files: [file] });
+        var done = function () { btn.disabled = false; btn.textContent = label; };
+        if (can) {
+          navigator.share({ files: [file], title: s.name }).then(done, done);
+        } else {
+          saveDataUri(name, uri);
+          done();
+        }
+      }, function () { btn.disabled = false; btn.textContent = label; });
+    }
+
+    /* Put the client back on the drawing, on the number they just read. */
+    function locate(id) {
+      var s = spaces.filter(function (x) { return String(x.id) === String(id); })[0];
+      if (!s) return;
+      close();
+      var panel = el.querySelector('[data-plate-panel="' + (s.plate || 0) + '"]');
+      if (panel && panel.hidden) {
+        el.querySelectorAll('[data-plate]').forEach(function (b) {
+          b.setAttribute('aria-selected', String(+b.getAttribute('data-plate') === (s.plate || 0)));
+        });
+        el.querySelectorAll('[data-plate-panel]').forEach(function (p) {
+          p.hidden = +p.getAttribute('data-plate-panel') !== (s.plate || 0);
+        });
+      }
+      var pin = el.querySelector('.deck-pin[data-space="' + String(s.id).replace(/"/g, '') + '"]');
+      if (!pin) return;
+      pin.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      pin.classList.add('deck-pin--found');
+      setTimeout(function () { pin.classList.remove('deck-pin--found'); }, 2200);
+    }
+
     el.addEventListener('click', function (e) {
+      var sh = e.target.closest('[data-share-one]');
+      if (sh) { shareSpace(sh.getAttribute('data-share-one'), sh); return; }
+      var loc = e.target.closest('[data-locate]');
+      if (loc) { locate(loc.getAttribute('data-locate')); return; }
       var jpg = e.target.closest('[data-jpg-one]');
       if (jpg) { saveJpg(jpg.getAttribute('data-jpg-one'), jpg); return; }
       var one = e.target.closest('[data-pdf-one]');
@@ -1161,7 +1250,7 @@ function blank(type) {
       name: '', client: '', contact: '', address: '', code: '',
       eyebrow: 'CONCEPT DECK · PRIVATE RESIDENCE',
       headline: '', kind: 'Interior Concept Deck',
-      dateLabel: '', confidentiality: 'Confidential',
+      dateLabel: '', confidentiality: 'Confidential', rate: '',
       designer: '', firm: 'essentia environments',
       firmLine: 'essentia Design & Project Partners · Sector 34, Gurugram · Since 1999',
       site: 'essentiaenvironments.com'
@@ -1278,10 +1367,13 @@ function renderCover() {
     field({ key: 'dateLabel', label: 'Date label', ph: 'September 2026' }) +
     field({ key: 'headline', label: 'Cover headline', wide: true, area: true, rows: 2,
             ph: 'The plan, in the way you will actually live in it.' }) +
+    field({ key: 'rate', label: 'Estimate rate (₹ / sq.ft.)', ph: '1200',
+            hint: 'Fills the estimate on every space that has an area. A space with its own estimate keeps it.' }) +
     field({ key: 'designer', label: 'Principal designer', ph: 'Monica Chawla' }) +
     field({ key: 'firm', label: 'Vertical', ph: 'essentia environments' });
   bindFields(host, S.project, function (key, val, w) {
     if (key === 'code') markField(w, val && !CODE_RE.test(val.trim()) ? 'Use ED/YY-YY/NNN — for example ED/26-27/058.' : '');
+    else if (key === 'rate') markField(w, val && !/^[0-9.,₹ ]*$/.test(val) ? 'Numbers only — for example 1200.' : '');
     else {
       var h = vocabHits(val);
       markField(w, h.length ? vocabMsg(h[0]) : '');
@@ -1291,6 +1383,7 @@ function renderCover() {
   host.querySelectorAll('[data-f]').forEach(function (w) {
     var k = w.getAttribute('data-f'), v = S.project[k];
     if (k === 'code') markField(w, v && !CODE_RE.test(String(v).trim()) ? 'Use ED/YY-YY/NNN — for example ED/26-27/058.' : '');
+    else if (k === 'rate') markField(w, '');
     else { var h = vocabHits(v); markField(w, h.length ? vocabMsg(h[0]) : ''); }
   });
 }
@@ -1642,6 +1735,11 @@ function renderTotals() {
   $('#tCount').textContent = on.length + (on.length === 1 ? ' space' : ' spaces');
   $('#tSub').textContent = pinned + ' pinned · ' + withImg + ' with visuals · ' +
     (on.length - withImg) + ' empty frame' + ((on.length - withImg) === 1 ? '' : 's');
+  var priced = window.EssentiaDeck.live(S).filter(function (x) { return String(x.estimate || '').trim(); });
+  var sum = priced.reduce(function (n, x) { return n + Number(String(x.estimate).replace(/[^0-9.]/g, '') || 0); }, 0);
+  var t = $('#tCount');
+  t.textContent = on.length + (on.length === 1 ? ' space' : ' spaces') +
+    (sum > 0 ? '  ·  ₹ ' + Math.round(sum).toLocaleString('en-IN') : '');
 }
 
 /* ── paint the live document ──────────────────────────────────────────── */

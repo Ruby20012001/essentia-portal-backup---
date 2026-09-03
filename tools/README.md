@@ -50,8 +50,14 @@ rather than shipping a second copy.
    out of it, which is why paste is the shortest route.)*
 3. **Spaces** — add each space, pick the name from the list for the project type
    so naming does not drift, set the **dimensions, area and estimate**, then
-   **Place pin** and click the plan. Area and estimate are optional; a row that
-   is left blank simply does not appear to the client.
+   **Place pin** and click the plan. A row left blank does not appear to the
+   client, so a deck that should carry no money simply carries none.
+
+   **The estimate is usually one number, not fifteen.** Put a rate in
+    on the cover and every space that has an area
+   prices itself — the same arithmetic the fee proposal already does per
+   sq.ft. An estimate typed against a single space overrides the rate for that
+   space. The running total sits on the Spaces card as you work.
 4. **Visuals** — drop, pick, or paste the renders onto each space. The first is
    the hero; the rest become the thumbnail strip. `↑` on any thumbnail promotes
    it to hero.
@@ -73,7 +79,14 @@ re-attach them or reopen the draft.
 
 The number on the drawing opens a panel that scrolls: the render, the other
 angles as thumbnails, the name, then **size · area · estimate**, then the line,
-the paragraph and the quotable. Under the writing sit three buttons.
+the paragraph and the quotable. Under the writing sit five buttons — share,
+save as image, save as PDF, see it on the plan, and the whole deck.
+
+**Share this space** is the one for a phone: it draws the JPG and hands it to
+the share sheet, so it goes to WhatsApp without ever becoming a file anyone has
+to find. Where sharing a file is not offered, it saves the image instead.
+**See it on the plan** closes the panel and puts the client back on the drawing
+with that number held in amber for a moment.
 
 **Save as image** draws that space onto a single 1080px JPG — the essentia
 mark, the project and date, the render, the number, the name, the size, the
