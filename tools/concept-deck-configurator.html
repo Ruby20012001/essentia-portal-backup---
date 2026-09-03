@@ -48,7 +48,11 @@
 .deck h1{font-size:38px;line-height:1.18;letter-spacing:-.01em}
 .deck h2{font-size:24px;line-height:1.3}
 .deck h3{font-size:16px}
-.deck p{margin:0 0 14px}
+/* Body copy only. Scoped to unclassed paragraphs on purpose: ".deck p" carries
+   more specificity than a single class, so as a blanket rule it silently
+   flattened the margins of every classed paragraph in the deck — the slogan,
+   the hint under the plan, the firm line, the estimate basis. */
+.deck p:not([class]){margin:0 0 14px}
 .deck-rule{border:0;border-top:1px solid var(--rule);margin:0}
 
 /* cover */
@@ -57,6 +61,9 @@
    inverted to black, exactly as frontend/public/brand/README.md prescribes */
 .deck-logo{height:22px;width:auto;display:block;filter:brightness(0)}
 .deck-logo--fallback{font-family:var(--display);font-size:19px;letter-spacing:.02em;color:var(--ink);font-weight:400}
+.deck-slogan{margin:24px 0 0;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--amber)}
+.deck-closing{font-family:var(--display);font-size:20px;line-height:1.5;color:var(--ink);
+  margin:0 0 26px;max-width:46ch}
 .deck-cover .deck-lede{font-size:15px;color:var(--body);margin:18px 0 0}
 .deck-cover .deck-kind{margin:26px 0 34px;font-size:15px;color:var(--ink)}
 .deck-meta{display:grid;grid-template-columns:1fr 1fr;gap:26px 40px;padding-top:22px;border-top:1px solid var(--rule)}
@@ -627,6 +634,8 @@ button,input,textarea,select{font:inherit;color:inherit}
       '</div>' +
       (p.eyebrow ? '<div class="deck-eyebrow">' + esc(p.eyebrow) + '</div>' : '') +
       '<h1>' + esc(p.headline || '') + '</h1>' +
+      /* the firm's line, not the project's — it belongs to every deck */
+      (p.slogan ? '<p class="deck-slogan">' + esc(p.slogan) + '</p>' : '') +
       (p.client ? '<p class="deck-lede">Prepared for ' + esc(p.client) + '</p>' : '') +
       (p.address ? '<p class="deck-lede">' + esc(p.address) + '</p>' : '') +
       (p.kind ? '<p class="deck-kind">' + esc(p.kind) + '</p>' : '') +
@@ -813,6 +822,11 @@ button,input,textarea,select{font:inherit;color:inherit}
         c.fillStyle = CARD.faint; c.font = CARD.font(400, 19);
         tracked(c, [p.name, p.code, p.dateLabel].filter(Boolean).join('  ·  ').toUpperCase(), PAD, y, 3);
         y += 30;
+        if ((p.slogan || '').trim()) {
+          c.fillStyle = CARD.amber; c.font = CARD.font(400, 17);
+          tracked(c, p.slogan.toUpperCase(), PAD, y + 24, 5);
+          y += 34;
+        }
 
         c.strokeStyle = CARD.rule; c.lineWidth = 1;
         c.beginPath(); c.moveTo(PAD, y + 0.5); c.lineTo(W - PAD, y + 0.5); c.stroke();
@@ -980,6 +994,8 @@ button,input,textarea,select{font:inherit;color:inherit}
   function footHtml(state) {
     var p = state.project || {}, n = state.narrative || {};
     return '<footer class="deck-foot">' +
+      /* the last thing read, so it is given room rather than tucked away */
+      (p.closing ? '<p class="deck-closing">' + esc(p.closing) + '</p>' : '') +
       '<span class="deck-stamp">Concept · not for construction</span>' +
       (n.disclaimer ? '<p class="deck-disclaimer">' + esc(n.disclaimer) + '</p>' : '') +
       '<dl class="deck-sign">' +
@@ -1361,7 +1377,7 @@ function blank(type) {
     logo: '',
     project: {
       name: '', client: '', contact: '', address: '', code: '',
-      eyebrow: 'CONCEPT DECK · PRIVATE RESIDENCE',
+      eyebrow: 'CONCEPT DECK · PRIVATE RESIDENCE', slogan: 'different by design', closing: '',
       headline: '', kind: 'Interior Concept Deck',
       dateLabel: '', confidentiality: 'Confidential', rate: '', estimateBasis: '',
       designer: '', firm: 'essentia environments',
@@ -1478,6 +1494,10 @@ function renderCover() {
     field({ key: 'address', label: 'Project address', wide: true, ph: 'Private Residence · Gurugram · Ground + Two Floors' }) +
     field({ key: 'eyebrow', label: 'Cover eyebrow', ph: 'CONCEPT DECK · PRIVATE RESIDENCE' }) +
     field({ key: 'dateLabel', label: 'Date label', ph: 'September 2026' }) +
+    field({ key: 'slogan', label: 'Slogan', wide: true, ph: 'different by design',
+            hint: 'The firm line, under the headline. Same on every deck.' }) +
+    field({ key: 'closing', label: 'Closing line', wide: true, area: true, rows: 2,
+            ph: 'The last line before the signatures.' }) +
     field({ key: 'headline', label: 'Cover headline', wide: true, area: true, rows: 2,
             ph: 'The plan, in the way you will actually live in it.' }) +
     field({ key: 'estimateBasis', label: 'Estimate basis', wide: true,

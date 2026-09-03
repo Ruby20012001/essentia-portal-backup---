@@ -213,7 +213,11 @@ const state = {
     address: 'IREO Corridors · Gurugram',
     code: '',
     eyebrow: 'CONCEPT DECK · PRIVATE RESIDENCE',
-    headline: 'The plan, in the way you will actually live in it.',
+    headline: 'A house you can read before you can walk it.',
+    slogan: 'different by design',
+    closing:
+      'Everything here is a beginning, not a conclusion. Tell us where it is wrong, ' +
+      'and it changes — that is what a concept is for.',
     kind: 'Interior Concept Deck',
     dateLabel: 'September 2026',
     confidentiality: 'Confidential',
@@ -252,14 +256,17 @@ const state = {
     images: s.imgs.map((n) => ({ src: jpg(n), w: 0, h: 0 })),
   })),
   narrative: {
-    lead: 'A plan is a drawing. This is the house.',
-    quote: 'Every marked space opens — its size, and what it is for.',
+    lead: 'A drawing is a language. Nobody should have to learn it to see their own home.',
+    quote: 'Touch a number, and the room answers for itself.',
     body:
-      'A layout tells you where the walls are. It does not tell you what it will feel like to walk ' +
-      'in at the end of a day, or which window the morning comes through.\n\n' +
-      'So every space on this plan carries a number. Tap it and that space opens — how big it is, ' +
-      'where it sits, and why it sits there. Nothing here needs anyone standing beside you to ' +
-      'explain it.',
+      'A plan records where the walls fall. It does not say which window the morning arrives ' +
+      'through, or what it will feel like to set a bag down at the end of a long day. Those are ' +
+      'the things a house is actually chosen for, and they are the things a drawing keeps to ' +
+      'itself.\n\n' +
+      'So every space on this plan carries a number. Touch it and the room opens — how large it ' +
+      'is, where it sits, what it holds, and why it sits there rather than anywhere else. The ' +
+      'reasoning is written beside the room it belongs to, not held back for a meeting.\n\n' +
+      'Nothing here needs anyone standing beside you to explain it. That is the whole intention.',
     disclaimer:
       'All the 3Ds in this deck are for representational purpose for design intent only, and are ' +
       'subject to changes according to the site conditions.',
