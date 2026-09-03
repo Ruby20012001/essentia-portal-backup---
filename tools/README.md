@@ -60,6 +60,15 @@ rather than shipping a second copy.
    pulled out under an amber rule, meant to be the thing the client repeats to
    someone else. Write the quotable to the type of space, not to the project.
 
+5. **Narrative** — the note the client reads before the spaces, and the
+   representational-purpose disclaimer.
+6. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.
+
+`SAVE DRAFT` writes a `.json` holding everything including the images — that is
+the real save. The tool also keeps the *text* of your last session in the
+browser so a crash does not lose the writing, but images are not kept there;
+re-attach them or reopen the draft.
+
 ### What a client gets when they open a space
 
 The number on the drawing opens a panel that scrolls: the render, the other
@@ -76,14 +85,6 @@ laptop and on a phone alike, so there is no library and nothing to install.
 So a client who is sent the link, opens one room and saves it has that room's
 size, area, estimate, drawings and words in a single PDF — without anyone at
 essentia assembling it.
-5. **Narrative** — the note the client reads before the spaces, and the
-   representational-purpose disclaimer.
-6. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.
-
-`SAVE DRAFT` writes a `.json` holding everything including the images — that is
-the real save. The tool also keeps the *text* of your last session in the
-browser so a crash does not lose the writing, but images are not kept there;
-re-attach them or reopen the draft.
 
 ### The gates, and what they refuse
 
