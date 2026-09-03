@@ -49,8 +49,12 @@ rather than shipping a second copy.
    *(A plan inside an InDesign PDF is vector — there is no image file to drag
    out of it, which is why paste is the shortest route.)*
 3. **Spaces** — add each space, pick the name from the list for the project type
-   so naming does not drift, set the **dimensions, area and estimate**, then
-   **Place pin** and click the plan. A row left blank does not appear to the
+   so naming does not drift, **choose its floor** from the plates you added, set
+   the **dimensions, area and estimate**, then **Place pin** and click the plan.
+   The floor is a choice, not a typed line — it decides which drawing the pin
+   goes on, and renaming a plate renames the floor on every space that sits on
+   it. Moving a space to another floor clears its pin, because the old one was
+   on a different drawing. A row left blank does not appear to the
    client, so a deck that should carry no money simply carries none.
 
    **The estimate is usually one number, not fifteen.** Put a rate in

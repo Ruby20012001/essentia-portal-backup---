@@ -321,6 +321,7 @@ button,input,textarea,select{font:inherit;color:inherit}
   background:var(--surface);border:1px solid var(--line-strong);color:var(--ink);padding:9px 11px;
   font-size:13px;font-weight:300;width:100%;border-radius:2px}
 .f input:focus,.f textarea:focus,.f select:focus{outline:none;border-color:var(--amber)}
+.f select{appearance:none;background-image:none;cursor:pointer}
 .f textarea{resize:vertical;min-height:74px;line-height:1.55}
 .f-hint{font-size:11px;color:var(--muted)}
 .f-bad input,.f-bad textarea{border-color:var(--error)}
@@ -1459,7 +1460,10 @@ function renderPlates() {
 
   host.querySelectorAll('[data-plate-label]').forEach(function (el) {
     el.addEventListener('input', function () {
-      S.plates[+el.getAttribute('data-plate-label')].label = el.value; paint();
+      var k = +el.getAttribute('data-plate-label');
+      S.plates[k].label = el.value;
+      S.spaces.forEach(function (sp) { if ((sp.plate || 0) === k) sp.floor = el.value; });
+      paint();
     });
   });
   host.querySelectorAll('[data-del-plate]').forEach(function (b) {
@@ -1519,7 +1523,15 @@ function renderSpaces() {
           '</span></div>' +
         '<div class="row-in"><div class="fields">' +
           '<div class="f"><label>Space name</label><input type="text" list="spaceNames" data-k="name" data-i="' + i + '" value="' + esc(s.name || '') + '"><span class="f-err" hidden></span></div>' +
-          '<div class="f"><label>Floor</label><input type="text" data-k="floor" data-i="' + i + '" value="' + esc(s.floor || '') + '"></div>' +
+          /* The floor is the plate the pin goes on, so it is chosen, not typed.
+             Picking it here is the only way a two-floor deck can put its pins
+             on the right drawing. */
+          '<div class="f"><label>Floor</label><select data-plate-sel="' + i + '">' +
+            S.plates.map(function (pl, k) {
+              return '<option value="' + k + '"' + ((s.plate || 0) === k ? ' selected' : '') + '>' +
+                esc(pl.label || 'Floor ' + (k + 1)) + '</option>';
+            }).join('') +
+          '</select></div>' +
           '<div class="f"><label>Dimensions</label><input type="text" placeholder="9&#39;-6&quot; x 27&#39;-0&quot;" data-k="dims" data-i="' + i + '" value="' + esc(s.dims || '') + '"></div>' +
           '<div class="f"><label>Area</label><input type="text" placeholder="&#8776; 139 sq ft" data-k="area" data-i="' + i + '" value="' + esc(s.area || '') + '"></div>' +
           '<div class="f"><label>Estimate</label><input type="text" placeholder="&#8377; 4,20,000" data-k="estimate" data-i="' + i + '" value="' + esc(s.estimate || '') + '"><span class="f-hint">Shown to the client. Leave blank to hide the row.</span></div>' +
@@ -1554,6 +1566,17 @@ function renderSpaces() {
       }
       if (k === 'name') { var t = el.closest('.row').querySelector('.row-title'); if (t) t.textContent = el.value || 'Untitled space'; }
       paint();
+    });
+  });
+  host.querySelectorAll('[data-plate-sel]').forEach(function (el) {
+    el.addEventListener('change', function () {
+      var i = +el.getAttribute('data-plate-sel');
+      var k = +el.value;
+      var sp = S.spaces[i];
+      if ((sp.plate || 0) !== k) { sp.x = sp.y = null; }   /* the old pin was on another drawing */
+      sp.plate = k;
+      sp.floor = (S.plates[k] || {}).label || '';
+      renderAll();
     });
   });
   host.querySelectorAll('[data-inc]').forEach(function (el) {
