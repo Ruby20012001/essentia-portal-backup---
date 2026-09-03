@@ -50,6 +50,7 @@ export const DEFAULT_FILES = [
   "036_remove_ai_advisory.sql",
   "037_wio_team_passwords.sql",
   "038_tracker_write_only_drafting.sql",
+  "039_tracker_view_account.sql",
   "900_dev_fixtures.sql",
 ];
 

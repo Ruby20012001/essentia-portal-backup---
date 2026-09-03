@@ -16,7 +16,7 @@
  */
 import { randomBytes, scrypt } from "node:crypto";
 import { promisify } from "node:util";
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,6 +31,9 @@ const PEOPLE = [
   ["wio.anshul@essentia.in", "Anshul Soni", "Senior Draughtsman"],
   ["wio.atul@essentia.in", "Atul Yadav", "Senior Draughtsman"],
   ["Jyoti.drafting@essentia.in", "Jyoti Yadav", "Senior Draughtsman"],
+  // The shared read-only login (db/039). One password the WIO team hands
+  // round essentia; it opens the board and can change nothing.
+  ["wio.view@essentia.in", "essentia — view only (SHARED)", "read-only"],
 ];
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -43,6 +46,16 @@ console.log("  Har account ke liye password likho (kam se kam 8 characters).");
 console.log("  Ye screen par dikhega, isliye akele baith kar karna.");
 console.log("  Khaali chhodoge to wo account skip ho jayega.");
 console.log("");
+
+// What the previous run wrote. A blank answer falls back to these.
+const OUT = join(HERE, "037_wio_team_passwords.sql");
+const existing = new Map();
+if (existsSync(OUT)) {
+  const prev = readFileSync(OUT, "utf8");
+  for (const m of prev.matchAll(/('([^']+)',s*'([0-9a-f]+:[0-9a-f]+)')/g)) {
+    existing.set(m[1].toLowerCase(), m[2]);
+  }
+}
 
 const rows = [];
 for (const [email, name, role] of PEOPLE) {
@@ -57,7 +70,15 @@ for (const [email, name, role] of PEOPLE) {
     break;
   }
   if (pw === "") {
-    console.log("    -> skipped\n");
+    // Keeping the hash it already has, so adding one person does not mean
+    // retyping everybody else's — the commonest reason to re-run this.
+    const kept = existing.get(email.toLowerCase());
+    if (kept) {
+      rows.push({ email, name, hash: kept });
+      console.log("    -> pehle jaisa hi rakha\n");
+    } else {
+      console.log("    -> skipped\n");
+    }
     continue;
   }
   const salt = randomBytes(16);
@@ -114,8 +135,7 @@ BEGIN
 END $$;
 `;
 
-const out = join(HERE, "037_wio_team_passwords.sql");
-writeFileSync(out, sql);
+writeFileSync(OUT, sql);
 
 console.log(`  Ho gaya — ${rows.length} account(s).`);
 console.log(`  File bani: db/037_wio_team_passwords.sql (sirf hashes)`);
