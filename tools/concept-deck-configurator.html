@@ -128,7 +128,8 @@
 .deck-sheet[data-open="1"]{display:block}
 .deck-sheet-veil{position:absolute;inset:0;background:rgba(17,17,17,.55)}
 .deck-sheet-body{position:absolute;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--paper);
-  overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column}
+  overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  display:flex;flex-direction:column}
 /* the panel's contents are swapped as one block, so that block — not the
    scroller — is the flex column; without this the footer nav floats mid-sheet */
 .deck-sheet-body > [data-sheet-in]{display:flex;flex-direction:column;flex:1;min-height:100%}
@@ -152,6 +153,23 @@
 /* the quotable — the line meant to stay with the client after they close the panel */
 .deck-sheet-quote{font-family:var(--display);font-size:17px;line-height:1.5;color:var(--ink);
   border-left:2px solid var(--amber);padding-left:16px;margin:20px 0 0}
+
+/* size · area · estimate — the numbers a client asks for, carried by the space
+   itself so they travel with the deck wherever it is sent */
+.deck-spec{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px 20px;
+  margin:22px 0 0;padding-top:16px;border-top:1px solid var(--rule)}
+.deck-spec div{min-width:0}
+.deck-spec dt{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:5px}
+.deck-spec dd{margin:0;font-size:15px;color:var(--ink)}
+
+/* the buttons under the writing */
+.deck-actions{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 0;padding-top:18px;border-top:1px solid var(--rule)}
+.deck-btn{font:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  padding:11px 16px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink);
+  cursor:pointer;transition:background-color .15s,border-color .15s}
+.deck-btn:hover{background:var(--wash);border-color:var(--ink)}
+.deck-btn--solid{background:var(--ink);border-color:var(--ink);color:#fff}
+.deck-btn--solid:hover{background:#333;border-color:#333}
 .deck-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:14px 22px;border-top:1px solid var(--rule);flex:none;position:sticky;bottom:0;background:var(--paper)}
 .deck-nav button{font:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);
@@ -170,13 +188,29 @@
 }
 
 /* print — the deck folds back into a flat lookbook, one space per page */
+/* a compact masthead, only ever on paper */
+.deck-print-head{display:none}
+.deck-print-head img{height:18px;width:auto;filter:brightness(0);display:block;margin-bottom:10px}
+.deck-print-head .deck-eyebrow{display:block}
+
 @media print{
-  .deck-sheet,.deck-hint,.deck-hint-static,.deck-floors{display:none !important}
+  .deck-sheet,.deck-hint,.deck-hint-static,.deck-floors,.deck-actions{display:none !important}
   .deck-scope{font-size:11pt}
   .deck{max-width:none;padding:0}
   .deck-sec{page-break-inside:avoid}
   .deck-print-space{page-break-before:always;padding-top:22px}
   .deck-print-space img{max-width:100%;height:auto}
+  .deck-spec{page-break-inside:avoid}
+
+  /* One space, on its own — what the PDF button produces. Everything else is
+     put away, including the other fourteen spaces. */
+  .print-one .deck-cover,
+  .print-one .deck-sec,
+  .print-one .deck-foot .deck-sign{display:none !important}
+  .print-one .deck-print-space{display:none !important}
+  .print-one .deck-print-space.print-target{display:block !important;page-break-before:avoid}
+  .print-one .deck-print-head{display:block !important;padding-bottom:14px;border-bottom:1px solid var(--rule)}
+  .print-one .deck-foot{border-top:1px solid var(--rule);padding:18px 0 0}
 }
 /* The no-JavaScript deck. Every space, in full, written into the file itself —
    so an email viewer, a file manager, or a phone that never runs the script
@@ -349,6 +383,13 @@ button,input,textarea,select{font:inherit;color:inherit}
 .fullbar .btn{border-color:#CFCAC4;color:#111}
 .fullbar .btn:hover{background:#F2F0EE}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media print{
+  /* the editor is not part of any document a client ever sees */
+  .nav,.topbar,.head,.typerow,.toolrow,.pane-edit,.toast,.modal{display:none !important}
+  .app{display:block}
+  .panes{display:block;padding:0;gap:0}
+  .pane-view{border:0;position:static;max-height:none;overflow:visible}
+}
 </style>
 </head>
 <body>
@@ -502,6 +543,16 @@ button,input,textarea,select{font:inherit;color:inherit}
   }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
+  /* size · area · estimate, in that order, skipping whatever is not filled in */
+  function specHtml(s) {
+    var rows = [['Size', s.dims], ['Area', s.area], ['Estimate', s.estimate]]
+      .filter(function (r) { return r[1] && String(r[1]).trim(); });
+    if (!rows.length) return '';
+    return '<dl class="deck-spec">' + rows.map(function (r) {
+      return '<div><dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd></div>';
+    }).join('') + '</dl>';
+  }
+
   /* spaces that are switched on, in order, renumbered 01.. */
   function live(state) {
     return (state.spaces || []).filter(function (s) { return s.include !== false; })
@@ -612,6 +663,7 @@ button,input,textarea,select{font:inherit;color:inherit}
         (s.summary ? '<p class="deck-sheet-summary">' + esc(s.summary) + '</p>' : '') +
         nl2p(s.body) +
         (s.quote ? '<p class="deck-sheet-quote">' + esc(s.quote) + '</p>' : '') +
+        specHtml(s) +
         (s.images || []).map(function (im, k) {
           return '<img loading="lazy" decoding="async" data-sp="' + esc(s.id) + '" data-ix="' + k +
             '" src="' + im.src + '" alt="' + esc(s.name) + '" style="margin-top:10px">';
@@ -656,8 +708,20 @@ button,input,textarea,select{font:inherit;color:inherit}
   /* opts.noIndex leaves out the card grid: its thumbnails are the same files
      the space sections already carry, and the export must not ship them twice.
      mount() puts the grid in once the interactive layer is running. */
+  /* Sits at the top of a single-space PDF, where the cover is not printed. The
+     mark carries no src: the single-space PDF is a scripted action, so mount()
+     fills it from the cover rather than the file storing the logo twice. */
+  function printHeadHtml(state) {
+    var p = state.project || {};
+    return '<div class="deck-print-head">' +
+      (state.logo ? '<img data-print-logo alt="essentia">' : '') +
+      '<span class="deck-eyebrow">' + esc(p.name || '') +
+        (p.code ? ' · ' + esc(p.code) : '') +
+        (p.dateLabel ? ' · ' + esc(p.dateLabel) : '') + '</span></div>';
+  }
+
   function deckHtml(state, opts) {
-    return '<article class="deck">' + coverHtml(state) + planHtml(state) +
+    return '<article class="deck">' + printHeadHtml(state) + coverHtml(state) + planHtml(state) +
       ((opts && opts.noIndex) ? '' : indexHtml(state)) +
       noteHtml(state) + printHtml(state) + footHtml(state) + '</article>' +
       '<div class="deck-sheet" data-sheet><div class="deck-sheet-veil" data-sheet-close></div>' +
@@ -682,6 +746,11 @@ button,input,textarea,select{font:inherit;color:inherit}
         (s.summary ? '<p class="deck-sheet-summary">' + esc(s.summary) + '</p>' : '') +
         '<div class="deck-sheet-body-copy">' + esc(s.body || '') + '</div>' +
         (s.quote ? '<p class="deck-sheet-quote">' + esc(s.quote) + '</p>' : '') +
+        specHtml(s) +
+        '<div class="deck-actions">' +
+          '<button class="deck-btn deck-btn--solid" data-pdf-one="' + esc(s.id) + '">Save this space as PDF</button>' +
+          '<button class="deck-btn" data-pdf-all>Save the whole deck</button>' +
+        '</div>' +
       '</div>' +
       '<div class="deck-nav">' +
         '<button data-prev' + (i === 0 ? ' disabled' : '') + '>&larr; Previous</button>' +
@@ -708,6 +777,8 @@ button,input,textarea,select{font:inherit;color:inherit}
       el.innerHTML = deckHtml(state);
     }
     el.classList.add('js-on');
+    var plog = el.querySelector('[data-print-logo]');
+    if (plog && state.logo) plog.src = state.logo;
     var spaces = live(state);
     var sheet = el.querySelector('[data-sheet]');
     var sheetIn = el.querySelector('[data-sheet-in]');
@@ -729,7 +800,33 @@ button,input,textarea,select{font:inherit;color:inherit}
       if (i >= 0 && i < spaces.length) open(spaces[i].id);
     }
 
+    /* Save one space as a PDF: put every other space away, mark the target,
+       and hand it to the browser's own printer — which is where "Save as PDF"
+       lives on a laptop and on a phone alike. No library, no network. */
+    function printSpace(id) {
+      var root = document.documentElement;
+      el.querySelectorAll('.print-target').forEach(function (n) { n.classList.remove('print-target'); });
+      var target = null;
+      el.querySelectorAll('.deck-print-space').forEach(function (n, i) {
+        if (String(spaces[i] && spaces[i].id) === String(id)) target = n;
+      });
+      if (!target) return;
+      target.classList.add('print-target');
+      root.classList.add('print-one');
+      var done = function () {
+        root.classList.remove('print-one');
+        target.classList.remove('print-target');
+        window.removeEventListener('afterprint', done);
+      };
+      window.addEventListener('afterprint', done);
+      setTimeout(function () { window.print(); }, 60);
+      setTimeout(done, 60000);   /* a browser that never fires afterprint */
+    }
+
     el.addEventListener('click', function (e) {
+      var one = e.target.closest('[data-pdf-one]');
+      if (one) { printSpace(one.getAttribute('data-pdf-one')); return; }
+      if (e.target.closest('[data-pdf-all]')) { close(); setTimeout(function () { window.print(); }, 120); return; }
       var t = e.target.closest('[data-space]');
       if (t) { open(t.getAttribute('data-space')); return; }
       if (e.target.closest('[data-sheet-close]')) { close(); return; }
@@ -897,7 +994,7 @@ function sample() {
     ["kid's bedroom", 'Ground floor'], ["kid's bath", 'Ground floor'],
     ['balcony', 'Ground floor'], ['balcony', 'Ground floor']
   ].forEach(function (r) {
-    s.spaces.push({ id: uid(), include: true, name: r[0], floor: r[1], dims: '',
+    s.spaces.push({ id: uid(), include: true, name: r[0], floor: r[1], dims: '', area: '', estimate: '',
       summary: '', body: '', plate: 0, x: null, y: null, images: [] });
   });
   return s;
@@ -1089,6 +1186,8 @@ function renderSpaces() {
           '<div class="f"><label>Space name</label><input type="text" list="spaceNames" data-k="name" data-i="' + i + '" value="' + esc(s.name || '') + '"><span class="f-err" hidden></span></div>' +
           '<div class="f"><label>Floor</label><input type="text" data-k="floor" data-i="' + i + '" value="' + esc(s.floor || '') + '"></div>' +
           '<div class="f"><label>Dimensions</label><input type="text" placeholder="9&#39;-6&quot; x 27&#39;-0&quot;" data-k="dims" data-i="' + i + '" value="' + esc(s.dims || '') + '"></div>' +
+          '<div class="f"><label>Area</label><input type="text" placeholder="&#8776; 139 sq ft" data-k="area" data-i="' + i + '" value="' + esc(s.area || '') + '"></div>' +
+          '<div class="f"><label>Estimate</label><input type="text" placeholder="&#8377; 4,20,000" data-k="estimate" data-i="' + i + '" value="' + esc(s.estimate || '') + '"><span class="f-hint">Shown to the client. Leave blank to hide the row.</span></div>' +
           '<div class="f"><label>On plan</label>' +
             '<button class="btn btn--sm" data-pin="' + i + '">' + (pinned ? 'Move pin' : 'Place pin') + '</button></div>' +
           '<div class="f f--wide"><label>One line — what it is</label>' +
@@ -1415,7 +1514,7 @@ $('#bAddPlate').addEventListener('click', function () {
 });
 $('#bAddSpace').addEventListener('click', function () {
   S.spaces.push({ id: uid(), include: true, name: '', floor: (S.plates[0] || {}).label || '',
-    dims: '', summary: '', body: '', quote: '', plate: 0, x: null, y: null, images: [] });
+    dims: '', area: '', estimate: '', summary: '', body: '', quote: '', plate: 0, x: null, y: null, images: [] });
   renderAll();
   var rows = $('#spaces').querySelectorAll('[data-space-row]');
   var last = rows[rows.length - 1];

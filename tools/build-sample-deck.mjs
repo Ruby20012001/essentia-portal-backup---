@@ -44,6 +44,18 @@ const jpg = (ref) => 'data:image/jpeg;base64,' + fs.readFileSync(
   path.join(imgDir, typeof ref === 'number' ? 'img_' + String(ref).padStart(3, '0') + '.jpg' : ref)
 ).toString('base64');
 
+/* Area is arithmetic on the two dimensions already read off the drawing — never
+   a figure anyone typed in. A dims string with only one measurement ("8'-9\"
+   wide", "10'-0\" across") gets no area rather than a guessed one. Marked
+   approximate because a room on this plan is not a perfect rectangle. */
+const FT_IN = /(\d+)'\s*-\s*(\d+)"/g;
+function areaFromDims(dims) {
+  const m = [...String(dims || '').matchAll(FT_IN)];
+  if (m.length !== 2) return '';
+  const feet = m.map(([, f, i]) => Number(f) + Number(i) / 12);
+  return '≈ ' + Math.round(feet[0] * feet[1]) + ' sq ft';
+}
+
 /* Image → space, resolved by each render's byte offset in the lookbook against
    the offset of the section heading above it. Verified against the visuals.
    The home office pages carry no heading of their own in the lookbook, so an
@@ -222,6 +234,8 @@ const state = {
     name: s.name,
     floor: 'Ground floor',
     dims: s.dims || '',
+    area: areaFromDims(s.dims),
+    estimate: '',            /* a money figure is nobody's to invent — Monica fills these */
     summary: s.summary || '',
     body: s.body || '',
     quote: s.quote || '',

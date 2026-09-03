@@ -49,8 +49,9 @@ rather than shipping a second copy.
    *(A plan inside an InDesign PDF is vector — there is no image file to drag
    out of it, which is why paste is the shortest route.)*
 3. **Spaces** — add each space, pick the name from the list for the project type
-   so naming does not drift, set the floor and dimensions, then **Place pin** and
-   click the plan.
+   so naming does not drift, set the **dimensions, area and estimate**, then
+   **Place pin** and click the plan. Area and estimate are optional; a row that
+   is left blank simply does not appear to the client.
 4. **Visuals** — drop, pick, or paste the renders onto each space. The first is
    the hero; the rest become the thumbnail strip. `↑` on any thumbnail promotes
    it to hero.
@@ -58,6 +59,23 @@ rather than shipping a second copy.
    the **paragraph** (why it sits there), and a **quotable** — one sentence,
    pulled out under an amber rule, meant to be the thing the client repeats to
    someone else. Write the quotable to the type of space, not to the project.
+
+### What a client gets when they open a space
+
+The number on the drawing opens a panel that scrolls: the render, the other
+angles as thumbnails, the name, then **size · area · estimate**, then the line,
+the paragraph and the quotable. Under the writing sit two buttons.
+
+**Save this space as PDF** prints that one space on its own — essentia mark,
+project and date across the top, the space with its numbers and its renders,
+the disclaimer at the foot. Everything else in the deck is put away. It goes
+through the browser's own printer, which is where "Save as PDF" lives on a
+laptop and on a phone alike, so there is no library and nothing to install.
+**Save the whole deck** does the same for all of it, one space per sheet.
+
+So a client who is sent the link, opens one room and saves it has that room's
+size, area, estimate, drawings and words in a single PDF — without anyone at
+essentia assembling it.
 5. **Narrative** — the note the client reads before the spaces, and the
    representational-purpose disclaimer.
 6. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.
