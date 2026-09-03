@@ -97,7 +97,7 @@ const sql = `-- ================================================================
 
 UPDATE public.users SET password_hash = v.hash, auth_provider = 'local'
 FROM (VALUES
-${rows.map((r) => `  ('${r.email}', '${r.hash}')  -- ${r.name}`).join(",\n")}
+${rows.map((r) => `  -- ${r.name}\n  ('${r.email}', '${r.hash}')`).join(",\n")}
 ) AS v(email, hash)
 WHERE lower(public.users.email) = lower(v.email);
 
