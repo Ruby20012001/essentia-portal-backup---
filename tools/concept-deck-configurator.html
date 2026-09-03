@@ -2037,7 +2037,15 @@ function exportDeck() {
 '<div id="deck-root" data-prerendered="1">' + pre + '</div>\n' +
 '<script>window.__DECK__=' + JSON.stringify(slim).replace(/<\//g, '<\\/') + ';<\/script>\n' +
 '<script>' + viewer + '<\/script>\n</body>\n</html>\n';
-  download(slug(S.project.code || S.project.name) + '-concept-deck.html', new Blob([html], { type: 'text/html' }));
+  /* The stamp is in the filename, not only in the footer. Exporting the same
+     deck twice otherwise lands two files with one name in the downloads folder,
+     and the older one gets opened. */
+  var d = new Date();
+  var stamp = String(d.getDate()).padStart(2, '0') +
+    ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] +
+    '-' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0');
+  download(slug(S.project.code || S.project.name) + '-concept-deck-' + stamp + '.html',
+           new Blob([html], { type: 'text/html' }));
   toast('Deck exported — ' + (html.length / 1048576).toFixed(1) + ' MB. Readable with or without scripts.');
 }
 
