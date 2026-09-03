@@ -80,7 +80,7 @@ export type TrackerBoard = {
   /** The two WIO teams. A lens for filtering, not an access fence (db/032). */
   teams: TrackerTeam[];
   /** What this viewer may actually do — the UI renders from this, not a guess. */
-  can: { edit: boolean; create: boolean; delete: boolean; logDelay: boolean };
+  can: { edit: boolean; create: boolean; delete: boolean; logDelay: boolean; export: boolean };
 };
 
 export async function getSettings(): Promise<TrackerSettings> {
@@ -272,11 +272,14 @@ export async function getBoard(user: SessionUser): Promise<TrackerBoard> {
   // Resolved once, server-side. The client renders controls from these rather
   // than inferring them from an access level, so the button a user can see is
   // always a button the API will actually honour.
-  const [edit, create, del, logDelay] = await Promise.all([
+  const [edit, create, del, logDelay, mayExport] = await Promise.all([
     allowed(user, "edit", "wio_tracker"),
     allowed(user, "create", "wio_tracker"),
     allowed(user, "delete", "wio_tracker"),
     allowed(user, "create", "wio_tracker_delay"),
+    // Taking the board out of the portal is its own act, and db/030 grants it
+    // separately — leadership and the owning team, not every reader.
+    allowed(user, "export", "wio_tracker"),
   ]);
 
   return {
@@ -289,13 +292,13 @@ export async function getBoard(user: SessionUser): Promise<TrackerBoard> {
     reasons,
     people,
     teams,
-    can: { edit, create, delete: del, logDelay },
+    can: { edit, create, delete: del, logDelay, export: mayExport },
   };
 }
 
 async function allowed(
   user: SessionUser,
-  action: "read" | "create" | "edit" | "delete",
+  action: "read" | "create" | "edit" | "delete" | "export",
   resource: string,
 ): Promise<boolean> {
   try {

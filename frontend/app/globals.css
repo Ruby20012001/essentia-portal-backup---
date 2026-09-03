@@ -29,3 +29,87 @@
     color: #ffffff;
   }
 }
+
+/* =====================================================================
+   PRINT — "Save as PDF" on the tracker is the browser's own print, so what
+   lands in the file is the very view on screen rather than a second
+   rendering of the board that could quietly drift from it.
+
+   Three things have to change on paper:
+
+   1. Only the board prints. The portal's header, nav and tab strip are ways
+      of getting somewhere, which a sheet of paper cannot offer.
+   2. Ink, not the dark theme. Printing white-on-black wastes a cartridge and
+      reads badly; the colours flip for print only.
+   3. Nothing may be scrolled away. On screen a wide table scrolls sideways
+      and a long one scrolls down — on paper both would simply be cut off, so
+      the overflow is released and the header row repeats on each page.
+   ===================================================================== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #print-area,
+  #print-area * {
+    visibility: visible;
+  }
+
+  #print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  [data-print="hide"] {
+    display: none !important;
+  }
+
+  /* Shown only on paper — the heading the screen gets from the shell. */
+  [data-print="only"] {
+    display: block !important;
+    margin-bottom: 8pt;
+  }
+
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  #print-area,
+  #print-area * {
+    background: transparent !important;
+    color: #000000 !important;
+    border-color: #999999 !important;
+    box-shadow: none !important;
+  }
+
+  #print-area .overflow-x-auto,
+  #print-area .overflow-y-auto {
+    overflow: visible !important;
+  }
+
+  #print-area table {
+    width: 100% !important;
+    font-size: 8pt;
+  }
+
+  /* The column headings repeat on every page; a row is never split across two. */
+  #print-area thead {
+    display: table-header-group;
+  }
+
+  #print-area tr {
+    break-inside: avoid;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+}

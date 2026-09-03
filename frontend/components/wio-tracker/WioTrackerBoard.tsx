@@ -106,8 +106,24 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
     { key: "setup", label: "Setup" },
   ];
 
+  const label = tabs.find((t) => t.key === tab)?.label ?? "";
+
   return (
-    <div>
+    <div id="print-area">
+      {/* Paper needs the heading the screen gets from the shell around it:
+          on a printed page there is no header, no nav and no tab strip, so a
+          sheet without this says nothing about which board or which day. */}
+      <div className="hidden" data-print="only">
+        <h1 className="font-body text-base font-bold">
+          {board.settings.teamName} — WIO → PIO Tracker · {label}
+        </h1>
+        <p className="font-body text-xs">
+          Read against {board.settings.today}
+          {team
+            ? ` · ${board.teams.find((t) => t.code === team)?.name ?? team}`
+            : " · both teams"}
+        </p>
+      </div>
       {banner ? (
         <div
           role="alert"
@@ -121,7 +137,10 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
         </div>
       ) : null}
 
-      <div className="mb-6 flex flex-wrap items-center gap-1 border-b border-line">
+      <div
+        className="mb-6 flex flex-wrap items-center gap-1 border-b border-line"
+        data-print="hide"
+      >
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -153,6 +172,19 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
             </button>
           ) : null}
         </span>
+
+        {/* Saving is printing: the browser's own "Save as PDF" turns this
+            view into a file, so there is no second rendering of the board to
+            drift from the real one. What you see is exactly what is saved. */}
+        {board.can.export ? (
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="ml-3 rounded border border-line-strong bg-canvas px-3 py-1.5 font-body text-xs font-bold text-secondary transition-colors hover:bg-hover hover:text-ink"
+          >
+            Save as PDF
+          </button>
+        ) : null}
       </div>
 
       {/* The team lens. Sits above the tabs because it applies to all of them —
