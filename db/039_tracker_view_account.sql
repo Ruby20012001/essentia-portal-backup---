@@ -64,17 +64,26 @@ WHERE d.code = 'TRACKER_VIEW'
 ON CONFLICT (access_level, department_id, resource_type, action_code)
 DO UPDATE SET allowed = FALSE, notes = EXCLUDED.notes;
 
--- 2. Re-open the two things it exists to do.
+-- 2. Re-open what it exists to do: read the board, read its delays, and save
+--    a copy. Export was withheld in the first cut of this file on the
+--    reasoning that taking data out is a different act from looking at it —
+--    which is true, and Ruby's answer (2026-09-03) is that the people holding
+--    this password are essentia staff who need the sheet in a meeting. Anyone
+--    who can read the whole board can photograph it anyway; withholding the
+--    button would have bought nothing and cost them the tidy version.
+--    Writing is still denied, which is the line that actually matters.
 UPDATE public.permissions p
    SET allowed = TRUE,
        scope = 'own_dept',
-       notes = 'Shared essentia view-only login (Ruby, 2026-09-03): read the board '
-               'and read why a row is stuck. Nothing else.'
+       notes = 'Shared essentia view-only login (Ruby, 2026-09-03): read the board, '
+               'read why a row is stuck, save a PDF. Never write.'
   FROM public.departments d
  WHERE d.id = p.department_id
    AND d.code = 'TRACKER_VIEW'
-   AND p.resource_type IN ('wio_tracker', 'wio_tracker_delay')
-   AND p.action_code = 'read';
+   AND (
+     (p.resource_type IN ('wio_tracker', 'wio_tracker_delay') AND p.action_code = 'read')
+     OR (p.resource_type = 'wio_tracker' AND p.action_code = 'export')
+   );
 
 -- 3. The account itself. auth_provider 'local' by design — this one signs in
 --    with a password; the six real people move to Microsoft when it lands.
@@ -111,11 +120,12 @@ BEGIN
        LIMIT 1
     ) AS x
    WHERE x.allowed
-     AND NOT (x.resource_type IN ('wio_tracker', 'wio_tracker_delay') AND x.action_code = 'read');
+     AND NOT (x.resource_type IN ('wio_tracker', 'wio_tracker_delay') AND x.action_code = 'read')
+     AND NOT (x.resource_type = 'wio_tracker' AND x.action_code = 'export');
 
   IF granted IS NOT NULL THEN
     RAISE EXCEPTION
-      'The shared view-only login resolves to more than reading the tracker: %. '
+      'The shared view-only login resolves to more than reading and exporting the tracker: %. '
       'It is handed around the company — it must never be able to change anything.',
       granted;
   END IF;
