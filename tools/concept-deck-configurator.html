@@ -428,6 +428,7 @@ button,input,textarea,select{font:inherit;color:inherit}
         <div class="head-actions">
           <button class="btn" id="bPreview">Preview</button>
           <button class="btn" id="bSave">Save draft</button>
+          <button class="btn" id="bJpgAll">All as images</button>
           <button class="btn" id="bPrint">Print / PDF</button>
           <button class="btn btn--solid" id="bExport">Export deck</button>
         </div>
@@ -671,6 +672,196 @@ button,input,textarea,select{font:inherit;color:inherit}
     }).join('');
   }
 
+  /* ── the space as one picture ──────────────────────────────────────────
+     A PDF has to be opened. A photograph shows itself in the message. So a
+     space can also leave as a single JPG with everything drawn into it —
+     the render, the number, the size, the area, the estimate, the words —
+     which is what actually survives being sent on WhatsApp.
+     Canvas only: no library, no network, and a data: URI never taints it. */
+
+  var CARD = {
+    w: 1080, pad: 72,
+    ink: '#111111', body: '#3A3A3A', soft: '#6E6E6E', faint: '#9A9A9A',
+    rule: '#E4E1DD', amber: '#A8895C', paper: '#FFFFFF',
+    font: function (weight, size) {
+      return weight + ' ' + size + 'px Lato, system-ui, "Segoe UI", sans-serif';
+    }
+  };
+
+  function loadImage(src) {
+    return new Promise(function (res, rej) {
+      if (!src) { res(null); return; }
+      var im = new Image();
+      im.onload = function () { res(im); };
+      im.onerror = function () { res(null); };   /* a missing picture must not stop the card */
+      im.src = src;
+    });
+  }
+
+  function wrap(ctx, text, maxW) {
+    var out = [];
+    String(text == null ? '' : text).split(/\n{2,}/).forEach(function (para, pi) {
+      if (pi) out.push('');
+      var line = '';
+      para.split(/\s+/).filter(Boolean).forEach(function (word) {
+        var test = line ? line + ' ' + word : word;
+        if (line && ctx.measureText(test).width > maxW) { out.push(line); line = word; }
+        else line = test;
+      });
+      if (line) out.push(line);
+    });
+    return out;
+  }
+
+  function tracked(ctx, text, x, y, px) {
+    /* letter-spacing for the small capitals; drawn by hand where unsupported */
+    if ('letterSpacing' in ctx) {
+      var prev = ctx.letterSpacing;
+      ctx.letterSpacing = px + 'px';
+      ctx.fillText(text, x, y);
+      ctx.letterSpacing = prev;
+      return;
+    }
+    var cx = x;
+    String(text).split('').forEach(function (ch) {
+      ctx.fillText(ch, cx, y);
+      cx += ctx.measureText(ch).width + px;
+    });
+  }
+
+  function spaceCard(state, s) {
+    var p = state.project || {};
+    var W = CARD.w, PAD = CARD.pad, CW = W - PAD * 2;
+
+    return Promise.all([loadImage(state.logo), loadImage((s.images && s.images[0]) ? s.images[0].src : '')])
+      .then(function (loaded) {
+        var logo = loaded[0], hero = loaded[1];
+        var tall = document.createElement('canvas');
+        tall.width = W; tall.height = 5200;
+        var c = tall.getContext('2d');
+        c.fillStyle = CARD.paper; c.fillRect(0, 0, W, tall.height);
+        c.textBaseline = 'alphabetic';
+        var y = PAD;
+
+        if (logo) {
+          var lw = Math.round(logo.width * (30 / logo.height));
+          /* the mark is white on transparent; on paper it is inverted to black */
+          var lc = document.createElement('canvas');
+          lc.width = logo.width; lc.height = logo.height;
+          var lg = lc.getContext('2d');
+          lg.drawImage(logo, 0, 0);
+          lg.globalCompositeOperation = 'source-in';
+          lg.fillStyle = CARD.ink;
+          lg.fillRect(0, 0, logo.width, logo.height);
+          c.drawImage(lc, PAD, y, lw, 30);
+          y += 30 + 22;
+        }
+        c.fillStyle = CARD.faint; c.font = CARD.font(400, 19);
+        tracked(c, [p.name, p.code, p.dateLabel].filter(Boolean).join('  ·  ').toUpperCase(), PAD, y, 3);
+        y += 30;
+
+        c.strokeStyle = CARD.rule; c.lineWidth = 1;
+        c.beginPath(); c.moveTo(PAD, y + 0.5); c.lineTo(W - PAD, y + 0.5); c.stroke();
+        y += 44;
+
+        if (hero) {
+          var hh = Math.min(760, Math.round(CW * (hero.height / hero.width)));
+          var sw = hero.width, sh = Math.round(hero.width * (hh / CW));
+          if (sh > hero.height) { sh = hero.height; sw = Math.round(hero.height * (CW / hh)); }
+          c.drawImage(hero, Math.round((hero.width - sw) / 2), Math.round((hero.height - sh) / 2),
+                      sw, sh, PAD, y, CW, hh);
+          y += hh + 46;
+        }
+
+        c.fillStyle = CARD.faint; c.font = CARD.font(400, 19);
+        tracked(c, (s.no + (s.floor ? '  ·  ' + s.floor : '')).toUpperCase(), PAD, y, 3);
+        y += 40;
+
+        c.fillStyle = CARD.ink; c.font = CARD.font(300, 58);
+        c.fillText(s.name || '', PAD, y);
+        y += 26;
+
+        if (s.dims) {
+          c.fillStyle = CARD.soft; c.font = CARD.font(300, 26);
+          c.fillText(s.dims, PAD, y + 20);
+          y += 42;
+        }
+        y += 26;
+
+        if (s.summary) {
+          c.fillStyle = CARD.ink; c.font = CARD.font(300, 33);
+          wrap(c, s.summary, CW).forEach(function (ln) { y += 46; c.fillText(ln, PAD, y); });
+          y += 26;
+        }
+        if (s.body) {
+          c.fillStyle = CARD.body; c.font = CARD.font(300, 27);
+          wrap(c, s.body, CW).forEach(function (ln) { y += 42; if (ln) c.fillText(ln, PAD, y); });
+          y += 30;
+        }
+        if (s.quote) {
+          c.font = CARD.font(300, 33);
+          var qs = wrap(c, s.quote, CW - 34);
+          var qTop = y + 8;
+          c.fillStyle = CARD.ink;
+          qs.forEach(function (ln) { y += 46; c.fillText(ln, PAD + 34, y); });
+          c.fillStyle = CARD.amber;
+          c.fillRect(PAD, qTop, 3, y - qTop + 10);
+          y += 30;
+        }
+
+        var spec = [['Size', s.dims], ['Area', s.area], ['Estimate', s.estimate]]
+          .filter(function (r) { return r[1] && String(r[1]).trim(); });
+        if (spec.length) {
+          y += 14;
+          c.strokeStyle = CARD.rule;
+          c.beginPath(); c.moveTo(PAD, y + 0.5); c.lineTo(W - PAD, y + 0.5); c.stroke();
+          y += 40;
+          var colW = CW / spec.length;
+          spec.forEach(function (r, i) {
+            var x = PAD + i * colW;
+            c.fillStyle = CARD.faint; c.font = CARD.font(400, 18);
+            tracked(c, r[0].toUpperCase(), x, y, 3);
+            c.fillStyle = CARD.ink; c.font = CARD.font(300, 30);
+            c.fillText(String(r[1]), x, y + 42);
+          });
+          y += 70;
+        }
+
+        y += 30;
+        c.strokeStyle = CARD.rule;
+        c.beginPath(); c.moveTo(PAD, y + 0.5); c.lineTo(W - PAD, y + 0.5); c.stroke();
+        y += 40;
+        c.fillStyle = CARD.amber; c.font = CARD.font(400, 18);
+        tracked(c, 'CONCEPT · NOT FOR CONSTRUCTION', PAD, y, 3);
+        y += 34;
+        var disc = (state.narrative || {}).disclaimer;
+        if (disc) {
+          c.fillStyle = CARD.faint; c.font = CARD.font(300, 21);
+          wrap(c, disc, CW).forEach(function (ln) { y += 30; c.fillText(ln, PAD, y); });
+        }
+        y += PAD;
+
+        var out = document.createElement('canvas');
+        out.width = W; out.height = Math.max(1350, Math.round(y));
+        var o = out.getContext('2d');
+        o.fillStyle = CARD.paper; o.fillRect(0, 0, out.width, out.height);
+        o.drawImage(tall, 0, 0);
+        return out.toDataURL('image/jpeg', 0.9);
+      });
+  }
+
+  function slugify(v) {
+    return String(v || 'space').toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '').slice(0, 48) || 'space';
+  }
+
+  function saveDataUri(name, uri) {
+    var a = document.createElement('a');
+    a.href = uri; a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { a.remove(); }, 1000);
+  }
+
   /* Pull the image data back out of pre-rendered markup into the state, so the
      exported file stores every picture exactly once. */
   function harvest(el, state) {
@@ -748,8 +939,9 @@ button,input,textarea,select{font:inherit;color:inherit}
         (s.quote ? '<p class="deck-sheet-quote">' + esc(s.quote) + '</p>' : '') +
         specHtml(s) +
         '<div class="deck-actions">' +
-          '<button class="deck-btn deck-btn--solid" data-pdf-one="' + esc(s.id) + '">Save this space as PDF</button>' +
-          '<button class="deck-btn" data-pdf-all>Save the whole deck</button>' +
+          '<button class="deck-btn deck-btn--solid" data-jpg-one="' + esc(s.id) + '">Save as image</button>' +
+          '<button class="deck-btn" data-pdf-one="' + esc(s.id) + '">Save as PDF</button>' +
+          '<button class="deck-btn" data-pdf-all>Whole deck</button>' +
         '</div>' +
       '</div>' +
       '<div class="deck-nav">' +
@@ -823,7 +1015,23 @@ button,input,textarea,select{font:inherit;color:inherit}
       setTimeout(done, 60000);   /* a browser that never fires afterprint */
     }
 
+    function saveJpg(id, btn) {
+      var s = spaces.filter(function (x) { return String(x.id) === String(id); })[0];
+      if (!s) return;
+      var label = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = 'Drawing…'; }
+      spaceCard(state, s).then(function (uri) {
+        var p = state.project || {};
+        saveDataUri(slugify(p.code || p.name) + '-' + s.no + '-' + slugify(s.name) + '.jpg', uri);
+        if (btn) { btn.disabled = false; btn.textContent = label; }
+      }).catch(function () {
+        if (btn) { btn.disabled = false; btn.textContent = label; }
+      });
+    }
+
     el.addEventListener('click', function (e) {
+      var jpg = e.target.closest('[data-jpg-one]');
+      if (jpg) { saveJpg(jpg.getAttribute('data-jpg-one'), jpg); return; }
       var one = e.target.closest('[data-pdf-one]');
       if (one) { printSpace(one.getAttribute('data-pdf-one')); return; }
       if (e.target.closest('[data-pdf-all]')) { close(); setTimeout(function () { window.print(); }, 120); return; }
@@ -865,7 +1073,8 @@ button,input,textarea,select{font:inherit;color:inherit}
     return { open: open, close: close };
   }
 
-  root.EssentiaDeck = { mount: mount, live: live, esc: esc, html: deckHtml };
+  root.EssentiaDeck = { mount: mount, live: live, esc: esc, html: deckHtml,
+    card: spaceCard, slug: slugify, save: saveDataUri };
 
   if (root.__DECK__ && document.getElementById('deck-root')) {
     mount(document.getElementById('deck-root'), root.__DECK__);
@@ -1546,6 +1755,28 @@ $('#fLoad').addEventListener('change', function () {
   fr.readAsText(f);
 });
 $('#bExport').addEventListener('click', exportDeck);
+$('#bJpgAll').addEventListener('click', function () {
+  var D = window.EssentiaDeck;
+  var list = D.live(S);
+  if (!list.length) { toast('No spaces to save yet.'); return; }
+  var btn = $('#bJpgAll');
+  btn.disabled = true;
+  var i = 0;
+  /* one at a time, spaced out — a browser refuses a burst of downloads */
+  (function next() {
+    if (i >= list.length) {
+      btn.disabled = false; btn.textContent = 'All as images';
+      toast(list.length + ' images saved.');
+      return;
+    }
+    var sp = list[i++];
+    btn.textContent = 'Drawing ' + i + '/' + list.length;
+    D.card(S, sp).then(function (uri) {
+      D.save(D.slug(S.project.code || S.project.name) + '-' + sp.no + '-' + D.slug(sp.name) + '.jpg', uri);
+      setTimeout(next, 450);
+    }).catch(function () { setTimeout(next, 120); });
+  })();
+});
 $('#bPreview').addEventListener('click', function () {
   window.EssentiaDeck.mount($('#fullpane'), S);
   document.body.classList.add('preview-full');

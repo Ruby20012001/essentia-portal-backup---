@@ -73,18 +73,27 @@ re-attach them or reopen the draft.
 
 The number on the drawing opens a panel that scrolls: the render, the other
 angles as thumbnails, the name, then **size · area · estimate**, then the line,
-the paragraph and the quotable. Under the writing sit two buttons.
+the paragraph and the quotable. Under the writing sit three buttons.
 
-**Save this space as PDF** prints that one space on its own — essentia mark,
+**Save as image** draws that space onto a single 1080px JPG — the essentia
+mark, the project and date, the render, the number, the name, the size, the
+area, the estimate, the writing, the quotable, the concept stamp and the
+disclaimer, all inside the picture. It is the one that matters for WhatsApp: a
+PDF has to be opened, an image shows itself in the message. Drawn on a canvas
+in about a fifth of a second, roughly 200 KB, and it needs no library and no
+network. **All as images** in the tool header does the whole deck, one file per
+space, saved one at a time so the browser does not refuse the burst.
+
+**Save as PDF** prints that one space on its own — essentia mark,
 project and date across the top, the space with its numbers and its renders,
 the disclaimer at the foot. Everything else in the deck is put away. It goes
 through the browser's own printer, which is where "Save as PDF" lives on a
 laptop and on a phone alike, so there is no library and nothing to install.
-**Save the whole deck** does the same for all of it, one space per sheet.
+**Whole deck** does the same for all of it, one space per sheet.
 
-So a client who is sent the link, opens one room and saves it has that room's
-size, area, estimate, drawings and words in a single PDF — without anyone at
-essentia assembling it.
+So a client who is sent the deck, opens one room and saves it, has that room's
+size, area, estimate, drawings and words in a single file — as a picture they
+can forward, or a PDF they can file — without anyone at essentia assembling it.
 
 ### The gates, and what they refuse
 
