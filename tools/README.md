@@ -107,7 +107,10 @@ The number on the drawing opens a panel that scrolls: the render, the other
 angles as thumbnails, the name, then **size · area · estimate**, then the line,
 the paragraph and the quotable. **Size, area and estimate are chips**, the same
 weight as the buttons beneath them, so the figures are as easy to find as the
-actions; tapping one copies its value. Under them sits the estimate basis, and
+actions. Size and area are facts and do nothing when pressed. The estimate
+opens: tapping it shows the arithmetic behind the number — 142 sq ft x 1,200
+per sq ft = 1,70,400 — which is simply printed on paper and inside the shared
+image, where there is nothing to tap. Under them sits the estimate basis, and
 anything entered under **What it includes**. Then five buttons — share,
 save as image, save as PDF, see it on the plan, and the whole deck.
 

@@ -181,7 +181,7 @@ button.deck-chip{cursor:pointer;transition:background-color .15s,border-color .1
 button.deck-chip:hover{background:var(--wash);border-color:var(--ink)}
 .deck-chip-l{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
 .deck-chip-v{font-size:16px;color:var(--ink);white-space:nowrap}
-.deck-chip[data-copied="1"] .deck-chip-l{color:var(--amber)}
+.deck-calc{margin:12px 0 0;font-size:13px;color:var(--ink)}
 .deck-spec-note{margin:10px 0 0;font-size:12px;color:var(--faint)}
 .deck-includes{margin:20px 0 0;padding-top:16px;border-top:1px solid var(--rule)}
 .deck-includes p{margin:7px 0 0;font-size:14px;color:var(--body);white-space:pre-line}
@@ -602,13 +602,22 @@ button,input,textarea,select{font:inherit;color:inherit}
     var basis = ((state || {}).project || {}).estimateBasis;
     var incl = (s.includes || '').trim();
     if (!rows.length && !incl) return '';
+    /* Size and area are facts — nothing to open, nothing to press. Only the
+       estimate has anything behind it: the area times the rate that made it. */
+    var rate = num(((state || {}).project || {}).rate);
+    var working = (s.estimateDerived && rate > 0 && num(s.area) > 0)
+      ? num(s.area).toLocaleString('en-IN') + ' sq ft  ×  ' + rupees(rate) + ' / sq ft  =  ' + s.estimate
+      : '';
     return (rows.length ? '<div class="deck-spec">' + rows.map(function (r) {
-      var inner = '<span class="deck-chip-l">' + esc(r[0]) + '</span>' +
+      var openable = interactive && r[0] === 'Estimate' && working;
+      var inner = '<span class="deck-chip-l">' + esc(r[0]) + (openable ? ' &#9662;' : '') + '</span>' +
                   '<span class="deck-chip-v">' + esc(r[1]) + '</span>';
-      return interactive
-        ? '<button class="deck-chip" data-copy="' + esc(r[1]) + '" title="Copy">' + inner + '</button>'
+      return openable
+        ? '<button class="deck-chip" data-calc title="How this is worked out">' + inner + '</button>'
         : '<span class="deck-chip">' + inner + '</span>';
     }).join('') + '</div>' : '') +
+    /* the arithmetic, hidden until asked for on screen and always shown on paper */
+    (working ? '<p class="deck-calc"' + (interactive ? ' hidden' : '') + '>' + esc(working) + '</p>' : '') +
     /* a figure with no basis stated is a figure waiting to be misread */
     ((s.estimate && basis) ? '<p class="deck-spec-note">' + esc(basis) + '</p>' : '') +
     (incl ? '<div class="deck-includes"><span class="deck-chip-l">What it includes</span>' +
@@ -959,6 +968,15 @@ button,input,textarea,select{font:inherit;color:inherit}
             cx += wBox + gap;
           });
           y = rowTop + chipH + 30;
+
+          /* nothing is tapped inside a picture, so the arithmetic is simply shown */
+          var cRate = num((state.project || {}).rate);
+          if (s.estimateDerived && cRate > 0 && num(s.area) > 0) {
+            c.fillStyle = CARD.soft; c.font = CARD.font(300, 24);
+            c.fillText(num(s.area).toLocaleString('en-IN') + ' sq ft  ×  ' + rupees(cRate) +
+                       ' / sq ft  =  ' + s.estimate, PAD, y);
+            y += 36;
+          }
 
           /* a shared picture must carry the basis with the figure */
           var basis = ((state.project || {}).estimateBasis || '').trim();
@@ -1317,37 +1335,15 @@ button,input,textarea,select{font:inherit;color:inherit}
       })();
     }
 
-    /* a figure is worth nothing if it cannot be lifted out of the page */
-    function copyChip(btn) {
-      var v = btn.getAttribute('data-copy') || '';
-      var label = btn.querySelector('.deck-chip-l');
-      var was = label ? label.textContent : '';
-      var mark = function () {
-        if (!label) return;
-        btn.setAttribute('data-copied', '1');
-        label.textContent = 'Copied';
-        setTimeout(function () { label.textContent = was; btn.removeAttribute('data-copied'); }, 1400);
-      };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(v).then(mark, function () { legacyCopy(v, mark); });
-      } else {
-        legacyCopy(v, mark);
-      }
-    }
-    function legacyCopy(v, done) {
-      var ta = document.createElement('textarea');
-      ta.value = v;
-      ta.setAttribute('readonly', '');
-      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
-      document.body.appendChild(ta);
-      ta.select();
-      try { document.execCommand('copy'); done(); } catch (err) { /* nothing to be done */ }
-      ta.remove();
-    }
-
     el.addEventListener('click', function (e) {
-      var chip = e.target.closest('[data-copy]');
-      if (chip) { copyChip(chip); return; }
+      /* Size and area are facts and do nothing. Only the estimate opens, and
+         what it opens is the arithmetic behind it — area times rate. */
+      var calc = e.target.closest('[data-calc]');
+      if (calc) {
+        var line = calc.closest('.deck-spec').nextElementSibling;
+        if (line && line.classList.contains('deck-calc')) line.hidden = !line.hidden;
+        return;
+      }
       var all = e.target.closest('[data-jpg-all]');
       if (all) { saveAllJpg(all); return; }
       var sh = e.target.closest('[data-share-one]');
