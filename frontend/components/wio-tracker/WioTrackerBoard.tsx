@@ -45,6 +45,40 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
    */
   const [printing, setPrinting] = useState<"view" | "summary" | null>(null);
 
+  /**
+   * Saving the view as a picture, for WhatsApp — where a PDF is an attachment
+   * somebody has to open and an image is just there in the thread.
+   *
+   * html2canvas is loaded only when the button is pressed. It is 200 KB, and
+   * charging that to every person who opens the board so that a few can save a
+   * picture is the wrong trade; imported here it costs nothing until used.
+   */
+  const saveImage = useCallback(async () => {
+    const area = document.getElementById("print-area");
+    if (!area) return;
+    setBanner(null);
+    try {
+      const { default: html2canvas } = await import("html2canvas");
+      const canvas = await html2canvas(area, {
+        // The board is white-on-black; a transparent PNG would come out as
+        // dark text on nothing in most viewers.
+        backgroundColor: "#000000",
+        scale: 2,
+        useCORS: true,
+      });
+      const url = canvas.toDataURL("image/jpeg", 0.92);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `wio-tracker-${board.settings.today}.jpg`;
+      a.click();
+    } catch {
+      setBanner({
+        tone: "error",
+        message: "Could not make the picture. Save as PDF works on any browser.",
+      });
+    }
+  }, [board.settings.today]);
+
   useEffect(() => {
     if (!printing) return;
     window.print();
@@ -206,6 +240,13 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
               className="rounded border border-line-strong bg-canvas px-3 py-1.5 font-body text-xs font-bold text-secondary transition-colors hover:bg-hover hover:text-ink"
             >
               Save 1-page summary
+            </button>
+            <button
+              type="button"
+              onClick={() => void saveImage()}
+              className="rounded border border-line-strong bg-canvas px-3 py-1.5 font-body text-xs font-light text-muted transition-colors hover:bg-hover hover:text-ink"
+            >
+              Save as JPG
             </button>
             <button
               type="button"
