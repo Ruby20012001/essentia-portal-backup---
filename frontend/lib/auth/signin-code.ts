@@ -53,11 +53,48 @@ export async function requestSignInCode(
     };
   }
 
-  const [account] = await query<{ id: string; full_name: string; email: string }>(
+  let [account] = await query<{ id: string; full_name: string; email: string }>(
     `SELECT id, full_name, email FROM public.users
       WHERE lower(email) = $1 AND is_active AND auth_provider = 'local'`,
     [email],
   );
+
+  // Nobody at essentia should have to be given an account before they can look
+  // at the board. If the address is on the company domain, the first code
+  // request makes them a view-only account and they are in — no password to
+  // hand out, no shared login, and the audit still knows who looked.
+  //
+  // The domain is the whole gate, and it holds because the code goes to the
+  // mailbox: someone can type any address they like, but only the person who
+  // opens that inbox gets in. TRACKER_VIEW (db/039) reads the board and
+  // nothing else, so what a stranger would gain by guessing a colleague's
+  // address is a screen they still cannot change.
+  if (!account) {
+    const domain = (process.env.SELF_SIGNUP_DOMAIN ?? "").trim().toLowerCase();
+    if (domain && email.endsWith(`@${domain}`)) {
+      const [made] = await query<{ id: string; full_name: string; email: string }>(
+        `INSERT INTO public.users
+           (email, full_name, display_name, access_level, department_id,
+            job_title, auth_provider)
+         SELECT $1, $2, $2, 'L3', d.id, 'essentia — view only', 'local'
+           FROM public.departments d
+          WHERE d.code = 'TRACKER_VIEW'
+         ON CONFLICT (email) DO NOTHING
+         RETURNING id, full_name, email`,
+        [email, email.split("@")[0]],
+      );
+      if (made) {
+        await writeAudit({
+          userId: made.id,
+          action: "VIEW_ACCOUNT_CREATED",
+          resourceType: "users",
+          resourceId: made.id,
+          newValues: { email, reason: "first sign-in code on the company domain" },
+        });
+        account = made;
+      }
+    }
+  }
 
   // No account, or a Microsoft account: say the same thing, send nothing.
   if (!account) {
