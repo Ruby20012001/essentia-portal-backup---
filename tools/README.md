@@ -69,15 +69,6 @@ rather than shipping a second copy.
 4. **Visuals** — drop, pick, or paste the renders onto each space. The first is
    the hero; the rest become the thumbnail strip. `↑` on any thumbnail promotes
    it to hero.
-
-   Under them is a second zone for the **signed drawings**, which come off the
-   drafting board as JPGs. They are kept apart from the renders on purpose: a
-   render is what it will look like, a drawing is what was agreed. In the deck
-   they follow the renders in the same thumbnail strip, each marked `DWG` and
-   shown whole rather than cropped, and they print under a *Signed drawings*
-   heading at the end of the space. They are held at 2200px against the renders'
-   1500px, because a drawing is read rather than admired. Optional — a space
-   with no drawing simply shows none.
    Each space carries four pieces of writing: the **one line** (what it is),
    the **paragraph** (why it sits there), and a **quotable** — one sentence,
    pulled out under an amber rule, meant to be the thing the client repeats to

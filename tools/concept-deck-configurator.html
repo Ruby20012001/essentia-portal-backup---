@@ -154,10 +154,6 @@
 .deck-thumb{width:56px;height:42px;border:1px solid var(--rule);padding:0;background:var(--wash);cursor:pointer;line-height:0}
 .deck-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .deck-thumb[aria-current="true"]{border-color:var(--ink)}
-.deck-thumb--dwg{position:relative;background:#fff}
-.deck-thumb--dwg img{object-fit:contain}
-.deck-thumb--dwg span{position:absolute;left:0;bottom:0;font-size:8px;letter-spacing:.1em;
-  background:var(--ink);color:#fff;padding:1px 3px;line-height:1.4}
 .deck-sheet-main{padding:20px 22px 26px;flex:1}
 .deck-sheet-meta{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
 .deck-sheet-main h3{font-family:var(--display);font-size:25px;font-weight:300;color:var(--ink);margin:0 0 4px}
@@ -254,7 +250,6 @@ button.deck-chip:hover{background:var(--wash);border-color:var(--ink)}
 .deck-print-space{display:block;padding-top:26px;border-top:1px solid var(--rule);margin-top:26px}
 /* these render on screen now, not only on paper — they must fit the phone */
 .deck-print-space img{display:block;max-width:100%;height:auto}
-.deck-dwg-label{margin:22px 0 0;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
 .js-on .deck-print-space{display:none}
 @media print{.deck-print-space{display:block !important;border-top:0;margin-top:0}}
 </style>
@@ -745,14 +740,7 @@ button,input,textarea,select{font:inherit;color:inherit}
         (s.images || []).map(function (im, k) {
           return '<img loading="lazy" decoding="async" data-sp="' + esc(s.id) + '" data-ix="' + k +
             '" src="' + im.src + '" alt="' + esc(s.name) + '" style="margin-top:10px">';
-        }).join('') +
-        ((s.drawings || []).length
-          ? '<p class="deck-dwg-label">Signed drawings</p>' +
-            s.drawings.map(function (im, k) {
-              return '<img loading="lazy" decoding="async" data-dsp="' + esc(s.id) + '" data-dix="' + k +
-                '" src="' + im.src + '" alt="' + esc(s.name) + ' drawing" style="margin-top:10px">';
-            }).join('')
-          : '') + '</section>';
+        }).join('') + '</section>';
     }).join('');
   }
 
@@ -1002,14 +990,6 @@ button,input,textarea,select{font:inherit;color:inherit}
     });
     var byId = {};
     (state.spaces || []).forEach(function (s) { byId[String(s.id)] = s; });
-    el.querySelectorAll('[data-dsp]').forEach(function (img) {
-      var sd = byId[img.getAttribute('data-dsp')];
-      if (!sd) return;
-      var dk = +img.getAttribute('data-dix');
-      sd.drawings = sd.drawings || [];
-      if (!sd.drawings[dk]) sd.drawings[dk] = { src: '', w: 0, h: 0 };
-      if (!sd.drawings[dk].src) sd.drawings[dk].src = img.getAttribute('src');
-    });
     el.querySelectorAll('[data-sp]').forEach(function (img) {
       var s = byId[img.getAttribute('data-sp')];
       if (!s) return;
@@ -1063,24 +1043,15 @@ button,input,textarea,select{font:inherit;color:inherit}
 
   function sheetHtml(s, i, total, state) {
     var imgs = s.images || [];
-    var dwgs = s.drawings || [];
     var hero = imgs[0]
       ? '<img src="' + imgs[0].src + '" alt="' + esc(s.name) + '" data-hero>'
       : '<span>No visual yet</span>';
     return '<div class="deck-sheet-hero' + (imgs[0] ? '' : ' deck-sheet-hero--none') + '">' + hero +
         '<button class="deck-x" data-sheet-close aria-label="Close">&times;</button></div>' +
-      /* renders first, then the signed drawings, marked so the two are never
-         mistaken for one another — one is intent, the other is agreement */
-      ((imgs.length + dwgs.length) > 1 ? '<div class="deck-thumbs">' +
-        imgs.map(function (im, k) {
-          return '<button class="deck-thumb" data-thumb="' + k + '" aria-current="' + (k === 0) + '">' +
-            '<img src="' + im.src + '" alt=""></button>';
-        }).join('') +
-        dwgs.map(function (im, k) {
-          return '<button class="deck-thumb deck-thumb--dwg" data-thumb="' + (imgs.length + k) +
-            '" aria-current="false" title="Signed drawing">' +
-            '<img src="' + im.src + '" alt=""><span>DWG</span></button>';
-        }).join('') + '</div>' : '') +
+      (imgs.length > 1 ? '<div class="deck-thumbs">' + imgs.map(function (im, k) {
+        return '<button class="deck-thumb" data-thumb="' + k + '" aria-current="' + (k === 0) + '">' +
+          '<img src="' + im.src + '" alt=""></button>';
+      }).join('') + '</div>' : '') +
       '<div class="deck-sheet-main">' +
         '<div class="deck-sheet-meta">' + esc(s.no) + (s.floor ? ' · ' + esc(s.floor) : '') + '</div>' +
         '<h3>' + esc(s.name) + '</h3>' +
@@ -1361,9 +1332,8 @@ button,input,textarea,select{font:inherit;color:inherit}
       if (th) {
         var k = +th.getAttribute('data-thumb');
         var s = spaces[at]; if (!s) return;
-        var all = (s.images || []).concat(s.drawings || []);
         var hero = sheetIn.querySelector('[data-hero]');
-        if (hero && all[k]) hero.src = all[k].src;
+        if (hero && s.images[k]) hero.src = s.images[k].src;
         sheetIn.querySelectorAll('[data-thumb]').forEach(function (b) {
           b.setAttribute('aria-current', String(+b.getAttribute('data-thumb') === k));
         });
@@ -1522,7 +1492,7 @@ function sample() {
     ['balcony', 'Ground floor'], ['balcony', 'Ground floor']
   ].forEach(function (r) {
     s.spaces.push({ id: uid(), include: true, name: r[0], floor: r[1], dims: '', area: '', estimate: '',
-      summary: '', body: '', plate: 0, x: null, y: null, images: [], drawings: [] });
+      summary: '', body: '', plate: 0, x: null, y: null, images: [] });
   });
   return s;
 }
@@ -1759,16 +1729,6 @@ function renderSpaces() {
               '<button class="tray-x" style="left:2px;right:auto" data-img-hero="' + i + '_' + k + '" title="Make hero">&uarr;</button>') +
             '</div>';
         }).join('') + '</div>' +
-        /* Signed drawings come off the drafting board as JPGs. They sit apart
-           from the renders because they are a different kind of evidence — the
-           render is what it will look like, the drawing is what was agreed. */
-        '<div class="drop" tabindex="0" data-dwg-drop="' + i + '" style="margin-top:12px">' +
-          'Click, drop, or paste the signed drawings for this space (JPG)</div>' +
-        '<div class="tray">' + (s.drawings || []).map(function (im, k) {
-          return '<div class="tray-item"><img src="' + im.src + '" alt="">' +
-            '<button class="tray-x" data-dwg-del="' + i + '_' + k + '" title="Remove">&times;</button>' +
-            '<span class="tray-hero">DWG</span></div>';
-        }).join('') + '</div>' +
       '</div></div>';
     }).join('');
 
@@ -1823,28 +1783,16 @@ function renderSpaces() {
       var arr = S.spaces[+p[0]].images; arr.unshift(arr.splice(+p[1], 1)[0]); renderAll();
     });
   });
-  host.querySelectorAll('[data-dwg-del]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      var p = b.getAttribute('data-dwg-del').split('_');
-      S.spaces[+p[0]].drawings.splice(+p[1], 1); renderAll();
-    });
-  });
-  host.querySelectorAll('[data-img-drop],[data-dwg-drop]').forEach(function (d) {
-    var isDwg = d.hasAttribute('data-dwg-drop');
-    var i = +d.getAttribute(isDwg ? 'data-dwg-drop' : 'data-img-drop');
-    var word = isDwg ? 'drawing' : 'visual';
+  host.querySelectorAll('[data-img-drop]').forEach(function (d) {
+    var i = +d.getAttribute('data-img-drop');
     function take(files) {
       var fs = Array.prototype.slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); });
       if (!fs.length) return;
-      d.textContent = 'Importing ' + fs.length + ' ' + word + (fs.length > 1 ? 's' : '') + '…';
-      /* a drawing is read, not admired — it keeps more pixels than a render */
-      Promise.all(fs.map(function (f) {
-        return isDwg ? importImage(f, 2200, 0.9, false) : importImage(f, 1500, 0.82, false);
-      }))
+      d.textContent = 'Importing ' + fs.length + ' image' + (fs.length > 1 ? 's' : '') + '…';
+      Promise.all(fs.map(function (f) { return importImage(f, 1500, 0.82, false); }))
         .then(function (ims) {
-          var key = isDwg ? 'drawings' : 'images';
-          S.spaces[i][key] = (S.spaces[i][key] || []).concat(ims);
-          renderAll(); toast(ims.length + ' ' + word + (ims.length > 1 ? 's' : '') + ' added.');
+          S.spaces[i].images = (S.spaces[i].images || []).concat(ims);
+          renderAll(); toast(ims.length + ' visual' + (ims.length > 1 ? 's' : '') + ' added.');
         })
         .catch(function (e) { toast(e.message); renderAll(); });
     }
@@ -1931,7 +1879,7 @@ document.addEventListener('paste', function (e) {
 
   var focus = document.activeElement;
   var plate = focus && focus.closest ? focus.closest('[data-plate-drop]') : null;
-  var space = focus && focus.closest ? focus.closest('[data-img-drop],[data-dwg-drop]') : null;
+  var space = focus && focus.closest ? focus.closest('[data-img-drop]') : null;
   if (!plate && !space) {
     /* nothing chosen — send it to the first plate that has no plan yet */
     var empty = S.plates.findIndex(function (p) { return !p.src; });
@@ -1947,13 +1895,10 @@ document.addEventListener('paste', function (e) {
       renderAll(); toast('Plan pasted · ' + im.w + '×' + im.h + '.');
     }).catch(function (err) { toast(err.message); });
   } else {
-    var dwg = space.hasAttribute('data-dwg-drop');
-    var si = +space.getAttribute(dwg ? 'data-dwg-drop' : 'data-img-drop');
-    importImage(file, dwg ? 2200 : 1500, dwg ? 0.9 : 0.82, false).then(function (im) {
-      var key = dwg ? 'drawings' : 'images';
-      S.spaces[si][key] = (S.spaces[si][key] || []).concat([im]);
-      renderAll();
-      toast((dwg ? 'Drawing' : 'Visual') + ' pasted into ' + (S.spaces[si].name || 'the space') + '.');
+    var si = +space.getAttribute('data-img-drop');
+    importImage(file, 1500, 0.82, false).then(function (im) {
+      S.spaces[si].images = (S.spaces[si].images || []).concat([im]);
+      renderAll(); toast('Visual pasted into ' + (S.spaces[si].name || 'the space') + '.');
     }).catch(function (err) { toast(err.message); });
   }
 });
@@ -2044,7 +1989,7 @@ function saveLocal() {
   try {
     var light = JSON.parse(JSON.stringify(S));
     light.plates.forEach(function (p) { p.src = ''; });
-    light.spaces.forEach(function (s) { s.images = []; s.drawings = []; });
+    light.spaces.forEach(function (s) { s.images = []; });
     light.logo = '';
     localStorage.setItem('essentia.deck.draft', JSON.stringify(light));
   } catch (e) { /* private window, full quota — the .json draft is the real save */ }
@@ -2078,7 +2023,6 @@ function exportDeck() {
   slim.plates.forEach(function (p) { p.src = ''; });
   slim.spaces.forEach(function (s) {
     (s.images || []).forEach(function (im) { im.src = ''; });
-    (s.drawings || []).forEach(function (im) { im.src = ''; });
   });
 
   var html =
@@ -2120,7 +2064,7 @@ $('#bAddPlate').addEventListener('click', function () {
 });
 $('#bAddSpace').addEventListener('click', function () {
   S.spaces.push({ id: uid(), include: true, name: '', floor: (S.plates[0] || {}).label || '',
-    dims: '', area: '', estimate: '', includes: '', summary: '', body: '', quote: '', plate: 0, x: null, y: null, images: [], drawings: [] });
+    dims: '', area: '', estimate: '', includes: '', summary: '', body: '', quote: '', plate: 0, x: null, y: null, images: [] });
   renderAll();
   var rows = $('#spaces').querySelectorAll('[data-space-row]');
   var last = rows[rows.length - 1];
@@ -2144,7 +2088,7 @@ $('#fLoad').addEventListener('change', function () {
       S = o;
       if (!S.plates) S.plates = [{ label: 'Ground floor', src: '', w: 0, h: 0 }];
       if (!S.narrative) S.narrative = blank().narrative;
-      S.spaces.forEach(function (s) { if (!s.id) s.id = uid(); if (!s.images) s.images = []; if (!s.drawings) s.drawings = []; });
+      S.spaces.forEach(function (s) { if (!s.id) s.id = uid(); if (!s.images) s.images = []; });
       boot(); toast('Draft opened.');
     } catch (e) { toast('That file is not a deck draft.'); }
     $('#fLoad').value = '';
@@ -2224,7 +2168,7 @@ function boot() {
   } catch (e) { /* nothing to restore */ }
   S = restored || sample();
   if (!S.plates) S.plates = [{ label: 'Ground floor', src: '', w: 0, h: 0 }];
-  S.spaces.forEach(function (s) { if (!s.id) s.id = uid(); if (!s.images) s.images = []; if (!s.drawings) s.drawings = []; });
+  S.spaces.forEach(function (s) { if (!s.id) s.id = uid(); if (!s.images) s.images = []; });
   boot();
   if (restored) toast('Restored your last session (text only — re-attach the images).');
 })();
