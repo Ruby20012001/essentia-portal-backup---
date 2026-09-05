@@ -51,6 +51,7 @@ export const DEFAULT_FILES = [
   "037_wio_team_passwords.sql",
   "038_tracker_write_only_drafting.sql",
   "039_tracker_view_account.sql",
+  "040_lead_password_reset.sql",
   "900_dev_fixtures.sql",
 ];
 

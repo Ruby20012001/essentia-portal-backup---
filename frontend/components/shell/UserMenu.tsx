@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { SessionUser } from "@/lib/auth/session";
 import { ChangePassword } from "@/components/shell/ChangePassword";
+import { TeamPasswords } from "@/components/shell/TeamPasswords";
 
 const LEVEL_LABEL: Record<SessionUser["accessLevel"], string> = {
   L0: "Founder",
@@ -26,6 +27,9 @@ export function UserMenu({ user }: { user: SessionUser }) {
       </div>
       {/* Beside Sign out, because both are things you do to your own account
           and this is the only place in the shell that is about you. */}
+      {/* Only rendered for someone who actually has people to reset — the
+          component asks the server and returns null otherwise. */}
+      <TeamPasswords />
       <ChangePassword />
       <button
         type="button"
