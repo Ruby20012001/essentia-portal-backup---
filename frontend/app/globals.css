@@ -169,15 +169,20 @@
    ===================================================================== */
 
 .login-photo {
+  /* Softened on purpose. The room is atmosphere, not the subject — sharp, it
+     competes with the one thing on this page that matters, which is the field
+     someone has to type into. The extra scale keeps the blur from bleeding a
+     pale edge in, since blur samples beyond the box. */
+  filter: blur(6px) saturate(0.92) brightness(1.04);
   animation: login-drift 46s ease-in-out infinite alternate;
 }
 
 @keyframes login-drift {
   from {
-    transform: scale(1.06) translate3d(-1%, 0, 0);
+    transform: scale(1.12) translate3d(-1%, 0, 0);
   }
   to {
-    transform: scale(1.14) translate3d(1%, -1%, 0);
+    transform: scale(1.2) translate3d(1%, -1%, 0);
   }
 }
 
@@ -235,7 +240,7 @@
   }
 
   .login-photo {
-    transform: scale(1.06);
+    transform: scale(1.12);
   }
 
   .login-intro {
