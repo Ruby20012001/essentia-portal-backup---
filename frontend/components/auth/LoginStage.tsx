@@ -66,39 +66,15 @@ export function LoginStage({
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-espresso px-6">
-      {/* Fluted timber, the panelling behind everything. */}
-      <div aria-hidden className="login-flute absolute inset-0" />
-
-      {/* Daylight through a tall window, crossing the room. */}
-      <div aria-hidden className="login-shaft absolute inset-0" />
-
-      {/* The pendant lamp, warm and low. */}
-      <div aria-hidden className="login-light absolute inset-0" />
-
-      {/* The plan, drawing itself: rooms, a doorway, a table, a rug. */}
-      <svg
+      {/* The room. It drifts, very slowly — a still photograph on a login
+          screen reads as a poster; a moving one reads as a place. */}
+      <div
         aria-hidden
-        viewBox="0 0 1200 700"
-        preserveAspectRatio="xMidYMid slice"
-        className="login-plan absolute inset-0 h-full w-full"
-      >
-        <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square">
-          <rect x="120" y="90" width="430" height="290" />
-          <rect x="550" y="90" width="530" height="290" />
-          <rect x="120" y="380" width="960" height="230" />
-          {/* a doorway and its swing */}
-          <path d="M550 250 h0 M550 190 v60" />
-          <path d="M550 250 a60 60 0 0 0 60 -60" />
-          {/* a round table and its chairs */}
-          <circle cx="800" cy="235" r="52" />
-          <circle cx="800" cy="235" r="86" strokeDasharray="4 10" />
-          {/* a rug */}
-          <rect x="250" y="430" width="380" height="140" strokeDasharray="6 8" />
-          {/* setting-out lines */}
-          <path d="M120 660 h960 M120 650 v20 M1080 650 v20" />
-          <path d="M60 90 v520 M50 90 h20 M50 610 h20" />
-        </g>
-      </svg>
+        className="login-photo absolute inset-0 bg-[url('/brand/login.jpg')] bg-cover bg-center"
+      />
+
+      {/* Warmth of the brand over whatever the photograph is doing. */}
+      <div aria-hidden className="login-light absolute inset-0" />
 
       {/* Keeps whatever is behind from competing with the type. */}
       <div
