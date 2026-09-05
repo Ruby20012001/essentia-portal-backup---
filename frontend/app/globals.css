@@ -148,3 +148,153 @@
     font-size: inherit;
   }
 }
+
+/* =====================================================================
+   SIGN-IN — the wordmark, a wipe, then the form.
+
+   Drawn, not photographed. A render is one project and this page belongs to
+   all of them; it also costs a download before anyone can type. Everything
+   below is built from gradients, so it weighs nothing and scales to any
+   screen.
+
+   The mood is the reference Ruby sent: fluted dark timber, a warm lamp, and
+   daylight coming in sideways. Four layers, back to front — timber, daylight,
+   lamp, plan — each faint enough that no single one is noticed, which is the
+   point. A login background that gets looked at is a login background that is
+   in the way.
+
+   Amber (#A8895C) is the brand's own accent, so the warmth here is essentia's
+   rather than a colour borrowed from a photograph.
+
+   All of it is decoration, so all of it is switched off under
+   prefers-reduced-motion at the foot of the block.
+   ===================================================================== */
+
+/* Fluted timber panelling. Fine vertical battens, drifting slowly enough that
+   the movement is felt rather than seen. */
+.login-flute {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.028) 0px,
+    rgba(255, 255, 255, 0.028) 1px,
+    transparent 1px,
+    transparent 9px
+  );
+  animation: login-flute-drift 60s linear infinite;
+}
+
+@keyframes login-flute-drift {
+  to {
+    background-position-x: 90px;
+  }
+}
+
+/* Daylight through a tall window, falling across the room at an angle. */
+.login-shaft {
+  background: linear-gradient(
+    102deg,
+    transparent 18%,
+    rgba(255, 255, 255, 0.05) 24%,
+    transparent 30%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.032) 45%,
+    transparent 52%
+  );
+  animation: login-shaft-move 44s ease-in-out infinite alternate;
+}
+
+@keyframes login-shaft-move {
+  from {
+    transform: translate3d(-4%, 0, 0);
+    opacity: 0.75;
+  }
+  to {
+    transform: translate3d(6%, 0, 0);
+    opacity: 1;
+  }
+}
+
+/* The pendant lamp: one warm pool, breathing. Not a pulse — a room settling. */
+.login-light {
+  background:
+    radial-gradient(48% 42% at 72% 34%, rgba(168, 137, 92, 0.3), transparent 68%),
+    radial-gradient(62% 55% at 18% 78%, rgba(168, 137, 92, 0.14), transparent 72%);
+  animation: login-glow 26s ease-in-out infinite alternate;
+}
+
+@keyframes login-glow {
+  from {
+    opacity: 0.82;
+    transform: scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+/* The plan draws itself once, then stays. A line that keeps redrawing turns a
+   background into a distraction. */
+.login-plan {
+  color: rgba(198, 160, 106, 0.16);
+}
+
+.login-plan g {
+  stroke-dasharray: 2400;
+  stroke-dashoffset: 2400;
+  animation: login-draw 3.6s 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes login-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* The intro: the wordmark alone, then a wipe upward. clip-path rather than
+   opacity, so it reads as a curtain drawn back and not a light dimmed. */
+.login-intro {
+  clip-path: inset(0 0 0 0);
+  transition:
+    clip-path 900ms cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 900ms ease;
+}
+
+.login-intro--gone {
+  clip-path: inset(0 0 100% 0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.login-mark {
+  animation: login-mark-in 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes login-mark-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-flute,
+  .login-shaft,
+  .login-light,
+  .login-plan g,
+  .login-mark {
+    animation: none;
+  }
+
+  .login-plan g {
+    stroke-dashoffset: 0;
+  }
+
+  .login-intro {
+    transition: none;
+  }
+}
