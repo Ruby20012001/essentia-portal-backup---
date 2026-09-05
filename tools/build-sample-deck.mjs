@@ -255,6 +255,7 @@ const state = {
     x: s.x == null ? null : s.x,
     y: s.y == null ? null : s.y,
     images: s.imgs.map((n) => ({ src: jpg(n), w: 0, h: 0 })),
+    drawings: [],   /* signed drawings are uploaded by the team, not in the lookbook */
   })),
   narrative: {
     lead: 'A drawing is a language. Nobody should have to learn it to see their own home.',
