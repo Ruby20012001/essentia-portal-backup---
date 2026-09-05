@@ -44,21 +44,21 @@ export function ChangePassword() {
         onClick={() => setOpen(true)}
         className="rounded border border-cream/25 px-3 py-1 font-body text-[11px] font-bold text-cream/80 transition-colors hover:border-cream/60 hover:text-cream"
       >
-        Password
+        Reset password
       </button>
 
       {open ? (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Change your password"
+          aria-label="Reset your password"
           className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 px-4 py-16"
           onClick={(e) => {
             if (e.target === e.currentTarget) close();
           }}
         >
           <div className="w-full max-w-sm rounded-lg border border-line bg-canvas p-6">
-            <h2 className="font-body text-base font-bold text-white">Change your password</h2>
+            <h2 className="font-body text-base font-bold text-white">Reset your password</h2>
             <p className="mt-1 font-body text-xs font-light text-secondary">
               You will stay signed in here. Every other device is signed out.
             </p>
@@ -86,15 +86,15 @@ export function ChangePassword() {
                   });
                   const data = await res.json().catch(() => ({}));
                   if (!res.ok) {
-                    setError(data.error ?? "Could not change the password.");
+                    setError(data.error ?? "Could not reset the password.");
                     return;
                   }
                   setDone(
                     data.otherSessionsEnded > 0
-                      ? `Password changed. ${data.otherSessionsEnded} other session${
+                      ? `Password reset. ${data.otherSessionsEnded} other session${
                           data.otherSessionsEnded === 1 ? " was" : "s were"
                         } signed out.`
-                      : "Password changed.",
+                      : "Password reset.",
                   );
                   setCurrent("");
                   setNext("");
@@ -168,7 +168,7 @@ export function ChangePassword() {
                   disabled={busy}
                   className="rounded bg-forest px-4 py-2 font-body text-xs font-bold text-white transition-colors hover:bg-forest/90 disabled:opacity-50"
                 >
-                  {busy ? "Saving…" : "Change password"}
+                  {busy ? "Saving…" : "Reset password"}
                 </button>
                 <button
                   type="button"
