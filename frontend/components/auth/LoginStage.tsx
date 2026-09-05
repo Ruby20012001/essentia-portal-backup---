@@ -73,6 +73,11 @@ export function LoginStage({
         className="login-photo absolute inset-0 bg-[url('/brand/login.jpg')] bg-cover bg-center"
       />
 
+      {/* The bedside lamp, breathing. A photograph cannot dim its own light,
+          so the glow sits over where the lamp actually is and does the
+          brightening instead — the room reads as lit rather than printed. */}
+      <div aria-hidden className="login-lamp absolute inset-0" />
+
       {/* Warmth of the brand over whatever the photograph is doing. */}
       <div aria-hidden className="login-light absolute inset-0" />
 

@@ -247,3 +247,35 @@
     transition: none;
   }
 }
+
+/* The bedside lamp, breathing.
+
+   A photograph cannot dim its own light, so this sits exactly over the lamp in
+   the render and brightens instead. Positioned in percentages of the frame so
+   it stays on the lamp at any window size, and slow enough — nine seconds out,
+   nine back — that it reads as a room settling rather than a pulse. Anything
+   faster looks like a fault. */
+.login-lamp {
+  background:
+    radial-gradient(13% 20% at 69% 77%, rgba(255, 226, 178, 0.55), transparent 70%),
+    radial-gradient(26% 34% at 69% 77%, rgba(214, 173, 116, 0.26), transparent 72%),
+    radial-gradient(30% 26% at 15% 62%, rgba(214, 173, 116, 0.14), transparent 74%);
+  mix-blend-mode: screen;
+  animation: login-lamp-breathe 18s ease-in-out infinite alternate;
+}
+
+@keyframes login-lamp-breathe {
+  from {
+    opacity: 0.28;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-lamp {
+    animation: none;
+    opacity: 0.7;
+  }
+}
