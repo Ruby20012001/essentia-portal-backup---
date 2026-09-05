@@ -39,6 +39,15 @@ sections, inserts the card grid, and opens the panels. Each picture is stored
 exactly once — the interactive layer harvests the images back out of the markup
 rather than shipping a second copy.
 
+The header carries a **build stamp** and a row of jump links — Cover, Plates,
+Drawings, Estimate, Spaces, Narrative, Gates. The stamp says which copy of the
+tool is open, which settles the commonest confusion once a few versions have
+been downloaded; the links land on any card without scrolling past the Spaces
+list, which runs thousands of pixels long on a real project.
+
+Delivery copies are cut with ,
+which writes the build time into the file and the filename together.
+
 ### Working sequence
 
 1. **Client & cover** — project name, project code (`ED/YY-YY/NNN`), Client

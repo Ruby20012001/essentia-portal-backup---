@@ -316,6 +316,13 @@ button,input,textarea,select{font:inherit;color:inherit}
 .head h1{margin:0;font-size:25px;font-weight:300;letter-spacing:.01em}
 .head-sub{margin:5px 0 0;font-size:13px;color:var(--secondary)}
 .head-actions{display:flex;gap:8px;flex-wrap:wrap}
+.head-build{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);
+  border:1px solid var(--line-strong);padding:4px 9px;vertical-align:middle;margin-left:10px}
+.head-jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.head-jump a{font-size:11px;letter-spacing:.08em;color:var(--secondary);text-decoration:none;
+  border:1px solid var(--line);padding:6px 11px}
+.head-jump a:hover{background:var(--hover);border-color:var(--line-strong);color:var(--ink)}
+.card{scroll-margin-top:16px}
 
 .btn{background:transparent;border:1px solid var(--line-strong);color:var(--ink);padding:8px 14px;
   font-size:11px;letter-spacing:.11em;text-transform:uppercase;cursor:pointer;transition:background-color .15s,border-color .15s,opacity .15s}
@@ -471,8 +478,11 @@ button,input,textarea,select{font:inherit;color:inherit}
       <div class="head-eyebrow">Tools / Concept Deck</div>
       <div class="head-row">
         <div>
-          <h1>Concept Deck</h1>
+          <h1>Concept Deck <span class="head-build" id="headBuild">build unstamped</span></h1>
           <p class="head-sub">Attach the plan, mark the spaces, add the visuals — then preview and send.</p>
+          <nav class="head-jump" aria-label="Jump to a section">
+            <a href="#card-cover">Cover</a><a href="#card-plates">Plates</a><a href="#card-drawings">Drawings</a><a href="#card-estimate">Estimate</a><a href="#card-spaces">Spaces</a><a href="#card-narrative">Narrative</a><a href="#card-gates">Gates</a>
+          </nav>
         </div>
         <div class="head-actions">
           <button class="btn" id="bPreview">Preview</button>
@@ -498,14 +508,14 @@ button,input,textarea,select{font:inherit;color:inherit}
       <!-- editor -->
       <div class="pane-edit">
 
-        <section class="card">
+        <section class="card" id="card-cover">
           <h2>Client &amp; cover</h2>
           <div class="card-in">
             <div class="fields" id="fCover"></div>
           </div>
         </section>
 
-        <section class="card">
+        <section class="card" id="card-plates">
           <h2>Layout plates</h2>
           <div class="card-in">
             <p class="f-hint" style="margin:0 0 12px">
@@ -517,7 +527,7 @@ button,input,textarea,select{font:inherit;color:inherit}
           </div>
         </section>
 
-        <section class="card">
+        <section class="card" id="card-drawings">
           <h2>Signed drawings</h2>
           <div class="card-in">
             <p class="f-hint" style="margin:0 0 12px">
@@ -529,7 +539,7 @@ button,input,textarea,select{font:inherit;color:inherit}
           </div>
         </section>
 
-        <section class="card">
+        <section class="card" id="card-estimate">
           <h2>Detailed estimate</h2>
           <div class="card-in">
             <p class="f-hint" style="margin:0 0 12px">
@@ -542,7 +552,7 @@ button,input,textarea,select{font:inherit;color:inherit}
           </div>
         </section>
 
-        <section class="card">
+        <section class="card" id="card-spaces">
           <h2>Spaces</h2>
           <div class="card-in">
             <div id="spaces"></div>
@@ -555,12 +565,12 @@ button,input,textarea,select{font:inherit;color:inherit}
         </section>
 
 
-        <section class="card">
+        <section class="card" id="card-narrative">
           <h2>Narrative</h2>
           <div class="card-in"><div class="fields" id="fNarr"></div></div>
         </section>
 
-        <section class="card">
+        <section class="card" id="card-gates">
           <h2>Publish gates</h2>
           <div class="card-in"><div class="stat" id="gates"></div></div>
         </section>
@@ -2356,6 +2366,9 @@ var LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABiAAAAE0CAYAAACl//uOAA
   nav.src = LOGO; nav.hidden = false;
   document.getElementById("navWord").hidden = true;
 })();
+
+var TOOL_BUILD = '__TOOL_BUILD__';
+if (TOOL_BUILD.indexOf('_') !== 0) document.getElementById('headBuild').textContent = 'build ' + TOOL_BUILD;
 
 function boot() {
   S.logo = LOGO;               // every deck carries the mark, however it was opened
