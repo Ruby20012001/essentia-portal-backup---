@@ -1246,7 +1246,7 @@ button,input,textarea,select{font:inherit;color:inherit}
     }
     /* ── moving on by itself ──────────────────────────────────────────── */
     var autoDir = 0, autoTimer = null;
-    var autoSecs = Math.max(3, +((state.project || {}).autoSeconds) || 5);
+    var autoSecs = Math.max(1, +((state.project || {}).autoSeconds) || 2);
 
     function stopAuto() {
       autoDir = 0;
@@ -1570,7 +1570,7 @@ function blank(type) {
       name: '', client: '', contact: '', address: '', code: '',
       eyebrow: 'CONCEPT DECK · PRIVATE RESIDENCE', slogan: 'different by design', closing: '',
       headline: '', kind: 'Interior Concept Deck',
-      dateLabel: '', confidentiality: 'Confidential', rate: '', estimateBasis: '', autoSeconds: '5',
+      dateLabel: '', confidentiality: 'Confidential', rate: '', estimateBasis: '', autoSeconds: '2',
       designer: '', firm: 'essentia environments',
       firmLine: 'essentia Design & Project Partners · Sector 34, Gurugram · Since 1999',
       site: 'essentiaenvironments.com'
@@ -1693,7 +1693,7 @@ function renderCover() {
             ph: 'The last line before the signatures.' }) +
     field({ key: 'headline', label: 'Cover headline', wide: true, area: true, rows: 2,
             ph: 'The plan, in the way you will actually live in it.' }) +
-    field({ key: 'autoSeconds', label: 'Move on after (seconds)', ph: '5',
+    field({ key: 'autoSeconds', label: 'Move on after (seconds)', ph: '2',
             hint: 'The pace of Play and Reverse inside a space. Never starts on its own.' }) +
     field({ key: 'estimateBasis', label: 'Estimate basis', wide: true,
             ph: 'Indicative, at essentia published rates. Not a quotation.',

@@ -148,7 +148,7 @@ network. **All as images** in the tool header does the whole deck, one file per
 space, saved one at a time so the browser does not refuse the burst.
 
 Under the buttons, **Play** and **Reverse** walk the deck on their own — one
-space every 5 seconds, forward or backward, so nobody taps Next fifteen times.
+space every 2 seconds, forward or backward, so nobody taps Next fifteen times.
 An amber bar shows the time left, so a room is never pulled away unannounced.
 It never starts by itself, it stops at either end rather than looping, and any
 tap on Previous, Next or an arrow key hands control straight back. The pace is
