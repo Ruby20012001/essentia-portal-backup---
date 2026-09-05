@@ -82,9 +82,17 @@ rather than shipping a second copy.
    for the client who cannot read a drawing — it is the record of what was
    agreed — so it stands on its own rather than sitting among the renders.
    Held at 2400px, because a drawing is read rather than admired.
-6. **Narrative** — the note the client reads before the spaces, and the
+6. **Detailed estimate** — the sheet the number was built from, page by page,
+   so a client can read it rather than take it on trust. Same shape as the
+   drawings: drop the JPGs, name and date each page. It becomes its own chapter,
+   and the arithmetic behind the estimate chip links straight to it.
+
+   A page of a BOQ is unreadable at page width on a phone, so **tapping any
+   drawing or estimate page opens it full screen at its own size**, to be panned
+   and pinched rather than squinted at. Held at 2600px for the same reason.
+7. **Narrative** — the note the client reads before the spaces, and the
    representational-purpose disclaimer.
-7. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.
+8. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.
 
 `SAVE DRAFT` writes a `.json` holding everything including the images — that is
 the real save. The tool also keeps the *text* of your last session in the

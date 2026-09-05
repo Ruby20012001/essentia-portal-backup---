@@ -124,6 +124,17 @@
 .deck-dwg figcaption{padding:11px 14px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--soft);border-top:1px solid var(--rule);background:var(--paper)}
 .deck-dwgs figure:last-child{margin-bottom:0}
+.js-on .deck-dwg img{cursor:zoom-in}
+.deck-lb{position:fixed;inset:0;z-index:70;background:rgba(17,17,17,.94);display:none;overflow:auto;
+  -webkit-overflow-scrolling:touch}
+.deck-lb[data-open="1"]{display:block}
+.deck-lb img{display:block;width:auto;max-width:none;margin:0 auto}
+.deck-lb-bar{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:12px 16px;background:rgba(17,17,17,.94);color:#fff;font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;z-index:2}
+.deck-lb-bar button{font:inherit;background:transparent;border:1px solid rgba(255,255,255,.4);
+  color:#fff;padding:7px 14px;cursor:pointer}
+@media print{.deck-lb{display:none !important}}
 .deck-note .deck-quote{font-family:var(--display);font-size:19px;line-height:1.5;color:var(--ink);
   border-left:2px solid var(--amber);padding-left:18px;margin:0 0 18px}
 
@@ -182,6 +193,7 @@ button.deck-chip:hover{background:var(--wash);border-color:var(--ink)}
 .deck-chip-l{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
 .deck-chip-v{font-size:16px;color:var(--ink);white-space:nowrap}
 .deck-calc{margin:12px 0 0;font-size:13px;color:var(--ink)}
+.deck-calc-link{display:block;margin-top:8px;font-size:12px;color:var(--amber);text-underline-offset:3px}
 .deck-spec-note{margin:10px 0 0;font-size:12px;color:var(--faint)}
 .deck-includes{margin:20px 0 0;padding-top:16px;border-top:1px solid var(--rule)}
 .deck-includes p{margin:7px 0 0;font-size:14px;color:var(--body);white-space:pre-line}
@@ -530,6 +542,19 @@ button,input,textarea,select{font:inherit;color:inherit}
         </section>
 
         <section class="card">
+          <h2>Detailed estimate</h2>
+          <div class="card-in">
+            <p class="f-hint" style="margin:0 0 12px">
+              The sheet the number was built from, page by page, so a client can read it
+              rather than take it on trust. Its own section in the deck; tapping a page
+              opens it full screen to be read. Optional.
+            </p>
+            <div class="drop" tabindex="0" id="estDrop">Click, drop, or paste the estimate pages (JPG)</div>
+            <div id="estList"></div>
+          </div>
+        </section>
+
+        <section class="card">
           <h2>Narrative</h2>
           <div class="card-in"><div class="fields" id="fNarr"></div></div>
         </section>
@@ -617,7 +642,10 @@ button,input,textarea,select{font:inherit;color:inherit}
         : '<span class="deck-chip">' + inner + '</span>';
     }).join('') + '</div>' : '') +
     /* the arithmetic, hidden until asked for on screen and always shown on paper */
-    (working ? '<p class="deck-calc"' + (interactive ? ' hidden' : '') + '>' + esc(working) + '</p>' : '') +
+    (working ? '<p class="deck-calc"' + (interactive ? ' hidden' : '') + '>' + esc(working) +
+      (((state || {}).estimateDocs || []).some(function (d) { return d.src; })
+        ? '<a class="deck-calc-link" href="#detailed-estimate">See the detailed estimate</a>' : '') +
+      '</p>' : '') +
     /* a figure with no basis stated is a figure waiting to be misread */
     ((s.estimate && basis) ? '<p class="deck-spec-note">' + esc(basis) + '</p>' : '') +
     (incl ? '<div class="deck-includes"><span class="deck-chip-l">What it includes</span>' +
@@ -756,6 +784,24 @@ button,input,textarea,select{font:inherit;color:inherit}
           '<img loading="lazy" decoding="async" data-dwg="' + k + '" src="' + d.src + '" alt="' +
             esc(d.label || 'Signed drawing') + '">' +
           '<figcaption>' + esc(d.label || 'Signed drawing') +
+            (d.date ? ' · ' + esc(d.date) : '') + '</figcaption>' +
+        '</figure>';
+      }).join('') + '</section>';
+  }
+
+  /* The detailed estimate, as its own chapter. The chip gives one figure and
+     the arithmetic behind it; this is the sheet the figure was built from. */
+  function estimateDocsHtml(state) {
+    var docs = (state.estimateDocs || []).filter(function (d) { return d.src; });
+    if (!docs.length) return '';
+    return '<section class="deck-sec deck-dwgs" id="detailed-estimate">' +
+      '<span class="deck-eyebrow">05 Detailed estimate</span>' +
+      '<h2>Where the number comes from.</h2>' +
+      docs.map(function (d, k) {
+        return '<figure class="deck-dwg">' +
+          '<img loading="lazy" decoding="async" data-est="' + k + '" src="' + d.src + '" alt="' +
+            esc(d.label || 'Detailed estimate') + '">' +
+          '<figcaption>' + esc(d.label || 'Detailed estimate') +
             (d.date ? ' · ' + esc(d.date) : '') + '</figcaption>' +
         '</figure>';
       }).join('') + '</section>';
@@ -1039,6 +1085,12 @@ button,input,textarea,select{font:inherit;color:inherit}
   function harvest(el, state) {
     var lg = el.querySelector('[data-logo]');
     if (lg && !state.logo) state.logo = lg.getAttribute('src');
+    el.querySelectorAll('[data-est]').forEach(function (img) {
+      var ek = +img.getAttribute('data-est');
+      state.estimateDocs = state.estimateDocs || [];
+      if (!state.estimateDocs[ek]) state.estimateDocs[ek] = { src: '', label: '' };
+      if (!state.estimateDocs[ek].src) state.estimateDocs[ek].src = img.getAttribute('src');
+    });
     el.querySelectorAll('[data-dwg]').forEach(function (img) {
       var k = +img.getAttribute('data-dwg');
       state.drawings = state.drawings || [];
@@ -1097,7 +1149,9 @@ button,input,textarea,select{font:inherit;color:inherit}
   function deckHtml(state, opts) {
     return '<article class="deck">' + printHeadHtml(state) + coverHtml(state) + planHtml(state) +
       ((opts && opts.noIndex) ? '' : indexHtml(state)) +
-      noteHtml(state) + drawingsHtml(state) + printHtml(state) + footHtml(state) + '</article>' +
+      noteHtml(state) + drawingsHtml(state) + estimateDocsHtml(state) + printHtml(state) + footHtml(state) + '</article>' +
+      '<div class="deck-lb" data-lb><div class="deck-lb-bar"><span data-lb-cap></span>' +
+        '<button data-lb-close>Close</button></div><img data-lb-img alt=""></div>' +
       '<div class="deck-sheet" data-sheet><div class="deck-sheet-veil" data-sheet-close></div>' +
       '<div class="deck-sheet-body" role="dialog" aria-modal="true"><div data-sheet-in></div></div></div>';
   }
@@ -1344,6 +1398,21 @@ button,input,textarea,select{font:inherit;color:inherit}
         if (line && line.classList.contains('deck-calc')) line.hidden = !line.hidden;
         return;
       }
+      var big = e.target.closest('[data-dwg],[data-est]');
+      if (big) {
+        var lb = el.querySelector('[data-lb]');
+        lb.querySelector('[data-lb-img]').src = big.getAttribute('src');
+        var fig = big.closest('figure');
+        var cap = fig && fig.querySelector('figcaption');
+        lb.querySelector('[data-lb-cap]').textContent = cap ? cap.textContent : '';
+        lb.setAttribute('data-open', '1');
+        lb.scrollTop = 0;
+        return;
+      }
+      if (e.target.closest('[data-lb-close]')) {
+        el.querySelector('[data-lb]').removeAttribute('data-open');
+        return;
+      }
       var all = e.target.closest('[data-jpg-all]');
       if (all) { saveAllJpg(all); return; }
       var sh = e.target.closest('[data-share-one]');
@@ -1391,6 +1460,8 @@ button,input,textarea,select{font:inherit;color:inherit}
     });
 
     el.addEventListener('keydown', function (e) {
+      var lb = el.querySelector('[data-lb]');
+      if (lb && lb.hasAttribute('data-open') && e.key === 'Escape') { lb.removeAttribute('data-open'); return; }
       if (!sheet.hasAttribute('data-open')) return;
       if (e.key === 'Escape') close();
       else if (e.key === 'ArrowLeft') { stopAuto(); step(-1); }
@@ -1495,6 +1566,7 @@ function blank(type) {
     },
     plates: [{ label: 'Ground floor', src: '', w: 0, h: 0 }],
     drawings: [],
+    estimateDocs: [],
     spaces: [],
     narrative: {
       lead: '', quote: '', body: '',
@@ -1918,7 +1990,8 @@ document.addEventListener('paste', function (e) {
   if (!file) return;
 
   var focus = document.activeElement;
-  if (focus && focus.closest && focus.closest('#dwgDrop')) { e.preventDefault(); addDrawings([file]); return; }
+  if (focus && focus.closest && focus.closest('#dwgDrop')) { e.preventDefault(); addDocs('drawings', [file]); return; }
+  if (focus && focus.closest && focus.closest('#estDrop')) { e.preventDefault(); addDocs('estimateDocs', [file]); return; }
   var plate = focus && focus.closest ? focus.closest('[data-plate-drop]') : null;
   var space = focus && focus.closest ? focus.closest('[data-img-drop]') : null;
   if (!plate && !space) {
@@ -1948,77 +2021,87 @@ document.addEventListener('paste', function (e) {
    Project level, not per space. A signed drawing is the record of what was
    agreed, so it belongs to the project and gets a chapter of its own rather
    than being filed behind one room.                                        */
-function renderDrawings() {
-  S.drawings = S.drawings || [];
-  var host = $('#dwgList');
-  host.innerHTML = S.drawings.map(function (d, i) {
+/* Signed drawings and estimate pages behave identically — a named, dated,
+   ordered list of pages — so one renderer serves both. */
+var DOCSETS = {
+  drawings:     { list: '#dwgList', drop: '#dwgDrop', word: 'drawing', ph: 'Ground floor SLD', px: 2400 },
+  estimateDocs: { list: '#estList', drop: '#estDrop', word: 'estimate page', ph: 'BOQ page 1', px: 2600 }
+};
+
+function renderDocs(key) {
+  var cfg = DOCSETS[key];
+  S[key] = S[key] || [];
+  var host = $(cfg.list);
+  host.innerHTML = S[key].map(function (d, i) {
     return '<div class="row">' +
       '<div class="row-head"><span class="row-no">' + (i + 1) + '</span>' +
-        '<span class="row-title">' + esc(d.label || 'Untitled drawing') + '</span>' +
+        '<span class="row-title">' + esc(d.label || 'Untitled') + '</span>' +
         '<span class="row-tools">' +
-          '<button class="btn btn--sm btn--ghost" data-dwg-up="' + i + '"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
-          '<button class="btn btn--sm btn--ghost" data-dwg-down="' + i + '"' + (i === S.drawings.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
-          '<button class="btn btn--sm btn--danger" data-dwg-del="' + i + '">Remove</button>' +
+          '<button class="btn btn--sm btn--ghost" data-doc-up="' + i + '"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+          '<button class="btn btn--sm btn--ghost" data-doc-down="' + i + '"' + (i === S[key].length - 1 ? ' disabled' : '') + '>&darr;</button>' +
+          '<button class="btn btn--sm btn--danger" data-doc-del="' + i + '">Remove</button>' +
         '</span></div>' +
       '<div class="row-in"><div class="fields">' +
         '<div class="f"><label>What it is</label>' +
-          '<input type="text" placeholder="Ground floor SLD" data-dwg-k="label" data-dwg-i="' + i + '" value="' + esc(d.label || '') + '"></div>' +
+          '<input type="text" placeholder="' + esc(cfg.ph) + '" data-doc-k="label" data-doc-i="' + i + '" value="' + esc(d.label || '') + '"></div>' +
         '<div class="f"><label>Dated</label>' +
-          '<input type="text" placeholder="04.06.2026" data-dwg-k="date" data-dwg-i="' + i + '" value="' + esc(d.date || '') + '"></div>' +
+          '<input type="text" placeholder="04.06.2026" data-doc-k="date" data-doc-i="' + i + '" value="' + esc(d.date || '') + '"></div>' +
       '</div>' +
       '<div class="tray"><div class="tray-item" style="width:150px;height:104px;background:#fff">' +
         '<img src="' + d.src + '" alt="" style="object-fit:contain"></div></div>' +
       '</div></div>';
   }).join('');
 
-  host.querySelectorAll('[data-dwg-k]').forEach(function (el) {
+  host.querySelectorAll('[data-doc-k]').forEach(function (el) {
     el.addEventListener('input', function () {
-      S.drawings[+el.getAttribute('data-dwg-i')][el.getAttribute('data-dwg-k')] = el.value;
+      S[key][+el.getAttribute('data-doc-i')][el.getAttribute('data-doc-k')] = el.value;
       var t = el.closest('.row').querySelector('.row-title');
-      if (el.getAttribute('data-dwg-k') === 'label' && t) t.textContent = el.value || 'Untitled drawing';
+      if (el.getAttribute('data-doc-k') === 'label' && t) t.textContent = el.value || 'Untitled';
       paint();
     });
   });
-  host.querySelectorAll('[data-dwg-del]').forEach(function (b) {
-    b.addEventListener('click', function () { S.drawings.splice(+b.getAttribute('data-dwg-del'), 1); renderAll(); });
+  host.querySelectorAll('[data-doc-del]').forEach(function (b) {
+    b.addEventListener('click', function () { S[key].splice(+b.getAttribute('data-doc-del'), 1); renderAll(); });
   });
-  host.querySelectorAll('[data-dwg-up]').forEach(function (b) {
-    b.addEventListener('click', function () { var i = +b.getAttribute('data-dwg-up'); var a = S.drawings; a.splice(i - 1, 0, a.splice(i, 1)[0]); renderAll(); });
+  host.querySelectorAll('[data-doc-up]').forEach(function (b) {
+    b.addEventListener('click', function () { var i = +b.getAttribute('data-doc-up'); var a = S[key]; a.splice(i - 1, 0, a.splice(i, 1)[0]); renderAll(); });
   });
-  host.querySelectorAll('[data-dwg-down]').forEach(function (b) {
-    b.addEventListener('click', function () { var i = +b.getAttribute('data-dwg-down'); var a = S.drawings; a.splice(i + 1, 0, a.splice(i, 1)[0]); renderAll(); });
+  host.querySelectorAll('[data-doc-down]').forEach(function (b) {
+    b.addEventListener('click', function () { var i = +b.getAttribute('data-doc-down'); var a = S[key]; a.splice(i + 1, 0, a.splice(i, 1)[0]); renderAll(); });
   });
 }
 
-function addDrawings(files) {
+function addDocs(key, files) {
+  var cfg = DOCSETS[key];
   var list = Array.prototype.slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); });
   if (!list.length) return;
-  var d = $('#dwgDrop');
-  d.textContent = 'Importing ' + list.length + ' drawing' + (list.length > 1 ? 's' : '') + '…';
-  /* held larger than a render — a drawing is read, not admired */
-  Promise.all(list.map(function (f) { return importImage(f, 2400, 0.92, false); }))
+  var d = $(cfg.drop);
+  d.textContent = 'Importing ' + list.length + ' ' + cfg.word + (list.length > 1 ? 's' : '') + '…';
+  /* held larger than a render — these are read, not admired, and an estimate
+     sheet is the densest thing in the deck */
+  Promise.all(list.map(function (f) { return importImage(f, cfg.px, 0.92, false); }))
     .then(function (ims) {
-      S.drawings = (S.drawings || []).concat(ims.map(function (im) {
+      S[key] = (S[key] || []).concat(ims.map(function (im) {
         return { src: im.src, w: im.w, h: im.h, label: '', date: '' };
       }));
       renderAll();
-      toast(ims.length + ' drawing' + (ims.length > 1 ? 's' : '') + ' added.');
+      toast(ims.length + ' ' + cfg.word + (ims.length > 1 ? 's' : '') + ' added.');
     })
     .catch(function (e) { toast(e.message); renderAll(); });
 }
 
-(function wireDrawingDrop() {
-  var d = $('#dwgDrop');
+Object.keys(DOCSETS).forEach(function (key) {
+  var d = $(DOCSETS[key].drop);
   d.addEventListener('click', function () {
     var inp = document.createElement('input');
     inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
-    inp.onchange = function () { addDrawings(inp.files); };
+    inp.onchange = function () { addDocs(key, inp.files); };
     inp.click();
   });
   d.addEventListener('dragover', function (e) { e.preventDefault(); d.classList.add('over'); });
   d.addEventListener('dragleave', function () { d.classList.remove('over'); });
-  d.addEventListener('drop', function (e) { e.preventDefault(); d.classList.remove('over'); addDrawings(e.dataTransfer.files); });
-})();
+  d.addEventListener('drop', function (e) { e.preventDefault(); d.classList.remove('over'); addDocs(key, e.dataTransfer.files); });
+});
 
 /* ── publish gates — loud, exact, and they name the offenders ──────────── */
 function gates() {
@@ -2099,7 +2182,7 @@ function paint() {
   renderGates();
   saveLocal();
 }
-function renderAll() { renderPlates(); renderSpaces(); renderDrawings(); paint(); }
+function renderAll() { renderPlates(); renderSpaces(); renderDocs('drawings'); renderDocs('estimateDocs'); paint(); }
 
 /* ── drafts ───────────────────────────────────────────────────────────── */
 function saveLocal() {
@@ -2107,7 +2190,10 @@ function saveLocal() {
     var light = JSON.parse(JSON.stringify(S));
     light.plates.forEach(function (p) { p.src = ''; });
     light.spaces.forEach(function (s) { s.images = []; });
-    (light.drawings || []).forEach(function (d) { d.src = ''; });
+    /* dropped entirely rather than emptied — a row with no picture left behind
+       is a row you have to delete by hand next time the tool opens */
+    light.drawings = [];
+    light.estimateDocs = [];
     light.logo = '';
     localStorage.setItem('essentia.deck.draft', JSON.stringify(light));
   } catch (e) { /* private window, full quota — the .json draft is the real save */ }
@@ -2140,6 +2226,7 @@ function exportDeck() {
   slim.logo = '';
   slim.plates.forEach(function (p) { p.src = ''; });
   (slim.drawings || []).forEach(function (d) { d.src = ''; });
+  (slim.estimateDocs || []).forEach(function (d) { d.src = ''; });
   slim.spaces.forEach(function (s) {
     (s.images || []).forEach(function (im) { im.src = ''; });
   });
@@ -2208,6 +2295,7 @@ $('#fLoad').addEventListener('change', function () {
       if (!S.plates) S.plates = [{ label: 'Ground floor', src: '', w: 0, h: 0 }];
       if (!S.narrative) S.narrative = blank().narrative;
       if (!S.drawings) S.drawings = [];
+      if (!S.estimateDocs) S.estimateDocs = [];
       S.spaces.forEach(function (s) { if (!s.id) s.id = uid(); if (!s.images) s.images = []; });
       boot(); toast('Draft opened.');
     } catch (e) { toast('That file is not a deck draft.'); }
@@ -2288,6 +2376,8 @@ function boot() {
   } catch (e) { /* nothing to restore */ }
   S = restored || sample();
   if (!S.plates) S.plates = [{ label: 'Ground floor', src: '', w: 0, h: 0 }];
+  if (!S.drawings) S.drawings = [];
+  if (!S.estimateDocs) S.estimateDocs = [];
   S.spaces.forEach(function (s) { if (!s.id) s.id = uid(); if (!s.images) s.images = []; });
   boot();
   if (restored) toast('Restored your last session (text only — re-attach the images).');
