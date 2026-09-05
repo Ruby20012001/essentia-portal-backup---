@@ -48,7 +48,23 @@ rather than shipping a second copy.
    then `Ctrl+V` on the plate. Dropping or picking a PNG/JPG works too.
    *(A plan inside an InDesign PDF is vector — there is no image file to drag
    out of it, which is why paste is the shortest route.)*
-3. **Spaces** — add each space, pick the name from the list for the project type
+3. **Signed drawings** — the SLD, the GFC, the layouts, as they come off the
+   board. Drop or paste the JPGs, then name each one and date it. They get their
+   own chapter in the deck, full width, in the order you set. Optional.
+
+   They are deliberately **not** filed behind a room. A signed drawing is not
+   for the client who cannot read a drawing — it is the record of what was
+   agreed — so it stands on its own rather than sitting among the renders.
+   Held at 2400px, because a drawing is read rather than admired.
+4. **Detailed estimate** — the sheet the number was built from, page by page,
+   so a client can read it rather than take it on trust. Same shape as the
+   drawings: drop the JPGs, name and date each page. It becomes its own chapter,
+   and the arithmetic behind the estimate chip links straight to it.
+
+   A page of a BOQ is unreadable at page width on a phone, so **tapping any
+   drawing or estimate page opens it full screen at its own size**, to be panned
+   and pinched rather than squinted at. Held at 2600px for the same reason.
+5. **Spaces** — add each space, pick the name from the list for the project type
    so naming does not drift, **choose its floor** from the plates you added, set
    the **dimensions, area and estimate**, then **Place pin** and click the plan.
    The floor is a choice, not a typed line — it decides which drawing the pin
@@ -66,7 +82,7 @@ rather than shipping a second copy.
    prices itself — the same arithmetic the fee proposal already does per
    sq.ft. An estimate typed against a single space overrides the rate for that
    space. The running total sits on the Spaces card as you work.
-4. **Visuals** — drop, pick, or paste the renders onto each space. The first is
+6. **Visuals** — drop, pick, or paste the renders onto each space. The first is
    the hero; the rest become the thumbnail strip. `↑` on any thumbnail promotes
    it to hero.
    Each space carries four pieces of writing: the **one line** (what it is),
@@ -74,22 +90,6 @@ rather than shipping a second copy.
    pulled out under an amber rule, meant to be the thing the client repeats to
    someone else. Write the quotable to the type of space, not to the project.
 
-5. **Signed drawings** — the SLD, the GFC, the layouts, as they come off the
-   board. Drop or paste the JPGs, then name each one and date it. They get their
-   own chapter in the deck, full width, in the order you set. Optional.
-
-   They are deliberately **not** filed behind a room. A signed drawing is not
-   for the client who cannot read a drawing — it is the record of what was
-   agreed — so it stands on its own rather than sitting among the renders.
-   Held at 2400px, because a drawing is read rather than admired.
-6. **Detailed estimate** — the sheet the number was built from, page by page,
-   so a client can read it rather than take it on trust. Same shape as the
-   drawings: drop the JPGs, name and date each page. It becomes its own chapter,
-   and the arithmetic behind the estimate chip links straight to it.
-
-   A page of a BOQ is unreadable at page width on a phone, so **tapping any
-   drawing or estimate page opens it full screen at its own size**, to be panned
-   and pinched rather than squinted at. Held at 2600px for the same reason.
 7. **Narrative** — the note the client reads before the spaces, and the
    representational-purpose disclaimer.
 8. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.
