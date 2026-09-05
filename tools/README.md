@@ -74,9 +74,17 @@ rather than shipping a second copy.
    pulled out under an amber rule, meant to be the thing the client repeats to
    someone else. Write the quotable to the type of space, not to the project.
 
-5. **Narrative** — the note the client reads before the spaces, and the
+5. **Signed drawings** — the SLD, the GFC, the layouts, as they come off the
+   board. Drop or paste the JPGs, then name each one and date it. They get their
+   own chapter in the deck, full width, in the order you set. Optional.
+
+   They are deliberately **not** filed behind a room. A signed drawing is not
+   for the client who cannot read a drawing — it is the record of what was
+   agreed — so it stands on its own rather than sitting among the renders.
+   Held at 2400px, because a drawing is read rather than admired.
+6. **Narrative** — the note the client reads before the spaces, and the
    representational-purpose disclaimer.
-6. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.
+7. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.
 
 `SAVE DRAFT` writes a `.json` holding everything including the images — that is
 the real save. The tool also keeps the *text* of your last session in the
