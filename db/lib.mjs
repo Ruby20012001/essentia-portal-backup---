@@ -52,6 +52,7 @@ export const DEFAULT_FILES = [
   "038_tracker_write_only_drafting.sql",
   "039_tracker_view_account.sql",
   "040_lead_password_reset.sql",
+  "041_signin_codes.sql",
   "900_dev_fixtures.sql",
 ];
 
