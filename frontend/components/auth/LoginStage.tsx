@@ -51,6 +51,7 @@ export function LoginStage({
   // guess would mean a visible correction a moment later.
   const [revealed, setRevealed] = useState(false);
   const [hello, setHello] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
     setHello(greeting(new Date().getHours()));
@@ -101,7 +102,7 @@ export function LoginStage({
             priority
           />
           <p className="mt-3 font-body text-[10px] font-light uppercase tracking-[0.3em] text-label">
-            dashboard
+            sign in page
           </p>
         </div>
 
@@ -138,6 +139,41 @@ export function LoginStage({
         ) : (
           <LoginForm next={next} showDevHint={devLogin} />
         )}
+        {/* Both of these need the portal to send an email, and it cannot yet
+            (lib/notifications/channels/email.ts has no transport). They are
+            shown because the team asked for them, and they say what is missing
+            rather than doing nothing — a control that fails silently teaches
+            people the whole page is broken. */}
+        <div className="mt-5 flex items-center justify-between border-t border-line pt-4">
+          <button
+            type="button"
+            onClick={() =>
+              setNote(
+                "Forgot password needs the portal to send you an email, which is not set up yet. Ask your team lead to reset it for now.",
+              )
+            }
+            className="font-body text-[11px] font-light text-secondary underline decoration-line-strong underline-offset-2 transition-colors hover:text-white"
+          >
+            Forgot password?
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setNote(
+                "Sign-in codes by email are not switched on yet. It needs one mailbox the portal can send from — IT can enable SMTP and issue an app password.",
+              )
+            }
+            className="rounded border border-line-strong px-3 py-1.5 font-body text-[11px] font-bold text-secondary transition-colors hover:bg-hover hover:text-white"
+          >
+            Send OTP
+          </button>
+        </div>
+
+        {note ? (
+          <p role="status" className="mt-3 font-body text-[11px] font-light leading-relaxed text-muted">
+            {note}
+          </p>
+        ) : null}
       </div>
 
       <p className="absolute bottom-6 font-body text-[10px] font-light tracking-[0.2em] text-cream/25">
