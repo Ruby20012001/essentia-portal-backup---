@@ -52,6 +52,9 @@ export function homeHref(mode: PortalMode = portalMode()): string {
  */
 const TRACKER_MODE_PREFIXES = [
   "/wio-tracker",
+  // The open, read-only board (app/board). Served in tracker mode too —
+  // it is the one page most of essentia will ever open.
+  "/board",
   "/api/wio-tracker",
   "/login",
   "/api/auth",

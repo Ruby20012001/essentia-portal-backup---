@@ -296,6 +296,62 @@ export async function getBoard(user: SessionUser): Promise<TrackerBoard> {
   };
 }
 
+/**
+ * The board with nobody signed in — for the read-only link the WIO team hands
+ * round essentia (app/board).
+ *
+ * Ruby, 2026-09-03: "ise har koi khol le direct... bas unke paas edit ka right
+ * na ho." Giving the whole company portal accounts was never going to happen,
+ * and a shared password lands in the same place with extra steps.
+ *
+ * It reads the same tables through the same pure functions as getBoard, so the
+ * link and the portal can never show different numbers. What it does NOT do is
+ * ask permissions — there is no user to ask about — so every capability is
+ * false and the client renders nothing that could write.
+ *
+ * That is the whole safety of it: the WRITE paths are unreachable from here.
+ * Every mutation goes through /api/wio-tracker/*, each one calls
+ * requirePermission, and none of them accepts a request without a session.
+ * This function cannot be used to change anything even if it were called from
+ * somewhere it should not be.
+ *
+ * Export is false as well. A reader can screenshot the page, but the buttons
+ * that put the board in a file belong to people the portal knows by name.
+ */
+export async function getPublicBoard(): Promise<TrackerBoard> {
+  const [settings, stages, wios, delays, reasons, people, teams] = await Promise.all([
+    getSettings(),
+    listStages(),
+    listWioInputs(),
+    listDelays(),
+    listReasons(),
+    listPeople(),
+    listTeams(),
+  ]);
+
+  const openDelaysByWio = new Map<string, number>();
+  for (const d of delays) {
+    if (d.status === "Open") {
+      openDelaysByWio.set(d.wioId, (openDelaysByWio.get(d.wioId) ?? 0) + 1);
+    }
+  }
+
+  const board = computeBoard(wios, stages, settings, openDelaysByWio);
+
+  return {
+    settings,
+    stages,
+    wios: board,
+    stats: todayStats(board, settings),
+    holding: holdingByStage(board, stages),
+    delays,
+    reasons,
+    people,
+    teams,
+    can: { edit: false, create: false, delete: false, logDelay: false, export: false },
+  };
+}
+
 async function allowed(
   user: SessionUser,
   action: "read" | "create" | "edit" | "delete" | "export",
