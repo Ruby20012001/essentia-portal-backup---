@@ -173,7 +173,7 @@
      competes with the one thing on this page that matters, which is the field
      someone has to type into. The extra scale keeps the blur from bleeding a
      pale edge in, since blur samples beyond the box. */
-  filter: blur(3px) saturate(0.92) brightness(1.04);
+  filter: blur(5px) saturate(0.96) brightness(1.02);
   animation: login-drift 46s ease-in-out infinite alternate;
 }
 
@@ -256,17 +256,21 @@
    nine back — that it reads as a room settling rather than a pulse. Anything
    faster looks like a fault. */
 .login-lamp {
+  /* The pendant, breathing. A photograph cannot dim its own light, so the glow
+     sits over the shade in the frame and brightens in its place. Percentages,
+     not pixels, so it stays on the lamp whatever the window size — and screen
+     blending, so it adds light rather than painting a pale disc over it. */
   background:
-    radial-gradient(13% 20% at 69% 77%, rgba(255, 226, 178, 0.55), transparent 70%),
-    radial-gradient(26% 34% at 69% 77%, rgba(214, 173, 116, 0.26), transparent 72%),
-    radial-gradient(30% 26% at 15% 62%, rgba(214, 173, 116, 0.14), transparent 74%);
+    radial-gradient(11% 9% at 49% 25%, rgba(255, 214, 150, 0.6), transparent 68%),
+    radial-gradient(30% 22% at 49% 30%, rgba(224, 150, 84, 0.24), transparent 74%),
+    radial-gradient(45% 40% at 62% 62%, rgba(224, 150, 84, 0.12), transparent 76%);
   mix-blend-mode: screen;
-  animation: login-lamp-breathe 18s ease-in-out infinite alternate;
+  animation: login-lamp-breathe 16s ease-in-out infinite alternate;
 }
 
 @keyframes login-lamp-breathe {
   from {
-    opacity: 0.28;
+    opacity: 0.35;
   }
   to {
     opacity: 1;
