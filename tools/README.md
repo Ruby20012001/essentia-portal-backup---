@@ -45,7 +45,8 @@ tool is open, which settles the commonest confusion once a few versions have
 been downloaded; the links land on any card without scrolling past the Spaces
 list, which runs thousands of pixels long on a real project.
 
-Delivery copies are cut with ,
+Delivery copies are cut with
+`node tools/stamp-build.mjs tools/concept-deck-configurator.html <outDir>`,
 which writes the build time into the file and the filename together.
 
 ### Working sequence
