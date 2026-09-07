@@ -410,10 +410,13 @@ button,input,textarea,select{font:inherit;color:inherit}
 .tray-item img{width:100%;height:100%;object-fit:cover}
 .tray-item .tray-x{position:absolute;top:2px;right:2px;width:18px;height:18px;border:0;background:rgba(0,0,0,.75);
   color:#fff;font-size:12px;line-height:1;cursor:pointer;padding:0}
+/* the tile sets line-height:0 so the picture has no gap under it; a label
+   inheriting that has no line to sit on and spills over its own box, which
+   is why HERO was cut in half by the tile edge */
 .tray-item .tray-hero{position:absolute;left:2px;bottom:2px;font-size:9px;letter-spacing:.08em;
-  background:rgba(0,0,0,.75);color:var(--amber);padding:1px 4px}
+  line-height:1.6;background:rgba(0,0,0,.78);color:var(--amber);padding:0 4px}
 .tray-item .tray-rev{position:absolute;right:2px;bottom:2px;font-size:9px;letter-spacing:.08em;
-  background:rgba(0,0,0,.75);color:var(--secondary);padding:1px 4px}
+  line-height:1.6;background:rgba(0,0,0,.78);color:#fff;padding:0 4px}
 .droprow{display:flex;gap:8px;align-items:stretch;margin-top:12px}
 .droprow .drop{flex:1;min-width:0}
 .drop-side{flex:none;border:1px dashed var(--line-strong);background:transparent;color:var(--secondary);
