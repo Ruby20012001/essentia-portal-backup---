@@ -413,9 +413,11 @@ button,input,textarea,select{font:inherit;color:inherit}
   background:rgba(0,0,0,.75);color:var(--amber);padding:1px 4px}
 .tray-item .tray-rev{position:absolute;right:2px;bottom:2px;font-size:9px;letter-spacing:.08em;
   background:rgba(0,0,0,.75);color:var(--secondary);padding:1px 4px}
-.tray-add{width:82px;height:62px;border:1px dashed var(--line-strong);background:transparent;
-  color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:0}
-.tray-add:hover{border-color:var(--amber);color:var(--amber)}
+.droprow{display:flex;gap:8px;align-items:stretch;margin-top:12px}
+.droprow .drop{flex:1;min-width:0}
+.drop-side{flex:none;border:1px dashed var(--line-strong);background:transparent;color:var(--secondary);
+  font-size:11px;letter-spacing:.08em;padding:0 14px;cursor:pointer;white-space:nowrap}
+.drop-side:hover{border-color:var(--amber);color:var(--amber);background:var(--hover)}
 .drop{border:1px dashed var(--line-strong);padding:14px;text-align:center;font-size:12px;color:var(--muted);cursor:pointer;border-radius:2px}
 .drop:hover,.drop.over{border-color:var(--amber);color:var(--secondary);background:var(--hover)}
 
@@ -1997,6 +1999,13 @@ function renderSpaces() {
     S.spaces.map(function (s, i) {
       var pinned = typeof s.x === 'number' && typeof s.y === 'number';
       var nImg = (s.images || []).length;
+      /* the series numbers itself, so the button beside the zone can say which
+         number is about to be used — the next render is named before it is
+         even picked */
+      var revs = window.EssentiaDeck.revs(s);
+      var nextRev = window.EssentiaDeck.rev(revs.reduce(function (m, im) {
+        return Math.max(m, +im.rev || 0);
+      }, 0) + 1);
       return '<div class="row" data-space-row="' + i + '">' +
         '<div class="row-head">' +
           '<label class="check" style="gap:6px"><input type="checkbox" data-inc="' + i + '"' + (s.include !== false ? ' checked' : '') + '></label>' +
@@ -2034,17 +2043,18 @@ function renderSpaces() {
           '<div class="f f--wide"><label>Quotable — the line that stays with them</label>' +
             '<input type="text" data-k="quote" data-i="' + i + '" value="' + esc(s.quote || '') + '"><span class="f-err" hidden></span></div>' +
         '</div>' +
-        '<div class="drop" tabindex="0" data-img-drop="' + i + '" style="margin-top:12px">Click, drop, or paste the visuals for this space (the first one is the hero)</div>' +
-        '<div class="tray">' + window.EssentiaDeck.revs(s).map(function (im, k) {
+        '<div class="droprow">' +
+          '<div class="drop" tabindex="0" data-img-drop="' + i + '">Click, drop, or paste the visuals for this space (the first one is the hero)</div>' +
+          '<button type="button" class="drop-side" data-img-add="' + i + '" title="Add the next render">+ ' + nextRev + '</button>' +
+        '</div>' +
+        '<div class="tray">' + revs.map(function (im, k) {
           return '<div class="tray-item"><img src="' + im.src + '" alt="">' +
             '<button class="tray-x" data-img-del="' + i + '_' + k + '" title="Remove">&times;</button>' +
             (k === 0 ? '<span class="tray-hero">HERO</span>' :
               '<button class="tray-x" style="left:2px;right:auto" data-img-hero="' + i + '_' + k + '" title="Make this the one the client opens on">&uarr;</button>') +
             '<span class="tray-rev">' + window.EssentiaDeck.rev(im.rev) + '</span>' +
             '</div>';
-        }).join('') +
-        '<button type="button" class="tray-add" data-img-add="' + i + '" title="Add the next render">+</button>' +
-        '</div>' +
+        }).join('') + '</div>' +
       '</div></div>';
     }).join('');
 

@@ -90,8 +90,11 @@ which writes the build time into the file and the filename together.
    the one the client opens on.
 
    **Every render carries a number — R01, R02, R03 —** in the order it arrived,
-   and the series continues: the next one added takes the next number. At the
-   end of the strip sits a **`+`**, which is where the next render goes. The
+   and the series continues: the next one added takes the next number. Beside
+   the drop zone, in the same place on every space, sits a small **`+ R04`** —
+   it names the number about to be used before the picture is even picked, and
+   pressing it opens the same picker the zone does. (In the client's panel the
+   same control is a **`+`** at the end of the thumbnail strip.) The
    number is stamped once and stays with its picture, so promoting a later
    render to the top does not renumber the ones behind it — R03 is still R03
    when it is the one being shown. Old renders can therefore sit in the deck
