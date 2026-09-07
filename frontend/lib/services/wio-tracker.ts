@@ -348,7 +348,15 @@ export async function getPublicBoard(): Promise<TrackerBoard> {
     reasons,
     people,
     teams,
-    can: { edit: false, create: false, delete: false, logDelay: false, export: false },
+    // Saving is allowed here, and it gives nothing away. Every export —
+    // the one-page summary, the JPG, the printed view — is drawn in the
+    // browser from the board already on the screen; there is no second
+    // request and no row that was not already visible. Withholding the
+    // button would only mean someone screenshots the page instead, and
+    // Brevo cannot send a sign-in code from a domain with a DMARC policy
+    // it has not been given the DNS to satisfy — so requiring an account
+    // for this would have made a download impossible rather than private.
+    can: { edit: false, create: false, delete: false, logDelay: false, export: true },
   };
 }
 
