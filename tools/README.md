@@ -155,8 +155,13 @@ the picture**, the space number, the name, the size, the area, the estimate,
 the writing, the quotable, the concept stamp and the disclaimer, all inside the
 picture. The render's number is drawn *into* the image rather than beside it,
 because this file gets forwarded, cropped and re-saved by people who will never
-see the deck it came from. On paper the number prints under each render, where
-there is nothing to tap. It is the one that matters for WhatsApp: a
+see the deck it came from.
+
+**Every render carries its number in its own corner** — in the panel, on the
+thumbnails, on the shared JPG, and on every picture in the printed lookbook. Not
+underneath it: a caption belongs to the page, and is gone the moment the picture
+is lifted out of it or the sheet is photographed. On the render it stays with
+the render. It is the one that matters for WhatsApp: a
 PDF has to be opened, an image shows itself in the message. Drawn on a canvas
 in about a fifth of a second, roughly 200 KB, and it needs no library and no
 network. **All as images** in the tool header does the whole deck, one file per
