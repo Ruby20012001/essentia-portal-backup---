@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { LoginForm } from "@/components/auth/LoginForm";
-import { CodeSignIn } from "@/components/auth/CodeSignIn";
 
 /**
  * The sign-in page as a short sequence rather than a static panel.
@@ -53,7 +52,6 @@ export function LoginStage({
   const [revealed, setRevealed] = useState(false);
   const [hello, setHello] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const [byCode, setByCode] = useState(false);
 
   useEffect(() => {
     setHello(greeting(new Date().getHours()));
@@ -138,40 +136,27 @@ export function LoginStage({
           >
             Sign in with Microsoft
           </a>
-        ) : byCode ? (
-          <CodeSignIn next={next} onCancel={() => setByCode(false)} />
         ) : (
           <LoginForm next={next} showDevHint={devLogin} />
         )}
-        {/* Both of these need the portal to send an email, and it cannot yet
-            (lib/notifications/channels/email.ts has no transport). They are
-            shown because the team asked for them, and they say what is missing
-            rather than doing nothing — a control that fails silently teaches
-            people the whole page is broken. */}
-        <div className="mt-5 flex items-center justify-between border-t border-line pt-4">
+        {/* Monica, 2026-09-07: the codes are done with. They never arrived —
+            Brevo will not send from essentia.in until DNS satisfies DMARC — so
+            the button was a dead control on the one screen nobody can afford to
+            find confusing. Everybody who may open this holds a password now,
+            and an account is made for them rather than by them
+            (auth.self_signup is off), which is the whole of the gate.
+
+            Forgetting one is therefore a person-to-person errand, and it says
+            so. A team lead resets their own team's password from inside. */}
+        <div className="mt-5 border-t border-line pt-4">
           <button
             type="button"
-            onClick={() => {
-              // Forgetting a password and signing in with a code are the same
-              // errand: get in without one. There is no separate reset flow to
-              // send them to, and there does not need to be — once they are in,
-              // Reset password is in their own menu.
-              setNote("Sign in with a code, then set a new password from your own menu.");
-              setByCode(true);
-            }}
+            onClick={() =>
+              setNote("Ask your team lead to set you a new one — they can do it from their own menu.")
+            }
             className="font-body text-[11px] font-light text-secondary underline decoration-line-strong underline-offset-2 transition-colors hover:text-white"
           >
             Forgot password?
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setNote(null);
-              setByCode(true);
-            }}
-            className="rounded border border-line-strong px-3 py-1.5 font-body text-[11px] font-bold text-secondary transition-colors hover:bg-hover hover:text-white"
-          >
-            Send OTP
           </button>
         </div>
 
