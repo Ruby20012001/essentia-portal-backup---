@@ -175,9 +175,15 @@
   color:var(--ink);font-size:17px;line-height:1;cursor:pointer;padding:0}
 .deck-x:hover{background:#fff}
 .deck-thumbs{display:flex;gap:6px;padding:10px 22px 0;flex-wrap:wrap;flex:none}
-.deck-thumb{width:56px;height:42px;border:1px solid var(--rule);padding:0;background:var(--wash);cursor:pointer;line-height:0}
+.deck-thumb{position:relative;overflow:hidden;width:56px;height:42px;border:1px solid var(--rule);padding:0;background:var(--wash);cursor:pointer;line-height:0}
 .deck-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .deck-thumb[aria-current="true"]{border-color:var(--ink)}
+.deck-thumb-rev{position:absolute;left:0;bottom:0;font-size:8px;letter-spacing:.06em;line-height:1.5;
+  background:rgba(0,0,0,.72);color:#fff;padding:0 3px}
+.deck-thumb--add{border-style:dashed;font-size:17px;line-height:1;color:var(--soft);white-space:nowrap}
+.deck-thumb--add:hover{border-color:var(--ink);color:var(--ink)}
+.deck-hero-rev{position:absolute;left:0;bottom:0;background:rgba(0,0,0,.72);color:#fff;
+  font-size:10px;letter-spacing:.12em;line-height:1;padding:5px 8px}
 .deck-sheet-main{padding:20px 22px 26px;flex:1}
 .deck-sheet-meta{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
 .deck-sheet-main h3{font-family:var(--display);font-size:25px;font-weight:300;color:var(--ink);margin:0 0 4px}
@@ -405,6 +411,11 @@ button,input,textarea,select{font:inherit;color:inherit}
   color:#fff;font-size:12px;line-height:1;cursor:pointer;padding:0}
 .tray-item .tray-hero{position:absolute;left:2px;bottom:2px;font-size:9px;letter-spacing:.08em;
   background:rgba(0,0,0,.75);color:var(--amber);padding:1px 4px}
+.tray-item .tray-rev{position:absolute;right:2px;bottom:2px;font-size:9px;letter-spacing:.08em;
+  background:rgba(0,0,0,.75);color:var(--secondary);padding:1px 4px}
+.tray-add{width:82px;height:62px;border:1px dashed var(--line-strong);background:transparent;
+  color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:0}
+.tray-add:hover{border-color:var(--amber);color:var(--amber)}
 .drop{border:1px dashed var(--line-strong);padding:14px;text-align:center;font-size:12px;color:var(--muted);cursor:pointer;border-radius:2px}
 .drop:hover,.drop.over{border-color:var(--amber);color:var(--secondary);background:var(--hover)}
 
@@ -626,6 +637,19 @@ button,input,textarea,select{font:inherit;color:inherit}
   }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
+  /* Every render carries a number — R01, R02, R03 — in the order it arrived,
+     and the series simply continues: the next one added takes the next number.
+     The number is stamped once and then stays put, so promoting a later render
+     to the top of the panel does not renumber the ones behind it. It is how the
+     3D team, the designer and the client name the same picture in an email. */
+  function revLabel(n) { return 'R' + pad2(+n || 1); }
+  function ensureRevs(s) {
+    var a = s.images || [], top = 0;
+    a.forEach(function (im) { if (+im.rev > top) top = +im.rev; });
+    a.forEach(function (im) { if (!(+im.rev > 0)) { top += 1; im.rev = top; } });
+    return a;
+  }
+
   /* size · area · estimate, in that order, skipping whatever is not filled in.
      Interactive in the panel; a plain chip everywhere a tap means nothing —
      on paper, and in the copy that reads without any script. */
@@ -676,6 +700,7 @@ button,input,textarea,select{font:inherit;color:inherit}
     var rate = num((state.project || {}).rate);
     return (state.spaces || []).filter(function (s) { return s.include !== false; })
       .map(function (s, i) {
+        ensureRevs(s);
         s = Object.assign({}, s);
         s.no = pad2(i + 1);
         if (!String(s.estimate || '').trim() && rate > 0 && num(s.area) > 0) {
@@ -1208,16 +1233,22 @@ button,input,textarea,select{font:inherit;color:inherit}
   }
 
   function sheetHtml(s, i, total, state) {
-    var imgs = s.images || [];
+    var imgs = ensureRevs(s);
     var hero = imgs[0]
-      ? '<img src="' + imgs[0].src + '" alt="' + esc(s.name) + '" data-hero>'
+      ? '<img src="' + imgs[0].src + '" alt="' + esc(s.name) + '" data-hero>' +
+        '<span class="deck-hero-rev" data-hero-rev>' + revLabel(imgs[0].rev) + '</span>'
       : '<span>No visual yet</span>';
     return '<div class="deck-sheet-hero' + (imgs[0] ? '' : ' deck-sheet-hero--none') + '">' + hero +
         '<button class="deck-x" data-sheet-close aria-label="Close">&times;</button></div>' +
-      (imgs.length > 1 ? '<div class="deck-thumbs">' + imgs.map(function (im, k) {
+      '<div class="deck-thumbs">' + imgs.map(function (im, k) {
         return '<button class="deck-thumb" data-thumb="' + k + '" aria-current="' + (k === 0) + '">' +
-          '<img src="' + im.src + '" alt=""></button>';
-      }).join('') + '</div>' : '') +
+          '<img src="' + im.src + '" alt="">' +
+          '<span class="deck-thumb-rev">' + revLabel(im.rev) + '</span></button>';
+      }).join('') +
+        /* the series ends in a +, which is where the next render goes */
+        '<button class="deck-thumb deck-thumb--add" data-add-space="' + esc(s.id) + '"' +
+          ' title="Add the next render" aria-label="Add the next render">+</button>' +
+      '</div>' +
       '<div class="deck-sheet-main">' +
         '<div class="deck-sheet-meta">' + esc(s.no) + (s.floor ? ' · ' + esc(s.floor) : '') + '</div>' +
         '<h3>' + esc(s.name) + '</h3>' +
@@ -1597,6 +1628,8 @@ button,input,textarea,select{font:inherit;color:inherit}
         var s = spaces[at]; if (!s) return;
         var hero = sheetIn.querySelector('[data-hero]');
         if (hero && s.images[k]) hero.src = s.images[k].src;
+        var rv = sheetIn.querySelector('[data-hero-rev]');
+        if (rv && s.images[k]) rv.textContent = revLabel(s.images[k].rev);
         sheetIn.querySelectorAll('[data-thumb]').forEach(function (b) {
           b.setAttribute('aria-current', String(+b.getAttribute('data-thumb') === k));
         });
@@ -1656,7 +1689,8 @@ button,input,textarea,select{font:inherit;color:inherit}
   }
 
   root.EssentiaDeck = { mount: mount, live: live, esc: esc, html: deckHtml,
-    card: spaceCard, slug: slugify, save: saveDataUri };
+    card: spaceCard, slug: slugify, save: saveDataUri,
+    revs: ensureRevs, rev: revLabel };
 
   if (root.__DECK__ && document.getElementById('deck-root')) {
     mount(document.getElementById('deck-root'), root.__DECK__);
@@ -2001,13 +2035,16 @@ function renderSpaces() {
             '<input type="text" data-k="quote" data-i="' + i + '" value="' + esc(s.quote || '') + '"><span class="f-err" hidden></span></div>' +
         '</div>' +
         '<div class="drop" tabindex="0" data-img-drop="' + i + '" style="margin-top:12px">Click, drop, or paste the visuals for this space (the first one is the hero)</div>' +
-        '<div class="tray">' + (s.images || []).map(function (im, k) {
+        '<div class="tray">' + window.EssentiaDeck.revs(s).map(function (im, k) {
           return '<div class="tray-item"><img src="' + im.src + '" alt="">' +
             '<button class="tray-x" data-img-del="' + i + '_' + k + '" title="Remove">&times;</button>' +
             (k === 0 ? '<span class="tray-hero">HERO</span>' :
-              '<button class="tray-x" style="left:2px;right:auto" data-img-hero="' + i + '_' + k + '" title="Make hero">&uarr;</button>') +
+              '<button class="tray-x" style="left:2px;right:auto" data-img-hero="' + i + '_' + k + '" title="Make this the one the client opens on">&uarr;</button>') +
+            '<span class="tray-rev">' + window.EssentiaDeck.rev(im.rev) + '</span>' +
             '</div>';
-        }).join('') + '</div>' +
+        }).join('') +
+        '<button type="button" class="tray-add" data-img-add="' + i + '" title="Add the next render">+</button>' +
+        '</div>' +
       '</div></div>';
     }).join('');
 
@@ -2060,6 +2097,14 @@ function renderSpaces() {
     b.addEventListener('click', function () {
       var p = b.getAttribute('data-img-hero').split('_');
       var arr = S.spaces[+p[0]].images; arr.unshift(arr.splice(+p[1], 1)[0]); renderAll();
+    });
+  });
+  /* one way in, two places to press it: the zone, and the + at the end of the
+     series where the eye already is after reading the numbers */
+  host.querySelectorAll('[data-img-add]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var d = host.querySelector('[data-img-drop="' + b.getAttribute('data-img-add') + '"]');
+      if (d) d.click();
     });
   });
   host.querySelectorAll('[data-img-drop]').forEach(function (d) {

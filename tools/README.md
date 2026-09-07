@@ -86,8 +86,17 @@ which writes the build time into the file and the filename together.
    sq.ft. An estimate typed against a single space overrides the rate for that
    space. The running total sits on the Spaces card as you work.
 5. **Visuals** — drop, pick, or paste the renders onto each space. The first is
-   the hero; the rest become the thumbnail strip. `↑` on any thumbnail promotes
-   it to hero.
+   the hero; the rest become the thumbnail strip. `↑` on any thumbnail makes it
+   the one the client opens on.
+
+   **Every render carries a number — R01, R02, R03 —** in the order it arrived,
+   and the series continues: the next one added takes the next number. At the
+   end of the strip sits a **`+`**, which is where the next render goes. The
+   number is stamped once and stays with its picture, so promoting a later
+   render to the top does not renumber the ones behind it — R03 is still R03
+   when it is the one being shown. Old renders can therefore sit in the deck
+   beside the current one, each named, which is how the 3D team, the designer
+   and the client end up naming the same picture in an email.
    Each space carries four pieces of writing: the **one line** (what it is),
    the **paragraph** (why it sits there), and a **quotable** — one sentence,
    pulled out under an amber rule, meant to be the thing the client repeats to
@@ -114,8 +123,10 @@ which matters once a few versions have been saved to the same downloads folder.
 
 ### What a client gets when they open a space
 
-The number on the drawing opens a panel that scrolls: the render, the other
-angles as thumbnails, the name, then **size · area · estimate**, then the line,
+The number on the drawing opens a panel that scrolls: the render with its
+revision number in the corner, the other renders as thumbnails — each carrying
+its own number, with a **`+`** at the end of the series to add the next — the
+name, then **size · area · estimate**, then the line,
 the paragraph and the quotable. **Size, area and estimate are chips**, the same
 weight as the buttons beneath them, so the figures are as easy to find as the
 actions. Size and area are facts and do nothing when pressed. The estimate
