@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { BoardAccount } from "@/components/wio-tracker/BoardAccount";
 import { WioTrackerBoard } from "@/components/wio-tracker/WioTrackerBoard";
 import { getSession } from "@/lib/auth/session";
 import { getBoard, getPublicBoard } from "@/lib/services/wio-tracker";
@@ -73,9 +74,15 @@ export default async function PublicBoardPage({
     <div className="flex min-h-screen flex-col bg-canvas">
       <header className="flex h-14 shrink-0 items-center justify-between gap-3 bg-espresso px-4 md:px-6">
         <Image src="/brand/logo-dark.png" alt="essentia" height={20} width={102} priority />
-        <p className="font-body text-[10px] font-light uppercase tracking-[0.22em] text-cream/50">
-          WIO → PIO Tracker{board.can.edit ? "" : " · view only"}
-        </p>
+        <div className="flex items-center gap-4">
+          <p className="hidden font-body text-[10px] font-light uppercase tracking-[0.22em] text-cream/50 md:block">
+            WIO → PIO Tracker{board.can.edit ? "" : " · view only"}
+          </p>
+          {/* Swapping who you are belongs on the page you are already on —
+              otherwise "sign in as someone who can edit" means hunting for a
+              second URL, which is the thing this page exists to avoid. */}
+          <BoardAccount name={session?.user.name ?? null} />
+        </div>
       </header>
 
       <main className="min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 md:px-10 md:py-8">
