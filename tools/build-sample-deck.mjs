@@ -306,7 +306,7 @@ const html =
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
 <style>html,body{margin:0;padding:0;background:#fff}</style>
-<style>${core}</style>
+<style id="core">${core}</style>
 </head>
 <body class="deck-scope">
 <div id="deck-root" data-prerendered="1">${prerendered}</div>
