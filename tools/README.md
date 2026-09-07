@@ -127,8 +127,12 @@ actions. Size and area are facts and do nothing when pressed. The estimate
 opens: tapping it shows the arithmetic behind the number — 142 sq ft x 1,200
 per sq ft = 1,70,400 — which is simply printed on paper and inside the shared
 image, where there is nothing to tap. Under them sits the estimate basis, and
-anything entered under **What it includes**. Then five buttons — share,
-save as image, save as PDF, see it on the plan, and the whole deck.
+anything entered under **What it includes**. Then six buttons — share, save as image, save as PDF, **add pictures here**,
+see it on the plan, and the whole deck.
+
+**Add pictures here** attaches a render to the room while it is open and named,
+rather than going back to the form for each of fifteen spaces. It works in the
+exported deck too, and the footer will then write the deck out again with them.
 
 **Share this space** is the one for a phone: it draws the JPG and hands it to
 the share sheet, so it goes to WhatsApp without ever becoming a file anyone has

@@ -1256,6 +1256,7 @@ button,input,textarea,select{font:inherit;color:inherit}
           '<button class="deck-btn deck-btn--solid" data-share-one="' + esc(s.id) + '">Share this space</button>' +
           '<button class="deck-btn" data-jpg-one="' + esc(s.id) + '">Save as image</button>' +
           '<button class="deck-btn" data-pdf-one="' + esc(s.id) + '">Save as PDF</button>' +
+          '<button class="deck-btn" data-add-space="' + esc(s.id) + '">Add pictures here</button>' +
           '<button class="deck-btn" data-locate="' + esc(s.id) + '">See it on the plan</button>' +
           '<button class="deck-btn" data-pdf-all>The whole deck</button>' +
         '</div>' +
@@ -1519,7 +1520,52 @@ button,input,textarea,select{font:inherit;color:inherit}
       })();
     }
 
+    /* Attach a render to the room being looked at, from inside the room.
+       Fifteen spaces each wanting a picture is fifteen trips through a form
+       otherwise; here the space is already open and already named. */
+    function addToSpace(id, btn) {
+      var sp = (state.spaces || []).filter(function (x) { return String(x.id) === String(id); })[0];
+      if (!sp) return;
+      var inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+      inp.onchange = function () {
+        var list = Array.prototype.slice.call(inp.files || [])
+          .filter(function (f) { return /^image\//.test(f.type); });
+        if (!list.length) return;
+        var label = btn.textContent;
+        btn.disabled = true; btn.textContent = 'Adding…';
+        Promise.all(list.map(function (f) { return importInto(f, 1500, 0.82); })).then(function (ims) {
+          /* Pushed in place, not reassigned. live() hands out shallow copies
+             that share this very array — swap it for a new one and the open
+             panel keeps reading the old pictures. */
+          if (!sp.images) sp.images = [];
+          Array.prototype.push.apply(sp.images, ims.map(function (im) {
+            return { src: im.src, w: im.w, h: im.h };
+          }));
+          var liveSp = spaces.filter(function (x) { return String(x.id) === String(id); })[0];
+          if (liveSp && liveSp.images !== sp.images) liveSp.images = sp.images;
+          btn.disabled = false; btn.textContent = label;
+          /* the editor, if there is one, needs to redraw its lists and gates */
+          el.dispatchEvent(new CustomEvent('deck:changed', { bubbles: true }));
+          /* the card behind the panel is stale now, and so is the panel */
+          var card = el.querySelector('.deck-card[data-space="' + String(sp.id).replace(/"/g, '') + '"]');
+          if (card) {
+            var slot = card.querySelector('.deck-card-img');
+            if (slot) {
+              slot.className = 'deck-card-img';
+              slot.innerHTML = '<img loading="lazy" decoding="async" src="' + sp.images[0].src +
+                '" alt="' + esc(sp.name) + '">';
+            }
+          }
+          open(id);
+        }, function () { btn.disabled = false; btn.textContent = label; });
+      };
+      inp.click();
+    }
+
     el.addEventListener('click', function (e) {
+      var addSp = e.target.closest('[data-add-space]');
+      if (addSp) { addToSpace(addSp.getAttribute('data-add-space'), addSp); return; }
       /* Size and area are facts and do nothing. Only the estimate opens, and
          what it opens is the arithmetic behind it — area times rate. */
       var calc = e.target.closest('[data-calc]');
@@ -2336,6 +2382,10 @@ function paint() {
   saveLocal();
 }
 function renderAll() { renderPlates(); renderSpaces(); renderDocs('drawings'); renderDocs('estimateDocs'); paint(); }
+
+/* the live document can now add pictures to a space on its own; when it does,
+   the editor's lists, totals and gates have to catch up */
+$('#pane').addEventListener('deck:changed', function () { renderAll(); });
 
 /* ── drafts ───────────────────────────────────────────────────────────── */
 function saveLocal() {
