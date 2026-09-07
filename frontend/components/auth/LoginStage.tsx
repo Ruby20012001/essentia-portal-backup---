@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { LoginForm } from "@/components/auth/LoginForm";
-import { CodeSignIn } from "@/components/auth/CodeSignIn";
 
 /**
  * The sign-in page as a short sequence rather than a static panel.
@@ -52,8 +51,6 @@ export function LoginStage({
   // guess would mean a visible correction a moment later.
   const [revealed, setRevealed] = useState(false);
   const [hello, setHello] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
-  const [byCode, setByCode] = useState(false);
 
   useEffect(() => {
     setHello(greeting(new Date().getHours()));
@@ -138,48 +135,20 @@ export function LoginStage({
           >
             Sign in with Microsoft
           </a>
-        ) : byCode ? (
-          <CodeSignIn next={next} onCancel={() => setByCode(false)} />
         ) : (
           <LoginForm next={next} showDevHint={devLogin} />
         )}
-        {/* Both of these need the portal to send an email, and it cannot yet
-            (lib/notifications/channels/email.ts has no transport). They are
-            shown because the team asked for them, and they say what is missing
-            rather than doing nothing — a control that fails silently teaches
-            people the whole page is broken. */}
-        <div className="mt-5 flex items-center justify-between border-t border-line pt-4">
-          <button
-            type="button"
-            onClick={() => {
-              // Forgetting a password and signing in with a code are the same
-              // errand: get in without one. There is no separate reset flow to
-              // send them to, and there does not need to be — once they are in,
-              // Reset password is in their own menu.
-              setNote("Sign in with a code, then set a new password from your own menu.");
-              setByCode(true);
-            }}
-            className="font-body text-[11px] font-light text-secondary underline decoration-line-strong underline-offset-2 transition-colors hover:text-white"
-          >
-            Forgot password?
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setNote(null);
-              setByCode(true);
-            }}
-            className="rounded border border-line-strong px-3 py-1.5 font-body text-[11px] font-bold text-secondary transition-colors hover:bg-hover hover:text-white"
-          >
-            Send OTP
-          </button>
-        </div>
+        {/* Sign-in codes are gone from this page, 2026-09-07. They were never
+            delivered: essentia.in publishes a DMARC policy and Brevo was not
+            authenticated in its DNS, so every code was refused at the door.
+            Ruby's call was to stop waiting on IT and sign in with passwords.
 
-        {note ? (
-          <p role="status" className="mt-3 font-body text-[11px] font-light leading-relaxed text-muted">
-            {note}
-          </p>
-        ) : null}
+            A "Forgot password?" that starts a flow which cannot finish is worse
+            than no link at all — it teaches people the page is broken. So the
+            recovery path is a person, and it says so. */}
+        <p className="mt-5 border-t border-line pt-4 font-body text-[11px] font-light leading-relaxed text-muted">
+          Forgot your password? Ask your team lead to set a new one for you.
+        </p>
       </div>
 
       <p className="absolute bottom-6 font-body text-[10px] font-light tracking-[0.2em] text-cream/25">
