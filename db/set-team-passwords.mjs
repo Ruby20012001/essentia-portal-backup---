@@ -32,9 +32,6 @@ const PEOPLE = [
   ["wio.atul@essentia.in", "Atul Yadav", "Senior Draughtsman"],
   ["Jyoti.drafting@essentia.in", "Jyoti Yadav", "Senior Draughtsman"],
   ["pio.coordinator@essentia.in", "PIO Coordinator", "PIO coordination"],
-  // The shared read-only login (db/039). One password the WIO team hands
-  // round essentia; it opens the board and can change nothing.
-  ["wio.view@essentia.in", "essentia — view only (SHARED)", "read-only"],
 ];
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
