@@ -2183,12 +2183,11 @@ document.addEventListener('paste', function (e) {
   }
 });
 
-/* ── signed drawings ──────────────────────────────────────────────────────
-   Project level, not per space. A signed drawing is the record of what was
-   agreed, so it belongs to the project and gets a chapter of its own rather
-   than being filed behind one room.                                        */
-/* Signed drawings and estimate pages behave identically — a named, dated,
-   ordered list of pages — so one renderer serves both. */
+/* ── documents ────────────────────────────────────────────────────────────
+   Project level, not per space. A signed drawing and a detailed estimate are
+   both the record of what was agreed, so they belong to the project and share
+   one chapter rather than being filed behind one room. One list, one drop
+   zone: the page is named when it goes in, and the name says what it is.   */
 var DOCSETS = {
   documents: { list: '#docList', drop: '#docDrop', word: 'document', ph: 'Ground floor SLD', px: 2600 }
 };
@@ -2361,8 +2360,7 @@ function saveLocal() {
     light.spaces.forEach(function (s) { s.images = []; });
     /* dropped entirely rather than emptied — a row with no picture left behind
        is a row you have to delete by hand next time the tool opens */
-    light.drawings = [];
-    light.estimateDocs = [];
+    light.documents = [];
     light.logo = '';
     localStorage.setItem('essentia.deck.draft', JSON.stringify(light));
   } catch (e) { /* private window, full quota — the .json draft is the real save */ }
@@ -2464,8 +2462,7 @@ $('#fLoad').addEventListener('change', function () {
       S = o;
       if (!S.plates) S.plates = [{ label: 'Ground floor', src: '', w: 0, h: 0 }];
       if (!S.narrative) S.narrative = blank().narrative;
-      if (!S.drawings) S.drawings = [];
-      if (!S.estimateDocs) S.estimateDocs = [];
+      if (!S.documents) S.documents = [];
       S.spaces.forEach(function (s) { if (!s.id) s.id = uid(); if (!s.images) s.images = []; });
       boot(); toast('Draft opened.');
     } catch (e) { toast('That file is not a deck draft.'); }
@@ -2563,8 +2560,7 @@ function boot() {
   b.addEventListener('click', function () {
     S = saved;
     if (!S.plates) S.plates = [{ label: 'Ground floor', src: '', w: 0, h: 0 }];
-    if (!S.drawings) S.drawings = [];
-    if (!S.estimateDocs) S.estimateDocs = [];
+    if (!S.documents) S.documents = [];
     S.spaces.forEach(function (sp) { if (!sp.id) sp.id = uid(); if (!sp.images) sp.images = []; });
     boot();
     b.remove();
