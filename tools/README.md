@@ -89,17 +89,17 @@ which writes the build time into the file and the filename together.
    the hero; the rest become the thumbnail strip. `↑` on any thumbnail makes it
    the one the client opens on.
 
-   **Every render carries a number — R01, R02, R03 —** in the order it arrived,
-   and the series continues: the next one added takes the next number. Beside
-   the drop zone, in the same place on every space, sits a small **`+ R04`** —
-   it names the number about to be used before the picture is even picked, and
-   pressing it opens the same picker the zone does. (In the client's panel the
-   same control is a **`+`** at the end of the thumbnail strip.) The
-   number is stamped once and stays with its picture, so promoting a later
-   render to the top does not renumber the ones behind it — R03 is still R03
-   when it is the one being shown. Old renders can therefore sit in the deck
-   beside the current one, each named, which is how the 3D team, the designer
-   and the client end up naming the same picture in an email.
+   **Every render is named after the space it is of.** Space 07 on the plan has
+   render **R07**; where a space holds more than one they run R07, R07.2, R07.3.
+   So the grid reads R01, R02, R03 straight down, the way the numbers on the
+   drawing do, and an old render can sit in the deck beside the current one with
+   both still named. Beside the drop zone, in the same place on every space,
+   sits a small **`+ R07.4`** — it names the render about to be added before the
+   picture is even picked, and pressing it opens the same picker the zone does.
+   (In the client's panel the same control is a **`+`** at the end of the
+   thumbnail strip.) A space left out of the deck takes no number, so the ones
+   after it do not shift.
+
    Each space carries four pieces of writing: the **one line** (what it is),
    the **paragraph** (why it sits there), and a **quotable** — one sentence,
    pulled out under an amber rule, meant to be the thing the client repeats to
@@ -126,9 +126,9 @@ which matters once a few versions have been saved to the same downloads folder.
 
 ### What a client gets when they open a space
 
-The number on the drawing opens a panel that scrolls: the render with its
-revision number in the corner, the other renders as thumbnails — each carrying
-its own number, with a **`+`** at the end of the series to add the next — the
+The number on the drawing opens a panel that scrolls: the render with its own
+number in the corner, the other renders as thumbnails — each carrying its
+number, with a **`+`** at the end of the series to add the next — the
 name, then **size · area · estimate**, then the line,
 the paragraph and the quotable. **Size, area and estimate are chips**, the same
 weight as the buttons beneath them, so the figures are as easy to find as the
