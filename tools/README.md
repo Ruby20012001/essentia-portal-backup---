@@ -157,8 +157,9 @@ picture. The render's number is drawn *into* the image rather than beside it,
 because this file gets forwarded, cropped and re-saved by people who will never
 see the deck it came from.
 
-**Every render carries its number in its own corner** — in the panel, on the
-thumbnails, on the shared JPG, and on every picture in the printed lookbook. Not
+**Every render carries its number in its own corner** — on the cards in the
+grid, in the panel, on the thumbnails, on the shared JPG, and on every picture
+in the printed lookbook. Not
 underneath it: a caption belongs to the page, and is gone the moment the picture
 is lifted out of it or the sheet is photographed. On the render it stays with
 the render. It is the one that matters for WhatsApp: a

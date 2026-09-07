@@ -104,7 +104,7 @@
 .deck-card{border:1px solid var(--rule);background:var(--paper);text-align:left;padding:0;cursor:pointer;
   font:inherit;color:inherit;display:flex;flex-direction:column;transition:border-color .15s}
 .deck-card:hover,.deck-card:focus-visible{border-color:var(--rule-strong);outline:none}
-.deck-card-img{display:block;aspect-ratio:4/3;background:var(--wash);overflow:hidden;line-height:0}
+.deck-card-img{position:relative;display:block;aspect-ratio:4/3;background:var(--wash);overflow:hidden;line-height:0}
 .deck-card-img img{width:100%;height:100%;object-fit:cover;display:block}
 .deck-card-img--none{display:flex;align-items:center;justify-content:center;line-height:1.5}
 .deck-card-img--none span{font-size:11px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase}
@@ -796,8 +796,11 @@ button,input,textarea,select{font:inherit;color:inherit}
       spaces.map(function (s) {
         var hero = (s.images && s.images[0]) ? s.images[0].src : '';
         return '<button class="deck-card" data-space="' + esc(s.id) + '">' +
+          /* the card is a picture with a number on it, like every other
+             picture in the deck — the grid is where most people look first */
           (hero ? '<span class="deck-card-img"><img loading="lazy" decoding="async" src="' + hero +
-                  '" alt="' + esc(s.name) + '"></span>'
+                  '" alt="' + esc(s.name) + '">' +
+                  '<span class="deck-rev">' + revLabel(s.images[0].rev) + '</span></span>'
                 : '<span class="deck-card-img deck-card-img--none"><span>No visual yet</span></span>') +
           '<span class="deck-card-body">' +
             '<span class="deck-card-no">' + esc(s.no) + (s.floor ? ' · ' + esc(s.floor) : '') + '</span>' +
