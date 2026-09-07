@@ -55,16 +55,11 @@ which writes the build time into the file and the filename together.
 
 ### Working sequence
 
-1. **Upload documents** — the first card. Two drop zones: the **signed
-   drawings** (SLD, GFC, layouts) and the **detailed estimate**, page by page.
-   Name and date each one. Each set becomes its own chapter in the deck, full
-   width. Both optional.
-
-   Drawings are deliberately not filed behind a room: a signed drawing is not
-   for the client who cannot read a drawing, it is the record of what was
-   agreed. And because a BOQ page is unreadable at page width on a phone,
-   **tapping any drawing or estimate page opens it full screen** to be panned
-   and pinched. Held at 2400px and 2600px against a render's 1500px.
+1. **Upload documents** — one drop zone, the first card. Signed drawings, the
+   detailed estimate, anything else the client should be able to read. Name and
+   date each page. They become one chapter in the deck, full width, in the order
+   you set, and tapping a page opens it full screen to be read. Held at 2600px,
+   because these are read rather than admired. Optional.
 2. **Client & cover** — project name, project code (`ED/YY-YY/NNN`), Client
    Advisor, headline.
 3. **Layout plates** — one per floor. Click the plate, then **paste a snip of
