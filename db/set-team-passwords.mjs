@@ -31,6 +31,7 @@ const PEOPLE = [
   ["wio.anshul@essentia.in", "Anshul Soni", "Senior Draughtsman"],
   ["wio.atul@essentia.in", "Atul Yadav", "Senior Draughtsman"],
   ["Jyoti.drafting@essentia.in", "Jyoti Yadav", "Senior Draughtsman"],
+  ["pio.coordinator@essentia.in", "PIO Coordinator", "PIO coordination"],
   // The shared read-only login (db/039). One password the WIO team hands
   // round essentia; it opens the board and can change nothing.
   ["wio.view@essentia.in", "essentia — view only (SHARED)", "read-only"],
@@ -139,8 +140,46 @@ writeFileSync(OUT, sql);
 
 console.log(`  Ho gaya — ${rows.length} account(s).`);
 console.log(`  File bani: db/037_wio_team_passwords.sql (sirf hashes)`);
-console.log("");
-console.log("  Ab bas database restart karo — file apne aap load ho jayegi.");
+
+// Straight into the live database, so nothing has to be pasted anywhere.
+function connectionString() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL.trim();
+  const envFile = join(HERE, "..", "frontend", ".env.local");
+  if (!existsSync(envFile)) return null;
+  const m = readFileSync(envFile, "utf8").match(/^DATABASE_URL=(.+)$/m);
+  return m ? m[1].trim() : null;
+}
+
+const url = connectionString();
+if (!url) {
+  console.log("");
+  console.log("  DATABASE_URL nahi mila — file likh di hai, use khud chalana padega.");
+} else {
+  const { default: pg } = await import("pg");
+  const client = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
+  try {
+    await client.connect();
+    await client.query(sql);
+    const check = await client.query(
+      `SELECT lower(email) AS email, auth_provider, (password_hash IS NOT NULL) AS has_password
+         FROM public.users WHERE lower(email) = ANY($1) ORDER BY email`,
+      [rows.map((r) => r.email.toLowerCase())],
+    );
+    console.log("");
+    console.log("  Database mein chala diya:");
+    for (const r of check.rows) {
+      const ok = r.has_password && r.auth_provider === "local";
+      console.log(`    ${ok ? "OK  " : "??  "}${r.email}`);
+    }
+  } catch (error) {
+    console.log("");
+    console.log("  Database tak nahi pahunch paya: " + error.message);
+    console.log("  File bani hui hai — baad mein chala lena.");
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
 console.log("");
 console.log("  Passwords sirf aapko pata hain. Kahin save nahi hue.");
 console.log("");
