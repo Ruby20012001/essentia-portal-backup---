@@ -51,6 +51,7 @@ export function LoginStage({
   // guess would mean a visible correction a moment later.
   const [revealed, setRevealed] = useState(false);
   const [hello, setHello] = useState<string | null>(null);
+  const [lost, setLost] = useState(false);
 
   useEffect(() => {
     setHello(greeting(new Date().getHours()));
@@ -143,12 +144,30 @@ export function LoginStage({
             authenticated in its DNS, so every code was refused at the door.
             Ruby's call was to stop waiting on IT and sign in with passwords.
 
-            A "Forgot password?" that starts a flow which cannot finish is worse
-            than no link at all — it teaches people the page is broken. So the
-            recovery path is a person, and it says so. */}
-        <p className="mt-5 border-t border-line pt-4 font-body text-[11px] font-light leading-relaxed text-muted">
-          Forgot your password? Ask your team lead to set a new one for you.
-        </p>
+            The link stays, because that is where people look when they are
+            stuck, and a page with nowhere to turn reads as broken. It no longer
+            promises a code it cannot send — it names the person who can help.
+            An answer someone can act on beats a button that goes nowhere. */}
+        <div className="mt-5 border-t border-line pt-4">
+          <button
+            type="button"
+            onClick={() => setLost((was) => !was)}
+            aria-expanded={lost}
+            className="font-body text-[11px] font-light text-secondary underline decoration-line-strong underline-offset-2 transition-colors hover:text-white"
+          >
+            Forgot password?
+          </button>
+
+          {lost ? (
+            <p
+              role="status"
+              className="mt-2 font-body text-[11px] font-light leading-relaxed text-muted"
+            >
+              Ask your team lead to set a new one for you — it takes a minute,
+              and you can sign in again straight away.
+            </p>
+          ) : null}
+        </div>
       </div>
 
       <p className="absolute bottom-6 font-body text-[10px] font-light tracking-[0.2em] text-cream/25">
