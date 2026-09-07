@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { BoardAccount } from "@/components/wio-tracker/BoardAccount";
 import { WioTrackerBoard } from "@/components/wio-tracker/WioTrackerBoard";
 import { getSession } from "@/lib/auth/session";
+import { getConfig } from "@/lib/services/config";
 import { getBoard, getPublicBoard } from "@/lib/services/wio-tracker";
 
 export const dynamic = "force-dynamic";
@@ -60,6 +61,13 @@ export default async function PublicBoardPage({
 
   const session = await getSession().catch(() => null);
 
+  // Open to anyone with the link, or only to the people who have an account —
+  // one row in portal.app_config, flipped without a deploy. Ruby asked for the
+  // second the moment sign-in codes can actually be delivered; until then the
+  // first is the only way those people can reach the board at all.
+  const open = await getConfig<boolean>("board.public", true);
+  if (!open && !session) redirect("/login?next=/board");
+
   // A signed-in account gets its own board; anything that goes wrong resolving
   // it — no read permission, an expired session, a database hiccup — falls back
   // to the open one rather than to an error page. The link has to keep working.
@@ -68,6 +76,7 @@ export default async function PublicBoardPage({
     board = await getBoard(session.user).catch(() => null);
   }
   const signedIn = board !== null;
+  if (!board && !open) notFound();
   if (!board) board = await getPublicBoard();
 
   return (

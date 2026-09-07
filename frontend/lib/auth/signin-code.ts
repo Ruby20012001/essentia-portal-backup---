@@ -2,6 +2,7 @@ import { createHash, randomInt } from "node:crypto";
 import { query } from "@/lib/db";
 import { sendMail, mailConfigured } from "@/lib/mail/send";
 import { writeAudit } from "@/lib/services/audit";
+import { getConfig } from "@/lib/services/config";
 
 /**
  * Signing in with a code sent by email.
@@ -69,7 +70,11 @@ export async function requestSignInCode(
   // opens that inbox gets in. TRACKER_VIEW (db/039) reads the board and
   // nothing else, so what a stranger would gain by guessing a colleague's
   // address is a screen they still cannot change.
-  if (!account) {
+  //
+  // Ruby, 2026-09-07: only the people she named. The switch is config rather
+  // than an environment variable because turning it off must not wait for a
+  // deploy — the day you want the door shut is the day you want it shut now.
+  if (!account && (await getConfig<boolean>("auth.self_signup", true))) {
     const domain = (process.env.SELF_SIGNUP_DOMAIN ?? "").trim().toLowerCase();
     if (domain && email.endsWith(`@${domain}`)) {
       const [made] = await query<{ id: string; full_name: string; email: string }>(
