@@ -87,7 +87,7 @@ export function LoginStage({
       {/* Keeps whatever is behind from competing with the type. */}
       <div
         aria-hidden
-        className="absolute inset-0 bg-gradient-to-b from-espresso/50 via-transparent to-espresso"
+        className="absolute inset-0 bg-gradient-to-b from-espresso/40 via-transparent to-espresso/90"
       />
 
       <div

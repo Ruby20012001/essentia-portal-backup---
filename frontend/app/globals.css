@@ -173,7 +173,7 @@
      competes with the one thing on this page that matters, which is the field
      someone has to type into. The extra scale keeps the blur from bleeding a
      pale edge in, since blur samples beyond the box. */
-  filter: blur(3px) saturate(0.96) brightness(1.02);
+  filter: blur(2px) saturate(0.96) brightness(1.12);
   animation: login-drift 46s ease-in-out infinite alternate;
 }
 
