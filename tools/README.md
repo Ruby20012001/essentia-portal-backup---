@@ -39,11 +39,15 @@ sections, inserts the card grid, and opens the panels. Each picture is stored
 exactly once — the interactive layer harvests the images back out of the markup
 rather than shipping a second copy.
 
-The header carries a **build stamp** and a row of jump links — Cover, Plates,
-Documents, Cover, Plates, Spaces, Narrative, Gates. The stamp says which copy of the
-tool is open, which settles the commonest confusion once a few versions have
-been downloaded; the links land on any card without scrolling past the Spaces
-list, which runs thousands of pixels long on a real project.
+The header carries a **build stamp** and a row of jump links — Documents, Cover,
+Plates, Spaces, Narrative, Gates. The stamp says which copy of the tool is open,
+which settles the commonest confusion once a few versions have been downloaded;
+the links land on any card without scrolling past the Spaces list, which runs
+thousands of pixels long on a real project.
+
+The tool **opens on a working deck** — the IREO ground floor sheet with its
+fifteen spaces pinned, their dimensions and their writing — so the thing
+explains itself before anyone has attached a file. `NEW BLANK` clears it.
 
 Delivery copies are cut with
 `node tools/stamp-build.mjs tools/concept-deck-configurator.html <outDir>`,
@@ -51,30 +55,24 @@ which writes the build time into the file and the filename together.
 
 ### Working sequence
 
-1. **Client & cover** — project name, project code (`ED/YY-YY/NNN`), Client
+1. **Upload documents** — the first card. Two drop zones: the **signed
+   drawings** (SLD, GFC, layouts) and the **detailed estimate**, page by page.
+   Name and date each one. Each set becomes its own chapter in the deck, full
+   width. Both optional.
+
+   Drawings are deliberately not filed behind a room: a signed drawing is not
+   for the client who cannot read a drawing, it is the record of what was
+   agreed. And because a BOQ page is unreadable at page width on a phone,
+   **tapping any drawing or estimate page opens it full screen** to be panned
+   and pinched. Held at 2400px and 2600px against a render's 1500px.
+2. **Client & cover** — project name, project code (`ED/YY-YY/NNN`), Client
    Advisor, headline.
-2. **Layout plates** — one per floor. Click the plate, then **paste a snip of
+3. **Layout plates** — one per floor. Click the plate, then **paste a snip of
    the plan**: `Win+Shift+S`, drag over the drawing in whatever is showing it,
    then `Ctrl+V` on the plate. Dropping or picking a PNG/JPG works too.
    *(A plan inside an InDesign PDF is vector — there is no image file to drag
    out of it, which is why paste is the shortest route.)*
-3. **Signed drawings** — the SLD, the GFC, the layouts, as they come off the
-   board. Drop or paste the JPGs, then name each one and date it. They get their
-   own chapter in the deck, full width, in the order you set. Optional.
-
-   They are deliberately **not** filed behind a room. A signed drawing is not
-   for the client who cannot read a drawing — it is the record of what was
-   agreed — so it stands on its own rather than sitting among the renders.
-   Held at 2400px, because a drawing is read rather than admired.
-4. **Detailed estimate** — the sheet the number was built from, page by page,
-   so a client can read it rather than take it on trust. Same shape as the
-   drawings: drop the JPGs, name and date each page. It becomes its own chapter,
-   and the arithmetic behind the estimate chip links straight to it.
-
-   A page of a BOQ is unreadable at page width on a phone, so **tapping any
-   drawing or estimate page opens it full screen at its own size**, to be panned
-   and pinched rather than squinted at. Held at 2600px for the same reason.
-5. **Spaces** — add each space, pick the name from the list for the project type
+4. **Spaces** — add each space, pick the name from the list for the project type
    so naming does not drift, **choose its floor** from the plates you added, set
    the **dimensions, area and estimate**, then **Place pin** and click the plan.
    The floor is a choice, not a typed line — it decides which drawing the pin
@@ -92,7 +90,7 @@ which writes the build time into the file and the filename together.
    prices itself — the same arithmetic the fee proposal already does per
    sq.ft. An estimate typed against a single space overrides the rate for that
    space. The running total sits on the Spaces card as you work.
-6. **Visuals** — drop, pick, or paste the renders onto each space. The first is
+5. **Visuals** — drop, pick, or paste the renders onto each space. The first is
    the hero; the rest become the thumbnail strip. `↑` on any thumbnail promotes
    it to hero.
    Each space carries four pieces of writing: the **one line** (what it is),
@@ -100,9 +98,9 @@ which writes the build time into the file and the filename together.
    pulled out under an amber rule, meant to be the thing the client repeats to
    someone else. Write the quotable to the type of space, not to the project.
 
-7. **Narrative** — the note the client reads before the spaces, and the
+6. **Narrative** — the note the client reads before the spaces, and the
    representational-purpose disclaimer.
-8. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.
+7. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.
 
 `SAVE DRAFT` writes a `.json` holding everything including the images — that is
 the real save. The tool also keeps the *text* of your last session in the
