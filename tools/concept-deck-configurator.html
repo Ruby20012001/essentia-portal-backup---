@@ -648,17 +648,34 @@ button,input,textarea,select{font:inherit;color:inherit}
   }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
-  /* Every render carries a number — R01, R02, R03 — in the order it arrived,
-     and the series simply continues: the next one added takes the next number.
-     The number is stamped once and then stays put, so promoting a later render
-     to the top of the panel does not renumber the ones behind it. It is how the
-     3D team, the designer and the client name the same picture in an email. */
-  function revLabel(n) { return 'R' + pad2(+n || 1); }
-  function ensureRevs(s) {
-    var a = s.images || [], top = 0;
-    a.forEach(function (im) { if (+im.rev > top) top = +im.rev; });
-    a.forEach(function (im) { if (!(+im.rev > 0)) { top += 1; im.rev = top; } });
-    return a;
+  /* Every render carries a number — R01, R02, R03 — and there is ONE series for
+     the whole deck, running in the order the deck runs: the first render of the
+     first space is R01, and the last render of the last space is the last
+     number. Not one series per space, which put R01 on every card in the grid
+     and told nobody anything.
+
+     Numbered by position rather than stamped once and kept. A number that was
+     stamped would survive a space being deleted or moved and the series would
+     read R01, R04, R09 — unique, and useless as a sequence. A space left out of
+     the deck takes no numbers with it, because the client never sees it. */
+  /* A render is named after the space it is of. Space 07 on the plan has
+     render R07, and if it has more than one they run R07, R07.2, R07.3 — so
+     the grid reads R01, R02, R03 straight down, the way the numbers on the
+     drawing do, and a picture forwarded on its own still says which pin it
+     belongs to. A space left out of the deck is numbered by nothing, because
+     the client never sees it and the numbers after it must not shift. */
+  function revName(no, k) { return 'R' + pad2(no) + (k ? '.' + (k + 1) : ''); }
+  function numberRenders(state) {
+    var no = 0;
+    (state.spaces || []).forEach(function (s) {
+      if (s.include === false) {
+        (s.images || []).forEach(function (im) { im.rev = ''; });
+        return;
+      }
+      no += 1;
+      (s.images || []).forEach(function (im, k) { im.rev = revName(no, k); });
+    });
+    return no;
   }
 
   /* size · area · estimate, in that order, skipping whatever is not filled in.
@@ -709,9 +726,9 @@ button,input,textarea,select{font:inherit;color:inherit}
      proposal does per sq.ft., so no figure is ever invented for a room. */
   function live(state) {
     var rate = num((state.project || {}).rate);
+    numberRenders(state);
     return (state.spaces || []).filter(function (s) { return s.include !== false; })
       .map(function (s, i) {
-        ensureRevs(s);
         s = Object.assign({}, s);
         s.no = pad2(i + 1);
         if (!String(s.estimate || '').trim() && rate > 0 && num(s.area) > 0) {
@@ -800,7 +817,7 @@ button,input,textarea,select{font:inherit;color:inherit}
              picture in the deck — the grid is where most people look first */
           (hero ? '<span class="deck-card-img"><img loading="lazy" decoding="async" src="' + hero +
                   '" alt="' + esc(s.name) + '">' +
-                  '<span class="deck-rev">' + revLabel(s.images[0].rev) + '</span></span>'
+                  '<span class="deck-rev">' + esc(s.images[0].rev) + '</span></span>'
                 : '<span class="deck-card-img deck-card-img--none"><span>No visual yet</span></span>') +
           '<span class="deck-card-body">' +
             '<span class="deck-card-no">' + esc(s.no) + (s.floor ? ' · ' + esc(s.floor) : '') + '</span>' +
@@ -867,7 +884,7 @@ button,input,textarea,select{font:inherit;color:inherit}
           return '<figure class="deck-shot">' +
             '<img loading="lazy" decoding="async" data-sp="' + esc(s.id) + '" data-ix="' + k +
             '" src="' + im.src + '" alt="' + esc(s.name) + '">' +
-            '<span class="deck-rev">' + revLabel(im.rev) + '</span></figure>';
+            '<span class="deck-rev">' + esc(im.rev) + '</span></figure>';
         }).join('') + '</section>';
     }).join('');
   }
@@ -979,7 +996,7 @@ button,input,textarea,select{font:inherit;color:inherit}
              This file is forwarded, cropped and re-saved by people who will
              never see the deck it came from; a name that sits outside the
              image is a name the image loses on its first hop. */
-          var rv = s.images[0].rev ? revLabel(s.images[0].rev) : '';
+          var rv = s.images[0].rev || '';
           if (rv) {
             c.font = CARD.font(400, 20);
             var rw = c.measureText(rv).width + 4 * (rv.length - 1) + 26;
@@ -1266,17 +1283,17 @@ button,input,textarea,select{font:inherit;color:inherit}
   }
 
   function sheetHtml(s, i, total, state) {
-    var imgs = ensureRevs(s);
+    var imgs = s.images || [];
     var hero = imgs[0]
       ? '<img src="' + imgs[0].src + '" alt="' + esc(s.name) + '" data-hero>' +
-        '<span class="deck-hero-rev" data-hero-rev>' + revLabel(imgs[0].rev) + '</span>'
+        '<span class="deck-hero-rev" data-hero-rev>' + esc(imgs[0].rev) + '</span>'
       : '<span>No visual yet</span>';
     return '<div class="deck-sheet-hero' + (imgs[0] ? '' : ' deck-sheet-hero--none') + '">' + hero +
         '<button class="deck-x" data-sheet-close aria-label="Close">&times;</button></div>' +
       '<div class="deck-thumbs">' + imgs.map(function (im, k) {
         return '<button class="deck-thumb" data-thumb="' + k + '" aria-current="' + (k === 0) + '">' +
           '<img src="' + im.src + '" alt="">' +
-          '<span class="deck-thumb-rev">' + revLabel(im.rev) + '</span></button>';
+          '<span class="deck-thumb-rev">' + esc(im.rev) + '</span></button>';
       }).join('') +
         /* the series ends in a +, which is where the next render goes */
         '<button class="deck-thumb deck-thumb--add" data-add-space="' + esc(s.id) + '"' +
@@ -1662,7 +1679,7 @@ button,input,textarea,select{font:inherit;color:inherit}
         var hero = sheetIn.querySelector('[data-hero]');
         if (hero && s.images[k]) hero.src = s.images[k].src;
         var rv = sheetIn.querySelector('[data-hero-rev]');
-        if (rv && s.images[k]) rv.textContent = revLabel(s.images[k].rev);
+        if (rv && s.images[k]) rv.textContent = s.images[k].rev || '';
         sheetIn.querySelectorAll('[data-thumb]').forEach(function (b) {
           b.setAttribute('aria-current', String(+b.getAttribute('data-thumb') === k));
         });
@@ -1723,7 +1740,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 
   root.EssentiaDeck = { mount: mount, live: live, esc: esc, html: deckHtml,
     card: spaceCard, slug: slugify, save: saveDataUri,
-    revs: ensureRevs, rev: revLabel };
+    number: numberRenders, revName: revName };
 
   if (root.__DECK__ && document.getElementById('deck-root')) {
     mount(document.getElementById('deck-root'), root.__DECK__);
@@ -2025,18 +2042,20 @@ function renderPlates() {
 function renderSpaces() {
   var host = $('#spaces');
   var list = TYPES[S.type] || TYPES.Residence;
+  /* named from the deck, so the tray shows the same numbers the client will
+     see rather than a private count per space */
+  window.EssentiaDeck.number(S);
+  var run = 0;
   host.innerHTML =
     '<datalist id="spaceNames">' + list.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>' +
     S.spaces.map(function (s, i) {
       var pinned = typeof s.x === 'number' && typeof s.y === 'number';
       var nImg = (s.images || []).length;
-      /* the series numbers itself, so the button beside the zone can say which
-         number is about to be used — the next render is named before it is
-         even picked */
-      var revs = window.EssentiaDeck.revs(s);
-      var nextRev = window.EssentiaDeck.rev(revs.reduce(function (m, im) {
-        return Math.max(m, +im.rev || 0);
-      }, 0) + 1);
+      /* What the next render here will be called — this space's own number,
+         and its position within the space. Named before it is even picked. */
+      if (s.include !== false) run += 1;
+      var revs = s.images || [];
+      var nextRev = window.EssentiaDeck.revName(run, revs.length);
       return '<div class="row" data-space-row="' + i + '">' +
         '<div class="row-head">' +
           '<label class="check" style="gap:6px"><input type="checkbox" data-inc="' + i + '"' + (s.include !== false ? ' checked' : '') + '></label>' +
@@ -2083,7 +2102,7 @@ function renderSpaces() {
             '<button class="tray-x" data-img-del="' + i + '_' + k + '" title="Remove">&times;</button>' +
             (k === 0 ? '<span class="tray-hero">HERO</span>' :
               '<button class="tray-x" style="left:2px;right:auto" data-img-hero="' + i + '_' + k + '" title="Make this the one the client opens on">&uarr;</button>') +
-            '<span class="tray-rev">' + window.EssentiaDeck.rev(im.rev) + '</span>' +
+            '<span class="tray-rev">' + esc(im.rev || '') + '</span>' +
             '</div>';
         }).join('') + '</div>' +
       '</div></div>';
