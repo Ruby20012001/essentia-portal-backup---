@@ -150,9 +150,13 @@ to find. Where sharing a file is not offered, it saves the image instead.
 with that number held in amber for a moment.
 
 **Save as image** draws that space onto a single 1080px JPG — the essentia
-mark, the project and date, the render, the number, the name, the size, the
-area, the estimate, the writing, the quotable, the concept stamp and the
-disclaimer, all inside the picture. It is the one that matters for WhatsApp: a
+mark, the project and date, the render with **its own number in the corner of
+the picture**, the space number, the name, the size, the area, the estimate,
+the writing, the quotable, the concept stamp and the disclaimer, all inside the
+picture. The render's number is drawn *into* the image rather than beside it,
+because this file gets forwarded, cropped and re-saved by people who will never
+see the deck it came from. On paper the number prints under each render, where
+there is nothing to tap. It is the one that matters for WhatsApp: a
 PDF has to be opened, an image shows itself in the message. Drawn on a canvas
 in about a fifth of a second, roughly 200 KB, and it needs no library and no
 network. **All as images** in the tool header does the whole deck, one file per

@@ -178,6 +178,7 @@
 .deck-thumb{position:relative;overflow:hidden;width:56px;height:42px;border:1px solid var(--rule);padding:0;background:var(--wash);cursor:pointer;line-height:0}
 .deck-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .deck-thumb[aria-current="true"]{border-color:var(--ink)}
+.deck-rev{display:block;font-size:10px;letter-spacing:.12em;color:var(--faint);margin-top:5px}
 .deck-thumb-rev{position:absolute;left:0;bottom:0;font-size:8px;letter-spacing:.06em;line-height:1.5;
   background:rgba(0,0,0,.72);color:#fff;padding:0 3px}
 .deck-thumb--add{border-style:dashed;font-size:17px;line-height:1;color:var(--soft);white-space:nowrap}
@@ -849,7 +850,9 @@ button,input,textarea,select{font:inherit;color:inherit}
         specHtml(s, false, state) +
         (s.images || []).map(function (im, k) {
           return '<img loading="lazy" decoding="async" data-sp="' + esc(s.id) + '" data-ix="' + k +
-            '" src="' + im.src + '" alt="' + esc(s.name) + '" style="margin-top:10px">';
+            '" src="' + im.src + '" alt="' + esc(s.name) + '" style="margin-top:10px">' +
+            /* on paper there is nothing to tap, so the number is printed */
+            '<span class="deck-rev">' + revLabel(im.rev) + '</span>';
         }).join('') + '</section>';
     }).join('');
   }
@@ -957,6 +960,19 @@ button,input,textarea,select{font:inherit;color:inherit}
           if (sh > hero.height) { sh = hero.height; sw = Math.round(hero.height * (CW / hh)); }
           c.drawImage(hero, Math.round((hero.width - sw) / 2), Math.round((hero.height - sh) / 2),
                       sw, sh, PAD, y, CW, hh);
+          /* The render's number, drawn into the picture rather than beside it.
+             This file is forwarded, cropped and re-saved by people who will
+             never see the deck it came from; a name that sits outside the
+             image is a name the image loses on its first hop. */
+          var rv = s.images[0].rev ? revLabel(s.images[0].rev) : '';
+          if (rv) {
+            c.font = CARD.font(400, 20);
+            var rw = c.measureText(rv).width + 4 * (rv.length - 1) + 26;
+            c.fillStyle = 'rgba(0,0,0,.72)';
+            c.fillRect(PAD, y + hh - 36, rw, 36);
+            c.fillStyle = '#fff';
+            tracked(c, rv, PAD + 13, y + hh - 12, 4);
+          }
           y += hh + 46;
         }
 
