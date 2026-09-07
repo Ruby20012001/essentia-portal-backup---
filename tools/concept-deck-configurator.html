@@ -489,7 +489,7 @@ button,input,textarea,select{font:inherit;color:inherit}
           <h1>Concept Deck <span class="head-build" id="headBuild">build unstamped</span></h1>
           <p class="head-sub">Attach the plan, mark the spaces, add the visuals — then preview and send.</p>
           <nav class="head-jump" aria-label="Jump to a section">
-            <a href="#card-cover">Cover</a><a href="#card-plates">Plates</a><a href="#card-drawings">Drawings</a><a href="#card-estimate">Estimate</a><a href="#card-spaces">Spaces</a><a href="#card-narrative">Narrative</a><a href="#card-gates">Gates</a>
+            <a href="#card-docs">Documents</a><a href="#card-cover">Cover</a><a href="#card-plates">Plates</a><a href="#card-spaces">Spaces</a><a href="#card-narrative">Narrative</a><a href="#card-gates">Gates</a>
           </nav>
         </div>
         <div class="head-actions">
@@ -516,6 +516,20 @@ button,input,textarea,select{font:inherit;color:inherit}
       <!-- editor -->
       <div class="pane-edit">
 
+        <section class="card" id="card-docs">
+          <h2>Upload documents</h2>
+          <div class="card-in">
+            <p class="f-hint" style="margin:0 0 12px">
+              Signed drawings and the detailed estimate. Each gets its own chapter in the deck —
+              full width, named and dated. Tapping a page opens it full screen to be read. Optional.
+            </p>
+            <div class="drop" tabindex="0" id="dwgDrop">Signed drawings — click, drop, or paste (JPG)</div>
+            <div id="dwgList"></div>
+            <div class="drop" tabindex="0" id="estDrop" style="margin-top:12px">Detailed estimate — click, drop, or paste (JPG)</div>
+            <div id="estList"></div>
+          </div>
+        </section>
+
         <section class="card" id="card-cover">
           <h2>Client &amp; cover</h2>
           <div class="card-in">
@@ -535,30 +549,6 @@ button,input,textarea,select{font:inherit;color:inherit}
           </div>
         </section>
 
-        <section class="card" id="card-drawings">
-          <h2>Signed drawings</h2>
-          <div class="card-in">
-            <p class="f-hint" style="margin:0 0 12px">
-              The record of what was agreed — SLD, GFC, layouts, as they come off the board.
-              They get their own section in the deck, full width and named. Optional.
-            </p>
-            <div class="drop" tabindex="0" id="dwgDrop">Click, drop, or paste the signed drawings (JPG)</div>
-            <div id="dwgList"></div>
-          </div>
-        </section>
-
-        <section class="card" id="card-estimate">
-          <h2>Detailed estimate</h2>
-          <div class="card-in">
-            <p class="f-hint" style="margin:0 0 12px">
-              The sheet the number was built from, page by page, so a client can read it
-              rather than take it on trust. Its own section in the deck; tapping a page
-              opens it full screen to be read. Optional.
-            </p>
-            <div class="drop" tabindex="0" id="estDrop">Click, drop, or paste the estimate pages (JPG)</div>
-            <div id="estList"></div>
-          </div>
-        </section>
 
         <section class="card" id="card-spaces">
           <h2>Spaces</h2>
@@ -2532,23 +2522,40 @@ function boot() {
   renderAll();
 }
 
-/* restore the text of the last session, if there is one */
+/* Open on the sample, every time.
+   The last session is still kept, but it is text only — every picture is
+   stripped to fit the browser store — so applying it silently left the tool
+   showing an empty plan and no visuals, which reads as broken. It is offered
+   as a button instead, and only when there is something to offer. */
 (function start() {
-  var restored = null;
+  S = sample();
+  boot();
+
+  var saved = null;
   try {
     var raw = localStorage.getItem('essentia.deck.draft');
     if (raw) {
       var o = JSON.parse(raw);
-      if (o && o.project && Array.isArray(o.spaces)) restored = o;
+      if (o && o.project && Array.isArray(o.spaces)) saved = o;
     }
-  } catch (e) { /* nothing to restore */ }
-  S = restored || sample();
-  if (!S.plates) S.plates = [{ label: 'Ground floor', src: '', w: 0, h: 0 }];
-  if (!S.drawings) S.drawings = [];
-  if (!S.estimateDocs) S.estimateDocs = [];
-  S.spaces.forEach(function (s) { if (!s.id) s.id = uid(); if (!s.images) s.images = []; });
-  boot();
-  if (restored) toast('Restored your last session (text only — re-attach the images).');
+  } catch (e) { /* nothing kept */ }
+  if (!saved) return;
+
+  var b = document.createElement('button');
+  b.className = 'btn btn--ghost btn--sm';
+  b.textContent = 'Restore last text';
+  b.title = 'The writing from your last session. Pictures are not kept here — re-attach them, or open a saved draft.';
+  b.addEventListener('click', function () {
+    S = saved;
+    if (!S.plates) S.plates = [{ label: 'Ground floor', src: '', w: 0, h: 0 }];
+    if (!S.drawings) S.drawings = [];
+    if (!S.estimateDocs) S.estimateDocs = [];
+    S.spaces.forEach(function (sp) { if (!sp.id) sp.id = uid(); if (!sp.images) sp.images = []; });
+    boot();
+    b.remove();
+    toast('Last session restored — text only. Re-attach the plan and the visuals.');
+  });
+  document.querySelector('.toolrow').appendChild(b);
 })();
 </script>
 </body>

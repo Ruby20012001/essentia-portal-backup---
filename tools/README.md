@@ -40,7 +40,7 @@ exactly once — the interactive layer harvests the images back out of the marku
 rather than shipping a second copy.
 
 The header carries a **build stamp** and a row of jump links — Cover, Plates,
-Drawings, Estimate, Spaces, Narrative, Gates. The stamp says which copy of the
+Documents, Cover, Plates, Spaces, Narrative, Gates. The stamp says which copy of the
 tool is open, which settles the commonest confusion once a few versions have
 been downloaded; the links land on any card without scrolling past the Spaces
 list, which runs thousands of pixels long on a real project.
