@@ -3,6 +3,7 @@ import Link from "next/link";
 import { UserMenu } from "@/components/shell/UserMenu";
 import { MobileNav } from "@/components/shell/MobileNav";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import type { SessionUser } from "@/lib/auth/session";
 import { homeHref } from "@/lib/portal-mode";
 
@@ -24,6 +25,7 @@ export function Header({ user }: { user: SessionUser }) {
         </Link>
       </div>
       <div className="flex shrink-0 items-center gap-3 md:gap-4">
+        <ThemeToggle />
         <NotificationCenter />
         <UserMenu user={user} />
       </div>

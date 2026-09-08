@@ -66,7 +66,14 @@ export function LoginStage({
   }, []);
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-espresso px-6">
+    // Pinned dark. This page is a lit room at night with a card floating on
+    // it; a light palette would put pale type on a photograph and lose the one
+    // effect the page is built around. data-theme is matched on any element,
+    // not just :root, so this subtree simply keeps the dark variables.
+    <div
+      data-theme="dark"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-espresso px-6"
+    >
       {/* The room. It drifts, very slowly — a still photograph on a login
           screen reads as a poster; a moving one reads as a place. */}
       <div

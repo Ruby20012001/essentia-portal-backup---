@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import { BoardAccount } from "@/components/wio-tracker/BoardAccount";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { WioTrackerBoard } from "@/components/wio-tracker/WioTrackerBoard";
 import { getSession } from "@/lib/auth/session";
 import { getConfig } from "@/lib/services/config";
@@ -90,6 +91,7 @@ export default async function PublicBoardPage({
           {/* Swapping who you are belongs on the page you are already on —
               otherwise "sign in as someone who can edit" means hunting for a
               second URL, which is the thing this page exists to avoid. */}
+          <ThemeToggle />
           <BoardAccount name={session?.user.name ?? null} />
         </div>
       </header>

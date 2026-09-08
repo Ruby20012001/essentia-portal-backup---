@@ -3,14 +3,84 @@
 @tailwind utilities;
 
 @layer base {
-  /* Dark theme — native controls, scrollbars and form widgets follow suit. */
-  :root {
+  /* ------------------------------------------------------------------
+     TWO THEMES, ONE SET OF CLASSES.
+
+     Every colour token in tailwind.config.ts reads one of these variables,
+     so switching theme is switching this block — no component knows which
+     theme is on, and none had to be rewritten.
+
+     Channels are bare "R G B" numbers rather than hex, which is what lets
+     Tailwind's opacity modifiers keep working: text-secondary/60 still
+     composes to rgb(var(--c-secondary) / 0.6).
+
+     Dark is the default and stays exactly the palette this portal has
+     always had. Light is the addition — warm rather than clinical, because
+     an interior practice's white is never #FFFFFF stark.
+
+     [data-theme] is matched anywhere, not only on :root, so a subtree can
+     pin its own theme. The sign-in page does: it sits on a photograph and
+     is dark whatever the rest of the portal is doing.
+     ------------------------------------------------------------------ */
+  :root,
+  [data-theme="dark"] {
     color-scheme: dark;
+
+    --c-canvas: 0 0 0;
+    --c-card: 13 13 13;
+    --c-surface: 17 17 17;
+    --c-line: 30 30 30;
+    --c-line-strong: 42 42 42;
+    --c-hover: 23 23 23;
+    --c-selected: 32 32 32;
+    --c-ink: 255 255 255;
+    --c-secondary: 181 181 181;
+    --c-muted: 122 122 122;
+    --c-success: 46 125 50;
+    --c-warning: 255 179 0;
+    --c-error: 211 47 47;
+    --c-navy: 59 91 168;
+    --c-amber: 168 137 92;
+    --c-amber-deep: 198 160 106;
+  }
+
+  [data-theme="light"] {
+    color-scheme: light;
+
+    /* Paper, not screen. The canvas is a warm off-white and cards sit a
+       shade brighter than it, so a card reads as lifted — the same
+       relationship the dark theme has, inverted rather than abandoned. */
+    --c-canvas: 247 246 244;
+    --c-card: 255 255 255;
+    --c-surface: 241 239 236;
+    --c-line: 227 224 219;
+    --c-line-strong: 209 205 198;
+    --c-hover: 239 237 233;
+    --c-selected: 230 226 220;
+
+    /* Not #000 on #FFF. Full black on white is harsher than paper ever is,
+       and at 300-weight Lato it buzzes. */
+    --c-ink: 26 24 22;
+    --c-secondary: 85 82 77;
+    --c-muted: 122 117 110;
+
+    /* The status colours are darkened, not reused: the dark theme's green
+       and amber were picked to carry on black and fail contrast on white. */
+    --c-success: 27 94 32;
+    --c-warning: 158 100 0;
+    --c-error: 176 32 32;
+    --c-navy: 42 68 133;
+    --c-amber: 138 108 66;
+    --c-amber-deep: 122 94 56;
+  }
+
+  html {
+    background-color: rgb(var(--c-canvas));
   }
 
   body {
-    background-color: #000000;
-    color: #ffffff;
+    background-color: rgb(var(--c-canvas));
+    color: rgb(var(--c-ink));
   }
 
   /* No blue browser focus outline anywhere; keyboard focus gets a subtle
@@ -20,13 +90,13 @@
   }
 
   :focus-visible {
-    outline: 2px solid #ffffff;
+    outline: 2px solid rgb(var(--c-ink));
     outline-offset: 1px;
   }
 
   ::selection {
-    background-color: #202020;
-    color: #ffffff;
+    background-color: rgb(var(--c-selected));
+    color: rgb(var(--c-ink));
   }
 }
 
