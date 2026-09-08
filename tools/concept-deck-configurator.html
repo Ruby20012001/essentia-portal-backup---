@@ -194,7 +194,10 @@
 .deck-sheet-hero{position:relative;overflow:hidden;background:var(--wash);line-height:0;flex:none}
 .deck-sheet-hero img{width:100%;height:auto;display:block;max-height:46vh;object-fit:cover;
   transition:transform .45s cubic-bezier(.2,.7,.3,1)}
-.deck-spots{position:absolute;inset:0;line-height:1}
+/* the layer lies over the whole picture, so it must not take the taps meant
+   for the picture — only the things drawn on it do */
+.deck-spots{position:absolute;inset:0;line-height:1;pointer-events:none}
+.deck-spot,.deck-spot-card,.deck-spot-in{pointer-events:auto}
 .deck-spot{position:absolute;transform:translate(-50%,-50%);width:26px;height:26px;padding:0;border:0;
   background:transparent;cursor:pointer;z-index:2}
 .deck-spot i{display:block;width:11px;height:11px;margin:7px;border-radius:50%;background:#fff;
