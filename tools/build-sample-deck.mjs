@@ -23,6 +23,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 
 const [tool, imgDir, logoPath, out] = process.argv.slice(2);
+const MARKS = JSON.parse(fs.readFileSync(new URL('./samples/ireo-marks.json', import.meta.url), 'utf8'));
 const src = fs.readFileSync(tool, 'utf8');
 
 /* anchored at line start so prose inside the file's header comment that merely
@@ -254,7 +255,13 @@ const state = {
     plate: 0,
     x: s.x == null ? null : s.x,
     y: s.y == null ? null : s.y,
-    images: s.imgs.map((n) => ({ src: jpg(n), w: 0, h: 0 })),
+    /* the materials, marked on the render they can be seen in — read off the
+       pictures and kept in ireo-marks.json so they can be corrected without
+       touching this file */
+    images: s.imgs.map((n, k) => ({
+      src: jpg(n), w: 0, h: 0,
+      spots: ((MARKS[s.name] || {})[String(k)] || []).map((q) => ({ x: q.x, y: q.y, name: q.name })),
+    })),
   })),
   narrative: {
     lead: 'A drawing is a language. Nobody should have to learn it to see their own home.',

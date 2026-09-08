@@ -221,8 +221,9 @@
 .deck-spot-in{position:absolute;z-index:4;transform:translate(-50%,-140%);display:flex;gap:4px;
   background:rgba(0,0,0,.9);padding:5px}
 .deck-spot-in.is-below{transform:translate(-50%,40%)}
-.deck-spot-in input{width:190px;border:0;background:transparent;color:#fff;font:inherit;font-size:13px;
-  padding:5px 7px;outline:none;border-bottom:1px solid var(--amber)}
+.deck-spot-in input{width:210px;border:0;background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:13px;
+  padding:7px 9px;outline:none;border-bottom:2px solid var(--amber)}
+.deck-spot-in input::placeholder{color:rgba(255,255,255,.5);font-style:italic}
 .deck-spot-in button{border:0;background:transparent;color:#c9c9c9;font-size:15px;cursor:pointer;padding:0 6px}
 .deck-spots.is-open .deck-spot:not(.is-live){opacity:.25}
 /* the name is wiped in from the left, the way the essentia mark arrives on the
@@ -2220,7 +2221,8 @@ button,input,textarea,select{font:inherit;color:inherit}
       box.className = 'deck-spot-in' + (q.y < 0.22 ? ' is-below' : '');
       box.style.left = Math.min(78, Math.max(22, q.x * 100)).toFixed(2) + '%';
       box.style.top = (q.y * 100).toFixed(2) + '%';
-      box.innerHTML = '<input type="text" value="' + esc(q.name || '') + '">' +
+      box.innerHTML = '<input type="text" placeholder="Name it, then press Enter"' +
+          ' value="' + esc(q.name || '') + '">' +
         '<button data-spot-x="' + j + '" title="Remove this mark">&times;</button>';
       layer.appendChild(box);
       var input = box.querySelector('input');
