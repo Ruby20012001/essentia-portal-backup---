@@ -318,7 +318,7 @@ const html =
 <body class="deck-scope">
 <div id="deck-root" data-prerendered="1">${prerendered}</div>
 <script>window.__DECK__=${JSON.stringify(slim).replace(/<\//g, '<\\/')};<\/script>
-<script>${viewer}<\/script>
+<script id="viewer">${viewer}<\/script>
 </body>
 </html>
 `;

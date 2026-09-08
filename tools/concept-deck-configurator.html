@@ -207,6 +207,13 @@
 .deck-hero-dots:hover,.deck-hero-dots:focus-visible{background:rgba(0,0,0,.82);outline:none}
 .deck-hero-dots[aria-pressed="true"]{background:var(--amber);color:#000}
 @media print{.deck-hero-dots{display:none}}
+/* A name typed into a picture lives in the open page and nowhere else until
+   the file is written again. This says so, where the naming happens. */
+.deck-hero-keep{position:absolute;right:0;bottom:31px;z-index:5;border:0;cursor:pointer;
+  background:var(--amber);color:#000;font:inherit;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;padding:7px 11px}
+.deck-hero-keep:hover,.deck-hero-keep:focus-visible{background:#c0a071;outline:none}
+@media print{.deck-hero-keep{display:none}}
 .deck-spot{position:absolute;transform:translate(-50%,-50%);width:26px;height:26px;padding:0;border:0;
   background:transparent;cursor:pointer;z-index:2}
 .deck-spot i{display:block;width:11px;height:11px;margin:7px;border-radius:50%;background:#fff;
@@ -1875,6 +1882,7 @@ button,input,textarea,select{font:inherit;color:inherit}
         '<button class="deck-hero-mark" data-mark="' + esc(s.id) + '"' +
           ' title="Mark materials" aria-label="Mark materials"><i></i></button>' +
         '<span class="deck-mark-hint" data-mark-hint hidden>Tap the picture where the material is</span>' +
+        '<button class="deck-hero-keep" data-keep hidden>Keep these names</button>' +
         /* the picture first, the marks when they are wanted — one press shows
            every material on it, another puts them away */
         ((imgs[0].spots || []).length
@@ -1987,6 +1995,7 @@ button,input,textarea,select{font:inherit;color:inherit}
       sheetIn.parentNode.scrollTop = 0;
       var c = sheetIn.querySelector('[data-sheet-close]');
       if (c) c.focus();
+      showKeep();
       armAuto();
       syncAuto();
     }
@@ -2176,6 +2185,19 @@ button,input,textarea,select{font:inherit;color:inherit}
     /* a document, full screen, to be read rather than admired */
     var ZOOM = 2.4;
     var marking = false;
+    /* Pressing Enter puts the name on the picture and into the state this page
+       is holding — which is the open page, not the file on disk. In the tool
+       the editor picks it up and keeps it; in a deck sent on its own there is
+       nothing behind it, so the deck has to be written out again. */
+    var spotsDirty = false;
+    function markDirty() {
+      spotsDirty = true;
+      showKeep();
+    }
+    function showKeep() {
+      var b = el.querySelector('[data-keep]');
+      if (b) b.hidden = !(spotsDirty && root.__DECK__);
+    }
     /* Marking belongs where the picture is. Doing it in the editor meant
        holding the deck in one hand and the tool in the other, and the person
        who knows the material is the one looking at the render. */
@@ -2224,6 +2246,7 @@ button,input,textarea,select{font:inherit;color:inherit}
         name: ''
       });
       redrawSpots();
+      markDirty();
       var made = el.querySelectorAll('[data-spot]');
       editSpot(made[made.length - 1]);
     }
@@ -2260,6 +2283,7 @@ button,input,textarea,select{font:inherit;color:inherit}
           if (where > -1) im.spots.splice(where, 1);
         }
         redrawSpots();
+        markDirty();
         el.dispatchEvent(new CustomEvent('deck:changed', { bubbles: true }));
       };
       input.addEventListener('blur', function () { setTimeout(settle, 120); });
@@ -2271,6 +2295,7 @@ button,input,textarea,select{font:inherit;color:inherit}
       var box = x.closest('.deck-spot-in');
       if (box) box.remove();
       redrawSpots();
+      markDirty();
       el.dispatchEvent(new CustomEvent('deck:changed', { bubbles: true }));
     }
     function clearSpot() {
@@ -2281,7 +2306,9 @@ button,input,textarea,select{font:inherit;color:inherit}
       var card = el.querySelector('[data-spot-card]');
       if (card) { card.hidden = true; card.innerHTML = ''; }
       var line = el.querySelector('[data-spot-line]');
-      if (line) line.setAttribute('data-on', '');
+      /* removed, not emptied: [data-on] in CSS matches an empty value too,
+         so an emptied attribute left the line drawn across the picture */
+      if (line) line.removeAttribute('data-on');
     }
     /* A client taps where they are looking, not where a mark happens to be.
        Anywhere on the picture goes there; a tap near a mark opens that mark,
@@ -2400,7 +2427,14 @@ button,input,textarea,select{font:inherit;color:inherit}
       var was = btn.textContent;
       btn.disabled = true; btn.textContent = 'Writing…';
       var html = rewriteSelf(state);
-      if (!html) { btn.disabled = false; btn.textContent = was; return; }
+      if (!html) {
+        /* an older deck, written before the viewer tag carried its id — it
+           cannot rebuild itself, and the button used to sit there doing
+           nothing at all, which is worse than saying so */
+        btn.disabled = false; btn.textContent = 'Cannot write this file';
+        setTimeout(function () { btn.textContent = was; }, 2600);
+        return false;
+      }
       var p = state.project || {};
       var d = new Date();
       var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -2412,6 +2446,7 @@ button,input,textarea,select{font:inherit;color:inherit}
       document.body.appendChild(a); a.click();
       setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
       btn.disabled = false; btn.textContent = was;
+      return true;
     }
 
     function cardName(s) {
@@ -2598,6 +2633,11 @@ button,input,textarea,select{font:inherit;color:inherit}
       var addZone = e.target.closest('[data-add]');
       if (addZone) { pickInto(addZone.getAttribute('data-add'), addZone); return; }
       if (e.target.closest('[data-save-self]')) { saveSelf(e.target.closest('[data-save-self]')); return; }
+      var keepBtn = e.target.closest('[data-keep]');
+      if (keepBtn) {
+        if (saveSelf(keepBtn) !== false) { spotsDirty = false; keepBtn.hidden = true; }
+        return;
+      }
       var big = e.target.closest('[data-doc],[data-spdoc]');
       if (big) { openBig(big); return; }
       if (e.target.closest('[data-lb-close]')) {
