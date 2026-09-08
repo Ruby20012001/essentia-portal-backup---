@@ -2653,9 +2653,14 @@ function renderPlates() {
     function take(files) {
       if (window.EssentiaDeck.pdfIn(files)) { window.EssentiaDeck.unpdf(files, d, take); return; }
       if (!files || !files[0]) return;
+      var many = files.length > 1;
       importImage(files[0], 2400, 0.92, true).then(function (im) {
         S.plates[i].src = im.src; S.plates[i].w = im.w; S.plates[i].h = im.h;
-        renderAll(); toast('Plan attached.');
+        /* a floor takes one sheet, so the rest have to be accounted for out
+           loud rather than dropped in silence */
+        renderAll(); toast(many
+          ? files.length + ' pages read · page 1 is on this floor. Add the rest with “Upload drawing”.'
+          : 'Plan attached.');
       }).catch(function (e) { toast(e.message); });
     }
     d.addEventListener('click', function () {
