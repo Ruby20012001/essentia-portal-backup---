@@ -89,17 +89,17 @@ which writes the build time into the file and the filename together.
    the hero; the rest become the thumbnail strip. `↑` on any thumbnail makes it
    the one the client opens on.
 
-   **Every render has a number of its own — R01, R02, R03 —** one count for the
-   whole deck, running in the order the deck runs. Twenty-six renders means R01
-   to R26, no repeats and no decimal points: a plain number is what people say
-   out loud and type into an email. A card in the grid shows the number of the
-   picture on it, so a space holding four renders takes four numbers and the
-   next space carries on from there. Beside the drop zone, in the same place on
-   every space, sits a small **`+ R07`** — it names the render about to be added
-   before the picture is even picked, and pressing it opens the same picker the
-   zone does. (In the client's panel the same control is a **`+`** at the end of
-   the thumbnail strip.) A space left out of the deck is counted by nothing,
-   because the client never sees it.
+   **A picture carries the number of the space it is of.** Space 07 on the plan
+   is **R07**, and so is every render of it. The grid therefore reads R01 to R15
+   straight down — fifteen cards, checkable at a glance, without opening a
+   single one. (Counting renders instead lets the extra angles inside a space
+   eat the numbers: the grid comes out R01, R03, R07 and the only way to know
+   what is missing is to open all fifteen.) Beside the drop zone, in the same
+   place on every space, sits a small **`+ R07`** — the number the next picture
+   here will carry, said before it is even picked, and pressing it opens the
+   same picker the zone does. (In the client's panel the same control is a
+   **`+`** at the end of the thumbnail strip.) A space left out of the deck is
+   counted by nothing, because the client never sees it.
 
    Each space carries four pieces of writing: the **one line** (what it is),
    the **paragraph** (why it sits there), and a **quotable** — one sentence,
@@ -158,9 +158,9 @@ picture. The render's number is drawn *into* the image rather than beside it,
 because this file gets forwarded, cropped and re-saved by people who will never
 see the deck it came from.
 
-**Every render has a number of its own**, counted across the whole deck in the
-order it runs — R01 to R26 on a deck of twenty-six. No repeats, so a picture
-that arrives on its own can be named exactly, and answered exactly.
+**A picture carries the number of the space it is of** — R07 is a render of the
+space marked 07 on the plan — so a picture that arrives on its own still says
+which pin it belongs to, and the grid can be read straight down.
 
 The name is in the corner of the picture itself — on the cards, in the panel, on
 the thumbnails, on the shared JPG and on every render in the printed lookbook.
