@@ -129,6 +129,11 @@ an open space. Fifteen spaces means fifteen of them down the grid, so filling in
 a deck is a pass down the page rather than fifteen rounds of open, attach,
 close. None of them print.
 
+Under the plan and under the documents sits **`+ Add another drawing`** and
+**`+ Add another document`**. The corner `+` reissues the sheet it sits on;
+these add a new one, as many as the project needs — a second floor, a section,
+another signed page. A new drawing brings its own floor tab with it.
+
 The deck footer carries a **Deck built** date and time. If a deck is not
 behaving as described here, read that line first — it says which copy is open,
 which matters once a few versions have been saved to the same downloads folder.

@@ -111,7 +111,11 @@
 .deck-card-add:hover,.deck-card-add:focus-visible,
 .deck-plate-add:hover,.deck-plate-add:focus-visible,
 .deck-dwg-add:hover,.deck-dwg-add:focus-visible{opacity:1;background:var(--ink);outline:none}
-@media print{.deck-card-add,.deck-plate-add,.deck-dwg-add{display:none}}
+@media print{.deck-card-add,.deck-plate-add,.deck-dwg-add,.deck-more{display:none}}
+.deck-more{display:block;width:100%;margin-top:12px;padding:13px;border:1px dashed var(--rule-strong);
+  background:transparent;color:var(--soft);font:inherit;font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;cursor:pointer;transition:color .15s,border-color .15s}
+.deck-more:hover,.deck-more:focus-visible{color:var(--ink);border-color:var(--ink);outline:none}
 .deck-card:hover,.deck-card:focus-visible{border-color:var(--rule-strong);outline:none}
 .deck-card-img{position:relative;display:block;aspect-ratio:4/3;background:var(--wash);overflow:hidden;line-height:0}
 .deck-card-img img{width:100%;height:100%;object-fit:cover;display:block}
@@ -820,6 +824,10 @@ button,input,textarea,select{font:inherit;color:inherit}
     }).join('');
     return '<section class="deck-sec"><span class="deck-eyebrow">01 The plan</span>' +
       '<h2>Every marked space opens.</h2>' + tabs + plateEls +
+      /* The + in the sheet's own corner reissues that sheet. This one is a
+         different drawing altogether — another floor, a section, whatever else
+         is being worked from — and there is no limit to how many. */
+      '<button class="deck-more" data-add-plate="new">+ &nbsp;Add another drawing</button>' +
       '<p class="deck-hint">Tap a number to open that space — its size, and what it is for.</p>' +
       '<p class="deck-hint-static">Every space is set out in full below, in the order it is numbered.</p>' +
       '</section>';
@@ -880,7 +888,9 @@ button,input,textarea,select{font:inherit;color:inherit}
           '<figcaption>' + esc(d.label || 'Document') +
             (d.date ? ' · ' + esc(d.date) : '') + '</figcaption>' +
         '</figure>';
-      }).join('') + '</section>';
+      }).join('') +
+      '<button class="deck-more" data-add="documents">+ &nbsp;Add another document</button>' +
+      '</section>';
   }
 
   function noteHtml(state) {
@@ -1518,6 +1528,13 @@ button,input,textarea,select{font:inherit;color:inherit}
        not on a different drawing. If the new sheet is drawn to another crop the
        pins want moving, and that is done in the tool where they were placed. */
     function addPlate(i, btn) {
+      var fresh = (i === 'new');
+      if (!fresh) i = +i;
+      if (fresh) {
+        state.plates = state.plates || [];
+        state.plates.push({ label: 'Floor ' + (state.plates.length + 1), src: '', w: 0, h: 0 });
+        i = state.plates.length - 1;
+      }
       var pl = (state.plates || [])[i];
       if (!pl) return;
       var inp = document.createElement('input');
@@ -1529,13 +1546,30 @@ button,input,textarea,select{font:inherit;color:inherit}
         btn.disabled = true; btn.textContent = '\u2026';
         importInto(f, 2400, 0.92).then(function (im) {
           pl.src = im.src; pl.w = im.w; pl.h = im.h;
-          var img = el.querySelector('[data-plate-img="' + i + '"]');
-          if (img) img.src = im.src;
           btn.disabled = false; btn.textContent = was;
+          /* a new drawing brings tabs and a panel with it, so that section is
+             rebuilt where it stands; a reissue only swaps the picture */
+          if (fresh) redrawPlan();
+          else {
+            var img = el.querySelector('[data-plate-img="' + i + '"]');
+            if (img) img.src = im.src;
+          }
           el.dispatchEvent(new CustomEvent('deck:changed', { bubbles: true }));
-        }, function () { btn.disabled = false; btn.textContent = was; });
+        }, function () {
+          btn.disabled = false; btn.textContent = was;
+          /* nothing was attached, so the empty floor should not stay behind */
+          if (fresh) state.plates.pop();
+        });
       };
       inp.click();
+    }
+    function redrawPlan() {
+      var old = el.querySelector('.deck-sec');
+      if (!old) return;
+      var tmp = document.createElement('div');
+      tmp.innerHTML = planHtml(state);
+      var next = tmp.firstChild;
+      if (next) old.replaceWith(next);
     }
     function pickInto(key, zone) {
       var inp = document.createElement('input');
@@ -1686,7 +1720,8 @@ button,input,textarea,select{font:inherit;color:inherit}
       var addSp = e.target.closest('[data-add-space]');
       if (addSp) { addToSpace(addSp.getAttribute('data-add-space'), addSp); return; }
       var addPl = e.target.closest('[data-add-plate]');
-      if (addPl) { addPlate(+addPl.getAttribute('data-add-plate'), addPl); return; }
+      /* not coerced to a number here: "new" is a value this one takes */
+      if (addPl) { addPlate(addPl.getAttribute('data-add-plate'), addPl); return; }
       /* Size and area are facts and do nothing. Only the estimate opens, and
          what it opens is the arithmetic behind it — area times rate. */
       var calc = e.target.closest('[data-calc]');
