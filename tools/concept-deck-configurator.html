@@ -678,7 +678,13 @@ button,input,textarea,select{font:inherit;color:inherit}
      read R01, R04, R09 — unique, and useless as a sequence. A space left out of
      the deck takes no numbers with it, because the client never sees it. */
   /* A picture carries the number of the space it is of. Space 07 on the plan is
-     R07, and so is every render of it.
+     R07 — and where a space holds several renders, the one on top is the current
+     one and keeps R07 clean; the ones behind it count back from it, R07-1,
+     R07-2, one step older each time.
+
+     Not R06 and R05 for those, which is the shortest way to say "one before":
+     06 and 05 are other rooms. A render forwarded on its own would then name
+     the wrong space, and naming the space is the entire job of this number.
 
      The grid is where this has to work: fifteen cards reading R01 to R15
      straight down, checkable at a glance, without opening a single one. Count
@@ -693,7 +699,7 @@ button,input,textarea,select{font:inherit;color:inherit}
   function hasDoc(state) {
     return ((state || {}).documents || []).some(function (d) { return d.src; });
   }
-  function revName(no) { return 'R' + pad2(no); }
+  function revName(no, back) { return 'R' + pad2(no) + (back ? '-' + back : ''); }
   function numberRenders(state) {
     var no = 0;
     (state.spaces || []).forEach(function (s) {
@@ -702,7 +708,7 @@ button,input,textarea,select{font:inherit;color:inherit}
         return;
       }
       no += 1;
-      (s.images || []).forEach(function (im) { im.rev = revName(no); });
+      (s.images || []).forEach(function (im, k) { im.rev = revName(no, k); });
     });
     return no;
   }
@@ -2225,7 +2231,9 @@ function renderSpaces() {
          which every picture of it carries. Named before it is even picked. */
       if (s.include !== false) run += 1;
       var revs = s.images || [];
-      var nextRev = window.EssentiaDeck.revName(run);
+      /* whatever is added lands behind the current one, so it is named for
+         where it will actually sit */
+      var nextRev = window.EssentiaDeck.revName(run, revs.length);
       return '<div class="row" data-space-row="' + i + '">' +
         '<div class="row-head">' +
           '<label class="check" style="gap:6px"><input type="checkbox" data-inc="' + i + '"' + (s.include !== false ? ' checked' : '') + '></label>' +

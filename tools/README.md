@@ -90,7 +90,12 @@ which writes the build time into the file and the filename together.
    the one the client opens on.
 
    **A picture carries the number of the space it is of.** Space 07 on the plan
-   is **R07**, and so is every render of it. The grid therefore reads R01 to R15
+   is **R07**. Where a space holds several renders the one on top is the current
+   one and keeps R07 clean; the ones behind it count back from it — **R07-1,
+   R07-2**, one step older each time. Not R06 and R05, which is the shortest way
+   to write "one before": those are other rooms, and a render forwarded on its
+   own would then name the wrong space, which is the entire job of this number.
+   The grid therefore reads R01 to R15
    straight down — fifteen cards, checkable at a glance, without opening a
    single one. (Counting renders instead lets the extra angles inside a space
    eat the numbers: the grid comes out R01, R03, R07 and the only way to know
