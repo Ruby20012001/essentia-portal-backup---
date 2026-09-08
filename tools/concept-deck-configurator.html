@@ -197,6 +197,7 @@
 .deck-thumb{position:relative;overflow:hidden;width:56px;height:42px;border:1px solid var(--rule);padding:0;background:var(--wash);cursor:pointer;line-height:0}
 .deck-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .deck-thumb[aria-current="true"]{border-color:var(--ink)}
+a.deck-btn{display:inline-flex;align-items:center;text-decoration:none}
 .deck-est-rate{font-size:15px;color:var(--ink);margin:0 0 22px;max-width:62ch}
 .deck-est-wrap{overflow-x:auto}
 .deck-est-table{width:100%;border-collapse:collapse;font-size:13px}
@@ -931,6 +932,10 @@ button,input,textarea,select{font:inherit;color:inherit}
         '<button class="deck-btn" data-add="documents">Upload the drawing</button>' +
         '<button class="deck-btn" data-see-doc' + (hasDoc(state) ? '' : ' disabled') +
           '>See the drawing</button>' +
+        /* the estimate chapter is below the note, a long way down a deck of
+           fifteen rooms; this is the way to it that needs no scrolling */
+        (spaces.some(function (x) { return String(x.estimate || '').trim(); })
+          ? '<a class="deck-btn" href="#estimate">How the estimate is worked out</a>' : '') +
       '</div>' +
       '</section>';
   }
