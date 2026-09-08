@@ -224,13 +224,15 @@
   padding:5px 7px;outline:none;border-bottom:1px solid var(--amber)}
 .deck-spot-in button{border:0;background:transparent;color:#c9c9c9;font-size:15px;cursor:pointer;padding:0 6px}
 .deck-spots.is-open .deck-spot:not(.is-live){opacity:.25}
+/* the name is wiped in from the left, the way the essentia mark arrives on the
+   tracker — the panel and the word uncover together, nothing sliding, nothing
+   fading. No rule under it: the wipe is the gesture. */
 .deck-spot-card{position:absolute;z-index:3;max-width:min(74%,300px);background:rgba(0,0,0,.88);color:#fff;
-  padding:11px 14px;font-size:14px;line-height:1.45;letter-spacing:.01em;
-  opacity:0;transform:translateY(7px);transition:opacity .34s ease .34s,transform .34s cubic-bezier(.2,.8,.3,1) .34s}
-.deck-spot-card.is-in{opacity:1;transform:none}
-.deck-spot-card::after{content:'';position:absolute;left:0;bottom:0;width:100%;height:1px;background:var(--amber);
-  transform:scaleX(0);transform-origin:left;transition:transform .5s cubic-bezier(.2,.8,.3,1) .5s}
-.deck-spot-card.is-in::after{transform:scaleX(1)}
+  padding:11px 14px;font-size:14px;line-height:1.45;letter-spacing:.01em;white-space:nowrap;
+  clip-path:inset(0 100% 0 0);
+  transition:clip-path .44s cubic-bezier(.22,.75,.24,1) .26s}
+.deck-spot-card.is-in{clip-path:inset(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){.deck-spot-card{transition:none;clip-path:none}}
 .deck-spot-card b{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
   color:var(--amber);margin-bottom:3px}
 .deck-spot-card span{display:block;margin-top:5px;font-size:11px;color:#c9c9c9}
