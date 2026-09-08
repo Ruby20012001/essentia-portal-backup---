@@ -2338,8 +2338,11 @@ button,input,textarea,select{font:inherit;color:inherit}
         : esc(q.name || '');
       card.hidden = false;
       /* the card sits on the emptier half, and a line goes back to the mark */
+      /* The line starts where the picture was touched, because that is the
+         point the zoom holds still. Starting it at the mark drew a line to
+         nowhere: the picture moves under the marks, the mark does not. */
       var W = layer.clientWidth, H = layer.clientHeight;
-      var dx = q.x * W, dy = q.y * H;
+      var dx = (atX == null ? q.x : atX) * W, dy = (atY == null ? q.y : atY) * H;
       var below = q.y < 0.55;
       var cw = Math.min(card.offsetWidth || 240, W - 24);
       var cx = Math.min(Math.max(dx - cw / 2, 12), W - cw - 12);
