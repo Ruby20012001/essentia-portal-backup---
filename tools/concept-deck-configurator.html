@@ -2267,6 +2267,31 @@ button,input,textarea,select{font:inherit;color:inherit}
       var line = el.querySelector('[data-spot-line]');
       if (line) line.setAttribute('data-on', '');
     }
+    /* A client taps where they are looking, not where a mark happens to be.
+       Anywhere on the picture goes there; a tap near a mark opens that mark,
+       so the five named things still answer with their names. */
+    function zoomAt(e) {
+      var hero = el.querySelector('[data-hero]');
+      var layer = el.querySelector('[data-spots]');
+      if (!hero) return;
+      if (hero.style.transform) { clearSpot(); return; }
+      var r = hero.getBoundingClientRect();
+      if (!(r.width > 0)) return;
+      var fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+      var im = currentImage();
+      var near = -1, best = 0.075;
+      ((im && im.spots) || []).forEach(function (q, j) {
+        var d = Math.sqrt(Math.pow(q.x - fx, 2) + Math.pow(q.y - fy, 2));
+        if (d < best) { best = d; near = j; }
+      });
+      if (near > -1 && layer) {
+        var btn = layer.querySelector('[data-spot="' + near + '"]');
+        if (btn) { showSpot(btn); return; }
+      }
+      hero.style.transformOrigin = (fx * 100).toFixed(2) + '% ' + (fy * 100).toFixed(2) + '%';
+      hero.style.transform = 'scale(' + ZOOM + ')';
+      if (layer) layer.classList.remove('is-open');
+    }
     function showSpot(btn) {
       var layer = btn.closest('[data-spots]');
       var host = layer && layer.parentNode;
@@ -2589,7 +2614,7 @@ button,input,textarea,select{font:inherit;color:inherit}
       if (e.target.closest('[data-spot-x]')) { dropSpot(e.target.closest('[data-spot-x]')); return; }
       if (e.target.closest('[data-hero]')) {
         if (marking) { placeSpot(e); return; }
-        clearSpot(); return;
+        zoomAt(e); return;
       }
       if (e.target.closest('[data-spot-card]')) { clearSpot(); return; }
       var th = e.target.closest('[data-thumb]');
