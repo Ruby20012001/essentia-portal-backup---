@@ -32,10 +32,6 @@ const PEOPLE = [
   ["wio.atul@essentia.in", "Atul Yadav", "Senior Draughtsman"],
   ["Jyoti.drafting@essentia.in", "Jyoti Yadav", "Senior Draughtsman"],
   ["pio.coordinator@essentia.in", "PIO Coordinator", "PIO coordination"],
-  // Back by request, 2026-09-07. With sign-in codes gone this is how someone
-  // without their own account gets in: one password, handed round, that opens
-  // the board and can change nothing (TRACKER_VIEW, db/039).
-  ["wio.view@essentia.in", "essentia — view only (SHARED)", "read-only"],
 ];
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
