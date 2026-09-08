@@ -62,11 +62,16 @@ which writes the build time into the file and the filename together.
    because these are read rather than admired. Optional.
 2. **Client & cover** — project name, project code (`ED/YY-YY/NNN`), Client
    Advisor, headline.
-3. **Layout plates** — one per floor. Click the plate, then **paste a snip of
-   the plan**: `Win+Shift+S`, drag over the drawing in whatever is showing it,
-   then `Ctrl+V` on the plate. Dropping or picking a PNG/JPG works too.
-   *(A plan inside an InDesign PDF is vector — there is no image file to drag
-   out of it, which is why paste is the shortest route.)*
+3. **Layout plates** — one per floor. Drop or pick a **PNG, JPG or PDF**, or
+   **paste a snip**: `Win+Shift+S`, drag over the drawing in whatever is showing
+   it, then `Ctrl+V` on the plate.
+
+   **A PDF is read where any picture is taken.** A page that is a photograph or
+   a scan holds a JPEG whole, and the tool lifts it straight out — no library,
+   no network. A page drawn in vector — AutoCAD, InDesign — holds no picture at
+   all, and no code short of a full PDF renderer will make one; the zone says so
+   in as many words and tells you to export it as JPG or PNG, or snip it. The
+   same is true of every other zone: documents, a space's own drawing, renders.
 4. **Spaces** — add each space, pick the name from the list for the project type
    so naming does not drift, **choose its floor** from the plates you added, set
    the **dimensions, area and estimate**, then **Place pin** and click the plan.

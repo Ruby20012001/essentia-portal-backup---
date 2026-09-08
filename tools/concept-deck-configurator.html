@@ -726,6 +726,78 @@ button,input,textarea,select{font:inherit;color:inherit}
      Counted on every draw rather than stamped once, so deleting or reordering a
      space closes the gap it left. A space left out of the deck is counted by
      nothing, because the client never sees it. */
+  /* A DRAWING OFTEN ARRIVES AS A PDF.
+
+     A page that is a photograph or a scan holds a JPEG, whole, inside the
+     file — it can be lifted straight out with no library and no network, which
+     is the only kind of answer this tool is allowed to give.
+
+     A page drawn in vector — AutoCAD, InDesign — holds no picture at all. There
+     is nothing to lift, and no amount of code short of a full PDF renderer will
+     make one. So that case is named out loud rather than failing quietly: export
+     it as JPG or PNG, or snip it with Win+Shift+S. */
+  function pdfJpegs(file) {
+    var read = file.arrayBuffer ? file.arrayBuffer() : new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onload = function () { res(fr.result); };
+      fr.onerror = function () { rej(new Error('Could not read ' + file.name)); };
+      fr.readAsArrayBuffer(file);
+    });
+    return read.then(function (buf) {
+      var b = new Uint8Array(buf), parts = [], CH = 32768;
+      for (var i = 0; i < b.length; i += CH) {
+        parts.push(String.fromCharCode.apply(null, b.subarray(i, i + CH)));
+      }
+      var t = parts.join(''), out = [], at = 0;
+      while (true) {
+        var d = t.indexOf('/DCTDecode', at);
+        if (d < 0) break;
+        /* the next 'stream' that is not the tail of an 'endstream' */
+        var st = d;
+        do { st = t.indexOf('stream', st + 1); } while (st > 2 && t.substr(st - 3, 3) === 'end');
+        if (st < 0) break;
+        var from = st + 6;
+        if (t.charCodeAt(from) === 13) from++;
+        if (t.charCodeAt(from) === 10) from++;
+        var end = t.indexOf('endstream', from);
+        if (end < 0) break;
+        var bytes = b.subarray(from, end);
+        /* only a real JPEG, so a stream that was something else is skipped */
+        if (bytes[0] === 0xFF && bytes[1] === 0xD8) {
+          out.push(new File([bytes], file.name.replace(/\.pdf$/i, '') + '-' + (out.length + 1) + '.jpg',
+            { type: 'image/jpeg' }));
+        }
+        at = end + 9;
+      }
+      return out;
+    });
+  }
+  function pdfIn(files) {
+    return Array.prototype.slice.call(files || []).some(function (f) {
+      return /pdf$/i.test(f.type || '') || /\.pdf$/i.test(f.name || '');
+    });
+  }
+  /* Expands any PDFs into the pictures inside them and hands the whole lot
+     back. `el` lends its own text for a moment to say what happened, because a
+     drop that does nothing teaches people the tool is broken. */
+  function unpdf(files, el, done) {
+    var all = Array.prototype.slice.call(files || []);
+    var pdfs = all.filter(function (f) { return /pdf$/i.test(f.type || '') || /\.pdf$/i.test(f.name || ''); });
+    var rest = all.filter(function (f) { return pdfs.indexOf(f) < 0; });
+    var was = el ? el.textContent : '';
+    if (el) el.textContent = 'Reading ' + pdfs.length + ' PDF' + (pdfs.length > 1 ? 's' : '') + '…';
+    Promise.all(pdfs.map(pdfJpegs)).then(function (groups) {
+      var got = [];
+      groups.forEach(function (g) { got = got.concat(g); });
+      if (el) el.textContent = was;
+      if (!got.length && el) {
+        el.textContent = 'That PDF is drawn in lines, not pictures — export it as JPG or PNG, or snip it (Win+Shift+S).';
+        setTimeout(function () { el.textContent = was; }, 6000);
+      }
+      done(rest.concat(got));
+    }, function () { if (el) el.textContent = was; done(rest); });
+  }
+
   function hasDoc(state) {
     return ((state || {}).documents || []).some(function (d) { return d.src; });
   }
@@ -1677,6 +1749,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 
     /* add pages to this deck, in this deck */
     function addFiles(key, files, zone) {
+      if (pdfIn(files)) { unpdf(files, zone, function (out) { addFiles(key, out, zone); }); return; }
       var list = Array.prototype.slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); });
       if (!list.length) return;
       var label = zone.textContent;
@@ -1703,9 +1776,11 @@ button,input,textarea,select{font:inherit;color:inherit}
       var pl = (state.plates || [])[i];
       if (!pl) return;
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*';
-      inp.onchange = function () {
-        var f = inp.files && inp.files[0];
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf';
+      inp.onchange = function () { take(inp.files); };
+      function take(files) {
+        if (pdfIn(files)) { unpdf(files, btn, take); return; }
+        var f = files && files[0];
         if (!f) return;
         var was = btn.textContent;
         btn.disabled = true; btn.textContent = '\u2026';
@@ -1741,9 +1816,13 @@ button,input,textarea,select{font:inherit;color:inherit}
       var sp = (state.spaces || []).filter(function (x) { return String(x.id) === String(id); })[0];
       if (!sp) return;
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf'; inp.multiple = true;
       inp.onchange = function () {
-        var list = Array.prototype.slice.call(inp.files || [])
+        take(inp.files);
+      };
+      function take(files) {
+        if (pdfIn(files)) { unpdf(files, btn, take); return; }
+        var list = Array.prototype.slice.call(files || [])
           .filter(function (f) { return /^image\//.test(f.type); });
         if (!list.length) return;
         var label = btn.textContent;
@@ -1775,7 +1854,7 @@ button,input,textarea,select{font:inherit;color:inherit}
     }
     function pickInto(key, zone) {
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf'; inp.multiple = true;
       inp.onchange = function () { addFiles(key, inp.files, zone); };
       inp.click();
     }
@@ -1882,9 +1961,13 @@ button,input,textarea,select{font:inherit;color:inherit}
       var sp = (state.spaces || []).filter(function (x) { return String(x.id) === String(id); })[0];
       if (!sp) return;
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf'; inp.multiple = true;
       inp.onchange = function () {
-        var list = Array.prototype.slice.call(inp.files || [])
+        take(inp.files);
+      };
+      function take(files) {
+        if (pdfIn(files)) { unpdf(files, btn, take); return; }
+        var list = Array.prototype.slice.call(files || [])
           .filter(function (f) { return /^image\//.test(f.type); });
         if (!list.length) return;
         var label = btn.textContent;
@@ -2070,7 +2153,8 @@ button,input,textarea,select{font:inherit;color:inherit}
 
   root.EssentiaDeck = { mount: mount, live: live, esc: esc, html: deckHtml,
     card: spaceCard, slug: slugify, save: saveDataUri,
-    number: numberRenders, revName: revName };
+    number: numberRenders, revName: revName,
+    pdfIn: pdfIn, unpdf: unpdf };
 
   if (root.__DECK__ && document.getElementById('deck-root')) {
     mount(document.getElementById('deck-root'), root.__DECK__);
@@ -2355,6 +2439,7 @@ function renderPlates() {
   host.querySelectorAll('[data-plate-drop]').forEach(function (d) {
     var i = +d.getAttribute('data-plate-drop');
     function take(files) {
+      if (window.EssentiaDeck.pdfIn(files)) { window.EssentiaDeck.unpdf(files, d, take); return; }
       if (!files || !files[0]) return;
       importImage(files[0], 2400, 0.92, true).then(function (im) {
         S.plates[i].src = im.src; S.plates[i].w = im.w; S.plates[i].h = im.h;
@@ -2363,7 +2448,7 @@ function renderPlates() {
     }
     d.addEventListener('click', function () {
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*';
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf';
       inp.onchange = function () { take(inp.files); };
       inp.click();
     });
@@ -2532,6 +2617,7 @@ function renderSpaces() {
   host.querySelectorAll('[data-spdoc-drop]').forEach(function (d) {
     var i = +d.getAttribute('data-spdoc-drop');
     function take(files) {
+      if (window.EssentiaDeck.pdfIn(files)) { window.EssentiaDeck.unpdf(files, d, take); return; }
       var fs = Array.prototype.slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); });
       if (!fs.length) return;
       var was = d.textContent;
@@ -2550,7 +2636,7 @@ function renderSpaces() {
     }
     d.addEventListener('click', function () {
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf'; inp.multiple = true;
       inp.onchange = function () { take(inp.files); };
       inp.click();
     });
@@ -2567,6 +2653,7 @@ function renderSpaces() {
   host.querySelectorAll('[data-img-drop]').forEach(function (d) {
     var i = +d.getAttribute('data-img-drop');
     function take(files) {
+      if (window.EssentiaDeck.pdfIn(files)) { window.EssentiaDeck.unpdf(files, d, take); return; }
       var fs = Array.prototype.slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); });
       if (!fs.length) return;
       d.textContent = 'Importing ' + fs.length + ' image' + (fs.length > 1 ? 's' : '') + '…';
@@ -2579,7 +2666,7 @@ function renderSpaces() {
     }
     d.addEventListener('click', function () {
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf'; inp.multiple = true;
       inp.onchange = function () { take(inp.files); };
       inp.click();
     });
@@ -2739,9 +2826,13 @@ function renderDocs(key) {
 
 function addDocs(key, files) {
   var cfg = DOCSETS[key];
+  var d = $(cfg.drop);
+  if (window.EssentiaDeck.pdfIn(files)) {
+    window.EssentiaDeck.unpdf(files, d, function (out) { addDocs(key, out); });
+    return;
+  }
   var list = Array.prototype.slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); });
   if (!list.length) return;
-  var d = $(cfg.drop);
   d.textContent = 'Importing ' + list.length + ' ' + cfg.word + (list.length > 1 ? 's' : '') + '…';
   /* held larger than a render — these are read, not admired, and an estimate
      sheet is the densest thing in the deck */
@@ -2760,7 +2851,7 @@ Object.keys(DOCSETS).forEach(function (key) {
   var d = $(DOCSETS[key].drop);
   d.addEventListener('click', function () {
     var inp = document.createElement('input');
-    inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+    inp.type = 'file'; inp.accept = 'image/*,application/pdf'; inp.multiple = true;
     inp.onchange = function () { addDocs(key, inp.files); };
     inp.click();
   });
