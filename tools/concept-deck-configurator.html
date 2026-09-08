@@ -204,6 +204,16 @@
 .deck-spot.is-live i{background:var(--amber);animation:none;
   box-shadow:0 0 0 2px rgba(0,0,0,.5),0 0 0 5px rgba(168,137,92,.28)}
 .deck-sheet-hero.is-marking{cursor:crosshair}
+.deck-hero-mark{position:absolute;left:0;top:0;z-index:4;width:32px;height:32px;border:0;padding:0;
+  background:rgba(0,0,0,.62);cursor:pointer;opacity:.9;transition:background .15s,opacity .15s}
+.deck-hero-mark:hover,.deck-hero-mark:focus-visible{opacity:1;background:rgba(0,0,0,.8);outline:none}
+.deck-hero-mark i{display:block;width:10px;height:10px;margin:11px;border-radius:50%;
+  border:2px solid #fff}
+.deck-hero-mark.is-on{background:var(--amber)}
+.deck-hero-mark.is-on i{border-color:#000}
+.deck-mark-hint{position:absolute;left:38px;top:6px;z-index:4;background:rgba(0,0,0,.7);color:#fff;
+  font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:5px 9px;line-height:1.4}
+@media print{.deck-hero-mark,.deck-mark-hint{display:none}}
 .deck-spots.is-marking .deck-spot i{background:var(--amber)}
 .deck-spot-in{position:absolute;z-index:4;transform:translate(-50%,-140%);display:flex;gap:4px;
   background:rgba(0,0,0,.9);padding:5px}
@@ -1843,7 +1853,12 @@ button,input,textarea,select{font:inherit;color:inherit}
     var hero = imgs[0]
       ? '<img src="' + imgs[0].src + '" alt="' + esc(s.name) + '" data-hero>' +
         '<span class="deck-hero-rev" data-hero-rev>' + esc(imgs[0].rev) + '</span>' +
-        spotsHtml(imgs[0], 0)
+        spotsHtml(imgs[0], 0) +
+        /* the ninth button in a row is not a control, it is a rumour. This
+           sits on the picture, which is where the marking happens. */
+        '<button class="deck-hero-mark" data-mark="' + esc(s.id) + '"' +
+          ' title="Mark materials" aria-label="Mark materials"><i></i></button>' +
+        '<span class="deck-mark-hint" data-mark-hint hidden>Tap the picture where the material is</span>'
       : '<span>No visual yet</span>';
     return '<div class="deck-sheet-hero' + (imgs[0] ? '' : ' deck-sheet-hero--none') + '">' + hero +
         '<button class="deck-x" data-sheet-close aria-label="Close">&times;</button></div>' +
@@ -1874,7 +1889,7 @@ button,input,textarea,select{font:inherit;color:inherit}
              is a long way from the room being discussed. These two put them
              within reach of the room instead: attach one, or look at one, with
              the space still open. */
-          '<button class="deck-btn" data-mark="' + esc(s.id) + '">Mark materials</button>' +
+
           '<button class="deck-btn" data-add-space-doc="' + esc(s.id) + '">Upload the drawing</button>' +
           '<button class="deck-btn" data-see-doc="' + esc(s.id) + '"' +
             ((docs.length || hasDoc(state)) ? '' : ' disabled title="No drawing uploaded yet"') +
@@ -2141,8 +2156,10 @@ button,input,textarea,select{font:inherit;color:inherit}
     function toggleMarking(btn) {
       marking = !marking;
       clearSpot();
-      btn.textContent = marking ? 'Done marking' : 'Mark materials';
-      btn.classList.toggle('deck-btn--solid', marking);
+      btn.classList.toggle('is-on', marking);
+      btn.setAttribute('title', marking ? 'Done marking' : 'Mark materials');
+      var hint = el.querySelector('[data-mark-hint]');
+      if (hint) hint.hidden = !marking;
       var layer = el.querySelector('[data-spots]');
       if (layer) layer.classList.toggle('is-marking', marking);
       var hero = el.querySelector('.deck-sheet-hero');
