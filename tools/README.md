@@ -121,6 +121,11 @@ Under the grid of spaces sit two buttons that need no tapping to find:
 **Save all spaces as images** and **Save the whole deck as PDF**. Everything
 else is behind a number.
 
+Every card carries a **`+`** in its corner — a picture goes onto that space from
+the grid, without opening it first. Fifteen spaces means fifteen of them, in the
+same place on every card, so filling in a deck is a pass down the page rather
+than fifteen rounds of open, attach, close.
+
 The deck footer carries a **Deck built** date and time. If a deck is not
 behaving as described here, read that line first — it says which copy is open,
 which matters once a few versions have been saved to the same downloads folder.
