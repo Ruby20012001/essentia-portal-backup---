@@ -201,10 +201,23 @@
   box-shadow:0 0 0 2px rgba(0,0,0,.4),0 0 0 0 rgba(255,255,255,.7);animation:deckSpot 2s infinite}
 @keyframes deckSpot{0%,100%{box-shadow:0 0 0 2px rgba(0,0,0,.4),0 0 0 0 rgba(255,255,255,.7)}
   55%{box-shadow:0 0 0 2px rgba(0,0,0,.4),0 0 0 11px rgba(255,255,255,0)}}
-.deck-spot.is-live i{background:var(--amber);animation:none;box-shadow:0 0 0 2px rgba(0,0,0,.5)}
+.deck-spot.is-live i{background:var(--amber);animation:none;
+  box-shadow:0 0 0 2px rgba(0,0,0,.5),0 0 0 5px rgba(168,137,92,.28)}
+.deck-sheet-hero.is-marking{cursor:crosshair}
+.deck-spots.is-marking .deck-spot i{background:var(--amber)}
+.deck-spot-in{position:absolute;z-index:4;transform:translate(-50%,-140%);display:flex;gap:4px;
+  background:rgba(0,0,0,.9);padding:5px}
+.deck-spot-in input{width:190px;border:0;background:transparent;color:#fff;font:inherit;font-size:13px;
+  padding:5px 7px;outline:none;border-bottom:1px solid var(--amber)}
+.deck-spot-in button{border:0;background:transparent;color:#c9c9c9;font-size:15px;cursor:pointer;padding:0 6px}
 .deck-spots.is-open .deck-spot:not(.is-live){opacity:.25}
-.deck-spot-card{position:absolute;z-index:3;max-width:min(74%,280px);background:rgba(0,0,0,.86);color:#fff;
-  padding:10px 12px;font-size:13px;line-height:1.5}
+.deck-spot-card{position:absolute;z-index:3;max-width:min(74%,300px);background:rgba(0,0,0,.88);color:#fff;
+  padding:11px 14px;font-size:14px;line-height:1.45;letter-spacing:.01em;
+  opacity:0;transform:translateY(7px);transition:opacity .34s ease .34s,transform .34s cubic-bezier(.2,.8,.3,1) .34s}
+.deck-spot-card.is-in{opacity:1;transform:none}
+.deck-spot-card::after{content:'';position:absolute;left:0;bottom:0;width:100%;height:1px;background:var(--amber);
+  transform:scaleX(0);transform-origin:left;transition:transform .5s cubic-bezier(.2,.8,.3,1) .5s}
+.deck-spot-card.is-in::after{transform:scaleX(1)}
 .deck-spot-card b{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
   color:var(--amber);margin-bottom:3px}
 .deck-spot-card span{display:block;margin-top:5px;font-size:11px;color:#c9c9c9}
@@ -1861,6 +1874,7 @@ button,input,textarea,select{font:inherit;color:inherit}
              is a long way from the room being discussed. These two put them
              within reach of the room instead: attach one, or look at one, with
              the space still open. */
+          '<button class="deck-btn" data-mark="' + esc(s.id) + '">Mark materials</button>' +
           '<button class="deck-btn" data-add-space-doc="' + esc(s.id) + '">Upload the drawing</button>' +
           '<button class="deck-btn" data-see-doc="' + esc(s.id) + '"' +
             ((docs.length || hasDoc(state)) ? '' : ' disabled title="No drawing uploaded yet"') +
@@ -2120,6 +2134,88 @@ button,input,textarea,select{font:inherit;color:inherit}
     }
     /* a document, full screen, to be read rather than admired */
     var ZOOM = 2.4;
+    var marking = false;
+    /* Marking belongs where the picture is. Doing it in the editor meant
+       holding the deck in one hand and the tool in the other, and the person
+       who knows the material is the one looking at the render. */
+    function toggleMarking(btn) {
+      marking = !marking;
+      clearSpot();
+      btn.textContent = marking ? 'Done marking' : 'Mark materials';
+      btn.classList.toggle('deck-btn--solid', marking);
+      var layer = el.querySelector('[data-spots]');
+      if (layer) layer.classList.toggle('is-marking', marking);
+      var hero = el.querySelector('.deck-sheet-hero');
+      if (hero) hero.classList.toggle('is-marking', marking);
+      if (!marking) { el.dispatchEvent(new CustomEvent('deck:changed', { bubbles: true })); }
+    }
+    function currentImage() {
+      var layer = el.querySelector('[data-spots]');
+      var s = spaces[at];
+      if (!layer || !s) return null;
+      return (s.images || [])[+layer.getAttribute('data-ix')] || null;
+    }
+    function redrawSpots() {
+      var layer = el.querySelector('[data-spots]');
+      var im = currentImage();
+      if (!layer || !im) return;
+      var k = +layer.getAttribute('data-ix');
+      var tmp = document.createElement('div');
+      tmp.innerHTML = spotsHtml(im, k);
+      var fresh = tmp.firstChild;
+      if (marking) fresh.classList.add('is-marking');
+      layer.replaceWith(fresh);
+    }
+    function placeSpot(e) {
+      var im = currentImage();
+      var hero = el.querySelector('[data-hero]');
+      if (!im || !hero) return;
+      var r = hero.getBoundingClientRect();
+      if (!(r.width > 0)) return;
+      im.spots = im.spots || [];
+      im.spots.push({
+        x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)),
+        y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)),
+        name: ''
+      });
+      redrawSpots();
+      var made = el.querySelectorAll('[data-spot]');
+      editSpot(made[made.length - 1]);
+    }
+    /* the name is typed on the picture, next to the thing it names */
+    function editSpot(btn) {
+      var layer = btn.closest('[data-spots]');
+      var im = currentImage();
+      var j = +btn.getAttribute('data-spot');
+      var q = im && (im.spots || [])[j];
+      if (!q) return;
+      layer.querySelectorAll('.deck-spot-in').forEach(function (o) { o.remove(); });
+      var box = document.createElement('div');
+      box.className = 'deck-spot-in';
+      box.style.left = (q.x * 100).toFixed(2) + '%';
+      box.style.top = (q.y * 100).toFixed(2) + '%';
+      box.innerHTML = '<input type="text" value="' + esc(q.name || '') + '">' +
+        '<button data-spot-x="' + j + '" title="Remove this mark">&times;</button>';
+      layer.appendChild(box);
+      var input = box.querySelector('input');
+      input.focus();
+      input.addEventListener('input', function () { q.name = input.value; });
+      input.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === 'Escape') { box.remove(); redrawSpots(); }
+      });
+      input.addEventListener('blur', function () {
+        setTimeout(function () { if (box.parentNode) { box.remove(); redrawSpots(); } }, 120);
+      });
+    }
+    function dropSpot(x) {
+      var im = currentImage();
+      if (!im) return;
+      (im.spots || []).splice(+x.getAttribute('data-spot-x'), 1);
+      var box = x.closest('.deck-spot-in');
+      if (box) box.remove();
+      redrawSpots();
+      el.dispatchEvent(new CustomEvent('deck:changed', { bubbles: true }));
+    }
     function clearSpot() {
       var hero = el.querySelector('[data-hero]');
       if (hero) { hero.style.transform = ''; hero.style.transformOrigin = ''; }
@@ -2166,10 +2262,23 @@ button,input,textarea,select{font:inherit;color:inherit}
       card.style.top = cy + 'px';
       var line = layer.querySelector('[data-spot-line]');
       var ln = line.querySelector('line');
+      var ex = Math.min(Math.max(dx, cx + 14), cx + cw - 14);
+      var ey = below ? cy : cy + card.offsetHeight;
       ln.setAttribute('x1', dx); ln.setAttribute('y1', dy);
-      ln.setAttribute('x2', Math.min(Math.max(dx, cx + 14), cx + cw - 14));
-      ln.setAttribute('y2', below ? cy : cy + card.offsetHeight);
+      ln.setAttribute('x2', ex); ln.setAttribute('y2', ey);
+      /* the line is drawn rather than switched on — it leaves the mark and
+         arrives at the name, which is the order a person reads it in */
+      var len = Math.sqrt((ex - dx) * (ex - dx) + (ey - dy) * (ey - dy)) || 1;
+      ln.style.transition = 'none';
+      ln.style.strokeDasharray = len;
+      ln.style.strokeDashoffset = len;
       line.setAttribute('data-on', '1');
+      void ln.getBoundingClientRect();
+      ln.style.transition = 'stroke-dashoffset .34s cubic-bezier(.3,.8,.3,1) .12s';
+      ln.style.strokeDashoffset = '0';
+      card.classList.remove('is-in');
+      void card.getBoundingClientRect();
+      card.classList.add('is-in');
     }
     function openBig(img) {
       var lb = el.querySelector('[data-lb]');
@@ -2429,9 +2538,19 @@ button,input,textarea,select{font:inherit;color:inherit}
       /* a hand on the controls means the reader is steering, not watching */
       if (e.target.closest('[data-prev]')) { stopAuto(); step(-1); return; }
       if (e.target.closest('[data-next]')) { stopAuto(); step(1); return; }
+      var markBtn = e.target.closest('[data-mark]');
+      if (markBtn) { toggleMarking(markBtn); return; }
       var spotBtn = e.target.closest('[data-spot]');
-      if (spotBtn) { showSpot(spotBtn); return; }
-      if (e.target.closest('[data-hero]') || e.target.closest('[data-spot-card]')) { clearSpot(); return; }
+      if (spotBtn) {
+        if (marking) { editSpot(spotBtn); return; }
+        showSpot(spotBtn); return;
+      }
+      if (e.target.closest('[data-spot-x]')) { dropSpot(e.target.closest('[data-spot-x]')); return; }
+      if (e.target.closest('[data-hero]')) {
+        if (marking) { placeSpot(e); return; }
+        clearSpot(); return;
+      }
+      if (e.target.closest('[data-spot-card]')) { clearSpot(); return; }
       var th = e.target.closest('[data-thumb]');
       if (th) {
         var k = +th.getAttribute('data-thumb');
@@ -3105,7 +3224,7 @@ function renderSpotter() {
     }).join('');
   $('#spotterList').innerHTML = (im.spots || []).map(function (q, j) {
     return '<div class="spotter-row"><span class="no">' + (j + 1) + '</span>' +
-      '<input type="text" placeholder="Natural teak veneer" data-spot-k="name" data-spot-j="' + j + '" value="' + esc(q.name || '') + '">' +
+      '<input type="text" placeholder="Name this one — as you would say it out loud" data-spot-k="name" data-spot-j="' + j + '" value="' + esc(q.name || '') + '">' +
       '<button class="btn btn--sm btn--danger" data-spot-del="' + j + '">Remove</button></div>';
   }).join('');
   $('#spotterList').querySelectorAll('[data-spot-k]').forEach(function (el) {
