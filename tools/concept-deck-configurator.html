@@ -678,13 +678,20 @@ button,input,textarea,select{font:inherit;color:inherit}
      read R01, R04, R09 — unique, and useless as a sequence. A space left out of
      the deck takes no numbers with it, because the client never sees it. */
   /* A picture carries the number of the space it is of. Space 07 on the plan is
-     R07 — and where a space holds several renders, the one on top is the current
-     one and keeps R07 clean; the ones behind it count back from it, R07-1,
-     R07-2, one step older each time.
+     R07 — and where a space holds several renders they count down from it:
+     R07, R06, R05, one step older each time. Monica, 08 Sep: "jaise sabse upar
+     image par R15 hai to uski neeche wali par R14, R13".
 
-     Not R06 and R05 for those, which is the shortest way to say "one before":
-     06 and 05 are other rooms. A render forwarded on its own would then name
-     the wrong space, and naming the space is the entire job of this number.
+     Her call, made twice, and the cost is stated here rather than argued: those
+     numbers belong to other rooms as well, so the same R14 can sit on the
+     current render of one space and on a superseded render of another. Inside
+     the deck that is clear enough — the older ones are behind the current one
+     in the room they belong to. A render forwarded on its own is the case that
+     can mislead.
+
+     A space near the top of the deck runs out of numbers going down. Below zero
+     the label falls back to the space and the step, R02-3, because R-01 is not
+     a number anybody would read.
 
      The grid is where this has to work: fifteen cards reading R01 to R15
      straight down, checkable at a glance, without opening a single one. Count
@@ -699,7 +706,10 @@ button,input,textarea,select{font:inherit;color:inherit}
   function hasDoc(state) {
     return ((state || {}).documents || []).some(function (d) { return d.src; });
   }
-  function revName(no, back) { return 'R' + pad2(no) + (back ? '-' + back : ''); }
+  function revName(no, back) {
+    var down = no - (back || 0);
+    return down >= 0 ? 'R' + pad2(down) : 'R' + pad2(no) + '-' + back;
+  }
   function numberRenders(state) {
     var no = 0;
     (state.spaces || []).forEach(function (s) {

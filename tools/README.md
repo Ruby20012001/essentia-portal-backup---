@@ -90,12 +90,15 @@ which writes the build time into the file and the filename together.
    the one the client opens on.
 
    **A picture carries the number of the space it is of.** Space 07 on the plan
-   is **R07**. Where a space holds several renders the one on top is the current
-   one and keeps R07 clean; the ones behind it count back from it — **R07-1,
-   R07-2**, one step older each time. Not R06 and R05, which is the shortest way
-   to write "one before": those are other rooms, and a render forwarded on its
-   own would then name the wrong space, which is the entire job of this number.
-   The grid therefore reads R01 to R15
+   is **R07**. Where a space holds several renders they count down from it —
+   **R07, R06, R05** — one step older each time (Monica, 08.09.2026). Those
+   numbers belong to other rooms too, so the same R06 can sit on one space's
+   current render and on another's superseded one; inside the deck an older
+   render sits behind the current one in the room it belongs to, and it is a
+   render forwarded on its own that can name the wrong space. A space near the
+   top of the deck runs out of numbers going down: below zero the label falls
+   back to the space and the step, **R02-3**.
+   The grid reads R01 to R15
    straight down — fifteen cards, checkable at a glance, without opening a
    single one. (Counting renders instead lets the extra angles inside a space
    eat the numbers: the grid comes out R01, R03, R07 and the only way to know
