@@ -121,10 +121,13 @@ Under the grid of spaces sit two buttons that need no tapping to find:
 **Save all spaces as images** and **Save the whole deck as PDF**. Everything
 else is behind a number.
 
-Every card carries a **`+`** in its corner — a picture goes onto that space from
-the grid, without opening it first. Fifteen spaces means fifteen of them, in the
-same place on every card, so filling in a deck is a pass down the page rather
-than fifteen rounds of open, attach, close.
+**Every picture in the deck carries a `+` in its corner**, in the same place
+each time: on each card in the grid (the picture goes onto that space without
+opening it), on the plan (a newer sheet for that floor, pins kept), on each
+document page (another document), and at the end of the thumbnail strip inside
+an open space. Fifteen spaces means fifteen of them down the grid, so filling in
+a deck is a pass down the page rather than fifteen rounds of open, attach,
+close. None of them print.
 
 The deck footer carries a **Deck built** date and time. If a deck is not
 behaving as described here, read that line first — it says which copy is open,
