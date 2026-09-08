@@ -1334,6 +1334,18 @@ button,input,textarea,select{font:inherit;color:inherit}
      rate is, what it was multiplied by, what that comes to, and what it does
      and does not include. A figure a client cannot take apart is a figure they
      will either accept without understanding or refuse without asking. */
+  /* Two stages of the same house: the deck that asks whether this is right,
+     and the deck that is worked to once it is. Same spaces, same pictures —
+     what changes is what the file is allowed to claim. */
+  function stageOf(state) {
+    return (state.project || {}).stage === 'execution' ? 'execution' : 'concept';
+  }
+  function stampOf(state) {
+    return stageOf(state) === 'execution'
+      ? 'For execution \u00b7 read with the GFC drawings'
+      : 'Concept \u00b7 not for construction';
+  }
+
   function estimateHtml(state) {
     var p = state.project || {};
     var rate = num(p.rate);
@@ -1379,6 +1391,62 @@ button,input,textarea,select{font:inherit;color:inherit}
       (((state.documents || []).some(function (d) { return d.src; }))
         ? '<p class="deck-hint"><a class="deck-calc-link" href="#documents">The detailed estimate, page by page</a></p>'
         : '') +
+    '</section>';
+  }
+
+  /* THE SCHEDULE OF FINISHES.
+
+     A concept deck is read to decide. An execution deck is read to build, and
+     the first question on site is not what a room feels like — it is what that
+     surface is and where else it goes.
+
+     Nothing here is typed a second time. It is the marks already placed on the
+     renders, read the other way round: by material, each one once, with every
+     room it lands in. Which also means the schedule cannot drift away from the
+     pictures — it is the pictures. */
+  function finishesHtml(state) {
+    if (stageOf(state) !== 'execution') return '';
+    var byName = {};
+    live(state).forEach(function (s) {
+      (s.images || []).forEach(function (im) {
+        ((im && im.spots) || []).forEach(function (q) {
+          var name = String(q.name || '').trim();
+          if (!name) return;
+          var key = name.toLowerCase();
+          var row = byName[key] || (byName[key] = { name: name, where: [] });
+          if (row.where.indexOf(s.name) < 0) row.where.push(s.name);
+        });
+      });
+    });
+    var rows = Object.keys(byName).map(function (k) { return byName[k]; });
+    if (!rows.length) return '';
+    rows.sort(function (a, b) {
+      return b.where.length - a.where.length || a.name.localeCompare(b.name);
+    });
+    /* the marks are written 'what it is \u00b7 what it is called', which is
+       already the two columns a schedule wants */
+    var split = function (t) {
+      var at = t.indexOf('\u00b7');
+      return at < 0 ? { item: t, spec: '' }
+        : { item: t.slice(0, at).trim(), spec: t.slice(at + 1).trim() };
+    };
+    return '<section class="deck-sec deck-est" id="finishes">' +
+      '<span class="deck-eyebrow">06 The finishes</span>' +
+      '<h2>What each surface is, and where it goes.</h2>' +
+      '<p class="deck-est-rate">Read off the renders themselves \u2014 every material ' +
+        'marked on a picture, listed once, against the rooms it lands in.</p>' +
+      '<div class="deck-est-wrap"><table class="deck-est-table"><thead><tr>' +
+        '<th>Material</th><th>Named as</th><th>Where it goes</th>' +
+      '</tr></thead><tbody>' +
+      rows.map(function (r) {
+        var x = split(r.name);
+        return '<tr><td>' + esc(x.item) + '</td>' +
+          '<td>' + esc(x.spec || '\u2014') + '</td>' +
+          '<td>' + esc(r.where.join(', ')) + '</td></tr>';
+      }).join('') +
+      '</tbody></table></div>' +
+      '<p class="deck-spec-note">Marked on the 3Ds, which carry design intent. ' +
+        'To be read with the GFC drawings and the fixed finishes schedule.</p>' +
     '</section>';
   }
 
@@ -1786,7 +1854,7 @@ button,input,textarea,select{font:inherit;color:inherit}
     return '<footer class="deck-foot">' +
       /* the last thing read, so it is given room rather than tucked away */
       (p.closing ? '<p class="deck-closing">' + esc(p.closing) + '</p>' : '') +
-      '<span class="deck-stamp">Concept · not for construction</span>' +
+      '<span class="deck-stamp">' + esc(stampOf(state)) + '</span>' +
       /* quiet, at the foot, where a client will not trip over it */
       '<div class="deck-edit">' +
         '<button class="deck-btn deck-btn--sm" data-edit-toggle>Add a document</button>' +
@@ -1826,7 +1894,7 @@ button,input,textarea,select{font:inherit;color:inherit}
   function deckHtml(state, opts) {
     return '<article class="deck">' + printHeadHtml(state) + coverHtml(state) + planHtml(state) +
       ((opts && opts.noIndex) ? '' : indexHtml(state)) +
-      noteHtml(state) + estimateHtml(state) + documentsHtml(state) +
+      noteHtml(state) + estimateHtml(state) + documentsHtml(state) + finishesHtml(state) +
       printHtml(state) + footHtml(state) + '</article>' +
       '<div class="deck-lb" data-lb><div class="deck-lb-bar"><span data-lb-cap></span>' +
         '<button data-lb-close>Close</button></div><img data-lb-img alt=""></div>' +
@@ -1843,6 +1911,22 @@ button,input,textarea,select{font:inherit;color:inherit}
 
      Held as fractions of the picture, not pixels, so a mark stays where it was
      put whatever size the picture is shown at. */
+  function finishListHtml(s) {
+    var seen = {}, out = [];
+    (s.images || []).forEach(function (im) {
+      ((im && im.spots) || []).forEach(function (q) {
+        var name = String(q.name || '').trim();
+        if (!name || seen[name.toLowerCase()]) return;
+        seen[name.toLowerCase()] = 1; out.push(name);
+      });
+    });
+    if (!out.length) return '';
+    return '<div class="deck-spacedocs"><span class="deck-chip-l">Finishes in this space</span>' +
+      '<ul class="deck-spot-list">' + out.map(function (x) {
+        return '<li>' + esc(x) + '</li>';
+      }).join('') + '</ul></div>';
+  }
+
   function spotsHtml(im, k) {
     var list = (im && im.spots) || [];
     return '<div class="deck-spots" data-spots data-ix="' + k + '">' +
@@ -1908,6 +1992,9 @@ button,input,textarea,select{font:inherit;color:inherit}
         '<div class="deck-sheet-body-copy">' + esc(s.body || '') + '</div>' +
         (s.quote ? '<p class="deck-sheet-quote">' + esc(s.quote) + '</p>' : '') +
         specHtml(s, true, state) +
+        /* on site the list is wanted beside the room, not in a chapter at the
+           back — and it is the same marks, so it cannot disagree with them */
+        (stageOf(state) === 'execution' ? finishListHtml(s) : '') +
         docStrip +
         '<div class="deck-actions">' +
           '<button class="deck-btn deck-btn--solid" data-share-one="' + esc(s.id) + '">Share this space</button>' +
@@ -2851,7 +2938,7 @@ function blank(type) {
     project: {
       name: '', client: '', contact: '', address: '', code: '',
       eyebrow: 'CONCEPT DECK · PRIVATE RESIDENCE', slogan: 'different by design', closing: '',
-      headline: '', kind: 'Interior Concept Deck',
+      headline: '', kind: 'Interior Concept Deck', stage: 'concept',
       dateLabel: '', confidentiality: 'Confidential', rate: '', estimateBasis: '', autoSeconds: '2',
       rateCovers: '', rateExcludes: '',
       designer: '', firm: 'essentia environments',
@@ -2920,7 +3007,11 @@ function toast(msg) {
 /* ── field helpers ─────────────────────────────────────────────────────── */
 function field(o) {
   var id = 'f_' + Math.random().toString(36).slice(2, 8);
-  var input = o.area
+  var input = o.pick
+    ? '<select id="' + id + '">' + o.pick.map(function (x) {
+        return '<option value="' + esc(x.v) + '">' + esc(x.label) + '</option>';
+      }).join('') + '</select>'
+    : o.area
     ? '<textarea id="' + id + '" rows="' + (o.rows || 3) + '" placeholder="' + esc(o.ph || '') + '"></textarea>'
     : '<input id="' + id + '" type="text" placeholder="' + esc(o.ph || '') + '">';
   return '<div class="f' + (o.wide ? ' f--wide' : '') + '" data-f="' + esc(o.key) + '">' +
@@ -2931,15 +3022,33 @@ function field(o) {
 function bindFields(host, obj, onChange) {
   host.querySelectorAll('[data-f]').forEach(function (w) {
     var key = w.getAttribute('data-f');
-    var el = w.querySelector('input,textarea');
+    var el = w.querySelector('input,textarea,select');
     el.value = obj[key] == null ? '' : obj[key];
-    el.addEventListener('input', function () { obj[key] = el.value; onChange(key, el.value, w); });
+    el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', function () {
+      obj[key] = el.value; onChange(key, el.value, w);
+    });
   });
 }
 function markField(w, msg) {
   var e = w.querySelector('.f-err');
   w.classList.toggle('f-bad', !!msg);
   e.hidden = !msg; e.textContent = msg || '';
+}
+
+/* Switching stage rewrites one word in the two lines that name the document,
+   and only that word. A deck that is being built to must not still say Concept
+   on its cover; nothing else anyone has written is touched, and switching back
+   puts the word back. */
+function applyStage(stage) {
+  var to = stage === 'execution' ? 'Execution' : 'Concept';
+  var from = stage === 'execution' ? 'Concept' : 'Execution';
+  ['kind', 'eyebrow'].forEach(function (k) {
+    var v = S.project[k];
+    if (!v) return;
+    S.project[k] = String(v)
+      .replace(new RegExp(from.toUpperCase(), 'g'), to.toUpperCase())
+      .replace(new RegExp(from, 'g'), to);
+  });
 }
 
 /* ── render: cover + narrative ─────────────────────────────────────────── */
@@ -2951,6 +3060,10 @@ function renderCover() {
     field({ key: 'client', label: 'Client name', ph: 'Mr. Ashley Khilwani' }) +
     field({ key: 'contact', label: 'Client Advisor', ph: 'Ms. Preeti Vashist' }) +
     field({ key: 'address', label: 'Project address', wide: true, ph: 'Private Residence · Gurugram · Ground + Two Floors' }) +
+    field({ key: 'stage', label: 'Deck stage',
+            pick: [{ v: 'concept', label: 'Concept deck \u2014 for a decision' },
+                   { v: 'execution', label: 'Execution deck \u2014 for the build' }],
+            hint: 'Execution adds The finishes, lists them inside each space, and stamps the deck for execution instead of not for construction. The word Concept in the two lines below is swapped for Execution; nothing else you have written is touched.' }) +
     field({ key: 'eyebrow', label: 'Cover eyebrow', ph: 'CONCEPT DECK · PRIVATE RESIDENCE' }) +
     field({ key: 'dateLabel', label: 'Date label', ph: 'September 2026' }) +
     field({ key: 'slogan', label: 'Slogan', wide: true, ph: 'different by design',
@@ -2975,6 +3088,7 @@ function renderCover() {
     field({ key: 'designer', label: 'Principal designer', ph: 'Monica Chawla' }) +
     field({ key: 'firm', label: 'Vertical', ph: 'essentia environments' });
   bindFields(host, S.project, function (key, val, w) {
+    if (key === 'stage') { applyStage(val); renderCover(); paint(); return; }
     if (key === 'code') markField(w, val && !CODE_RE.test(val.trim()) ? 'Use ED/YY-YY/NNN — for example ED/26-27/058.' : '');
     else if (key === 'autoSeconds') markField(w, val && !/^[0-9]*$/.test(val) ? 'Seconds, as a number.' : '');
     else if (key === 'rate') markField(w, val && !/^[0-9.,₹ ]*$/.test(val) ? 'Numbers only — for example 1200.' : '');

@@ -156,6 +156,29 @@ which writes the build time into the file and the filename together.
    representational-purpose disclaimer.
 7. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.
 
+### Two stages of the same deck
+
+**Deck stage**, the first field on Cover, decides what the file is allowed to
+claim. *Concept* is the deck that asks whether this is right, and is stamped
+**Concept · not for construction**. *Execution* is the deck that is worked to
+once it is, and is stamped **For execution · read with the GFC drawings**.
+
+Switching to Execution adds one chapter, **06 The finishes**, and lists the
+finishes inside each space as well. Neither is typed: both are the material
+marks already placed on the renders, read the other way round — by material,
+each one once, against every room it lands in. So the schedule cannot drift
+away from the pictures, because it *is* the pictures. A mark written
+`Wall tile · Canyon Beige 600x1200, Kajaria` splits at the `·` into what it is
+and what it is called; a mark with no product name leaves that column empty
+rather than inventing one.
+
+Switching also swaps the word *Concept* for *Execution* in the two lines that
+name the document — the cover eyebrow and the kind — and nothing else. Switching
+back puts it right. A deck built to on site must not still say Concept on its
+cover.
+
+The sample builder takes the same switch: `--execution` as its fifth argument.
+
 `SAVE DRAFT` writes a `.json` holding everything including the images — that is
 the real save. The tool also keeps the *text* of your last session in the
 browser so a crash does not lose the writing, but images are not kept there;

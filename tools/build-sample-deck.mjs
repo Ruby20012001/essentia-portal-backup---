@@ -22,7 +22,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 
-const [tool, imgDir, logoPath, out] = process.argv.slice(2);
+const [tool, imgDir, logoPath, out, stageArg] = process.argv.slice(2);
+/* the same house at either stage: pass --execution for the deck that is built
+   to, which stamps it for execution and adds the schedule of finishes read off
+   the marks already on the renders */
+const STAGE = stageArg === '--execution' ? 'execution' : 'concept';
+const ex = (concept, execution) => (STAGE === 'execution' ? execution : concept);
 const MARKS = JSON.parse(fs.readFileSync(new URL('./samples/ireo-marks.json', import.meta.url), 'utf8'));
 const src = fs.readFileSync(tool, 'utf8');
 
@@ -213,13 +218,14 @@ const state = {
     contact: 'Preeti Kardam',
     address: 'IREO Corridors · Gurugram',
     code: '',
-    eyebrow: 'CONCEPT DECK · PRIVATE RESIDENCE',
+    stage: STAGE,
+    eyebrow: ex('CONCEPT DECK \u00b7 PRIVATE RESIDENCE', 'EXECUTION DECK \u00b7 PRIVATE RESIDENCE'),
     headline: 'A house you can read before you can walk it.',
     slogan: 'different by design',
     closing:
       'Everything here is a beginning, not a conclusion. Tell us where it is wrong, ' +
       'and it changes — that is what a concept is for.',
-    kind: 'Interior Concept Deck',
+    kind: ex('Interior Concept Deck', 'Interior Execution Deck'),
     dateLabel: 'September 2026',
     confidentiality: 'Confidential',
     autoSeconds: '2',
