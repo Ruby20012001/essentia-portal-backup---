@@ -114,6 +114,15 @@ which writes the build time into the file and the filename together.
    pulled out under an amber rule, meant to be the thing the client repeats to
    someone else. Write the quotable to the type of space, not to the project.
 
+   **The estimate explains itself.** The deck carries a chapter, *04 The
+   estimate — How this is worked out*: the rate in a sentence, then every priced
+   space with its area, the rate and the amount, and a total under them. Two
+   fields on the cover fill the rest of it — **What this rate covers** and
+   **What it does not cover**, one line each, printed as lists. The second is
+   the half people find out about later; saying it here is what keeps it from
+   becoming an argument. A space with no area is not in the table, and a deck
+   with no figures has no chapter.
+
 6. **Narrative** — the note the client reads before the spaces, and the
    representational-purpose disclaimer.
 7. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.

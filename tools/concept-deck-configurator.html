@@ -197,6 +197,18 @@
 .deck-thumb{position:relative;overflow:hidden;width:56px;height:42px;border:1px solid var(--rule);padding:0;background:var(--wash);cursor:pointer;line-height:0}
 .deck-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .deck-thumb[aria-current="true"]{border-color:var(--ink)}
+.deck-est-rate{font-size:15px;color:var(--ink);margin:0 0 22px;max-width:62ch}
+.deck-est-wrap{overflow-x:auto}
+.deck-est-table{width:100%;border-collapse:collapse;font-size:13px}
+.deck-est-table th{text-align:left;font-weight:400;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--faint);padding:0 14px 9px 0;border-bottom:1px solid var(--rule)}
+.deck-est-table td{padding:11px 14px 11px 0;border-bottom:1px solid var(--rule);color:var(--body);white-space:nowrap}
+.deck-est-table td:first-child{white-space:normal;color:var(--ink)}
+.deck-est-amt{text-align:right;color:var(--ink)}
+.deck-est-table tfoot td{border-bottom:0;border-top:1px solid var(--rule-strong);font-size:15px;color:var(--ink);padding-top:14px}
+.deck-est-side{margin-top:26px}
+.deck-est-side ul{margin:9px 0 0;padding-left:18px}
+.deck-est-side li{font-size:14px;color:var(--body);margin-bottom:5px}
 .deck-spacedocs{margin-top:20px;padding-top:16px;border-top:1px solid var(--rule)}
 .deck-spacedocs-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:9px}
 .deck-spacedoc{margin:0;width:120px;border:1px solid var(--rule);background:var(--wash);cursor:pointer}
@@ -758,8 +770,7 @@ button,input,textarea,select{font:inherit;color:inherit}
     }).join('') + '</div>' : '') +
     /* the arithmetic, hidden until asked for on screen and always shown on paper */
     (working ? '<p class="deck-calc"' + (interactive ? ' hidden' : '') + '>' + esc(working) +
-      (((state || {}).documents || []).some(function (d) { return d.src; })
-        ? '<a class="deck-calc-link" href="#documents">See the detailed estimate</a>' : '') +
+      '<a class="deck-calc-link" href="#estimate">How the estimate is worked out</a>' +
       '</p>' : '') +
     /* a figure with no basis stated is a figure waiting to be misread */
     ((s.estimate && basis) ? '<p class="deck-spec-note">' + esc(basis) + '</p>' : '') +
@@ -932,7 +943,7 @@ button,input,textarea,select{font:inherit;color:inherit}
     var docs = (state.documents || []).filter(function (d) { return d.src; });
     if (!docs.length) return '';
     return '<section class="deck-sec deck-dwgs" id="documents">' +
-      '<span class="deck-eyebrow">04 The documents</span>' +
+      '<span class="deck-eyebrow">05 The documents</span>' +
       '<h2>' + (docs.length === 1 ? 'The document this is built on.'
                                     : 'The ' + docs.length + ' documents this is built on.') + '</h2>' +
       docs.map(function (d, k) {
@@ -947,6 +958,58 @@ button,input,textarea,select{font:inherit;color:inherit}
       }).join('') +
       '<button class="deck-more" data-add="documents">+ &nbsp;Upload document</button>' +
       '</section>';
+  }
+
+  /* How the money was arrived at, in the order a person would ask it: what the
+     rate is, what it was multiplied by, what that comes to, and what it does
+     and does not include. A figure a client cannot take apart is a figure they
+     will either accept without understanding or refuse without asking. */
+  function estimateHtml(state) {
+    var p = state.project || {};
+    var rate = num(p.rate);
+    var rows = live(state).filter(function (s) { return String(s.estimate || '').trim(); });
+    if (!rows.length) return '';
+    var lines = function (t) {
+      return String(t || '').split(/\n+/).map(function (x) { return x.trim(); })
+        .filter(Boolean);
+    };
+    var covers = lines(p.rateCovers), excludes = lines(p.rateExcludes);
+    var total = rows.reduce(function (t, s) { return t + num(s.estimate); }, 0);
+    var priced = rows.filter(function (s) { return num(s.area) > 0; });
+    var area = priced.reduce(function (t, s) { return t + num(s.area); }, 0);
+    return '<section class="deck-sec deck-est" id="estimate">' +
+      '<span class="deck-eyebrow">04 The estimate</span>' +
+      '<h2>How this is worked out.</h2>' +
+      (rate > 0
+        ? '<p class="deck-est-rate">Every space is priced on its own area, at ' + esc(rupees(rate)) +
+          ' per sq.ft. Nothing else is added.</p>'
+        : '') +
+      '<div class="deck-est-wrap"><table class="deck-est-table"><thead><tr>' +
+        '<th>Space</th><th>Area</th>' + (rate > 0 ? '<th>Rate</th>' : '') + '<th>Amount</th>' +
+      '</tr></thead><tbody>' +
+      rows.map(function (s) {
+        return '<tr><td>' + esc(s.no + '  ' + s.name) + '</td>' +
+          '<td>' + (num(s.area) > 0 ? esc(num(s.area).toLocaleString('en-IN') + ' sq ft') : '—') + '</td>' +
+          (rate > 0 ? '<td>' + (s.estimateDerived ? esc(rupees(rate)) : 'as quoted') + '</td>' : '') +
+          '<td class="deck-est-amt">' + esc(s.estimate) + '</td></tr>';
+      }).join('') +
+      '</tbody><tfoot><tr><td>Total</td>' +
+        '<td>' + (area > 0 ? esc(area.toLocaleString('en-IN') + ' sq ft') : '') + '</td>' +
+        (rate > 0 ? '<td></td>' : '') +
+        '<td class="deck-est-amt">' + esc(rupees(total)) + '</td></tr></tfoot></table></div>' +
+      (covers.length
+        ? '<div class="deck-est-side"><span class="deck-chip-l">What this covers</span><ul>' +
+          covers.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>'
+        : '') +
+      (excludes.length
+        ? '<div class="deck-est-side"><span class="deck-chip-l">What it does not cover</span><ul>' +
+          excludes.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>'
+        : '') +
+      (p.estimateBasis ? '<p class="deck-spec-note">' + esc(p.estimateBasis) + '</p>' : '') +
+      (((state.documents || []).some(function (d) { return d.src; }))
+        ? '<p class="deck-hint"><a class="deck-calc-link" href="#documents">The detailed estimate, page by page</a></p>'
+        : '') +
+    '</section>';
   }
 
   function noteHtml(state) {
@@ -1387,7 +1450,8 @@ button,input,textarea,select{font:inherit;color:inherit}
   function deckHtml(state, opts) {
     return '<article class="deck">' + printHeadHtml(state) + coverHtml(state) + planHtml(state) +
       ((opts && opts.noIndex) ? '' : indexHtml(state)) +
-      noteHtml(state) + documentsHtml(state) + printHtml(state) + footHtml(state) + '</article>' +
+      noteHtml(state) + estimateHtml(state) + documentsHtml(state) +
+      printHtml(state) + footHtml(state) + '</article>' +
       '<div class="deck-lb" data-lb><div class="deck-lb-bar"><span data-lb-cap></span>' +
         '<button data-lb-close>Close</button></div><img data-lb-img alt=""></div>' +
       '<div class="deck-sheet" data-sheet><div class="deck-sheet-veil" data-sheet-close></div>' +
@@ -2089,6 +2153,7 @@ function blank(type) {
       eyebrow: 'CONCEPT DECK · PRIVATE RESIDENCE', slogan: 'different by design', closing: '',
       headline: '', kind: 'Interior Concept Deck',
       dateLabel: '', confidentiality: 'Confidential', rate: '', estimateBasis: '', autoSeconds: '2',
+      rateCovers: '', rateExcludes: '',
       designer: '', firm: 'essentia environments',
       firmLine: 'essentia Design & Project Partners · Sector 34, Gurugram · Since 1999',
       site: 'essentiaenvironments.com'
@@ -2201,6 +2266,12 @@ function renderCover() {
             hint: 'Printed under the figures. A number with no basis stated will be misread.' }) +
     field({ key: 'rate', label: 'Estimate rate (₹ / sq.ft.)', ph: '1200',
             hint: 'Fills the estimate on every space that has an area. A space with its own estimate keeps it.' }) +
+    field({ key: 'rateCovers', label: 'What this rate covers', wide: true, area: true, rows: 3,
+            ph: 'One per line — false ceiling and cove lighting · wardrobes, internally finished · loose furniture',
+            hint: 'Printed as a list in The estimate. One line, one thing.' }) +
+    field({ key: 'rateExcludes', label: 'What it does not cover', wide: true, area: true, rows: 3,
+            ph: 'One per line — civil work · appliances · anything bought outside essentia',
+            hint: 'The half people find out about later. Saying it here is what keeps it from becoming an argument.' }) +
     field({ key: 'designer', label: 'Principal designer', ph: 'Monica Chawla' }) +
     field({ key: 'firm', label: 'Vertical', ph: 'essentia environments' });
   bindFields(host, S.project, function (key, val, w) {
