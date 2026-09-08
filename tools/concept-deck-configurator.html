@@ -774,6 +774,12 @@ button,input,textarea,select{font:inherit;color:inherit}
         }
         at = end + 9;
       }
+      /* what the file holds, so the message can name it rather than guess */
+      out.why = out.length ? ''
+        : (t.indexOf('/Subtype /Image') < 0 && t.indexOf('/Subtype/Image') < 0) ? 'vector'
+        : /CCITTFax|JBIG2/.test(t) ? 'scan'
+        : /JPXDecode/.test(t) ? 'jpeg2000'
+        : /FlateDecode/.test(t) ? 'flate' : 'unknown';
       return out;
     });
   }
@@ -970,8 +976,13 @@ button,input,textarea,select{font:inherit;color:inherit}
       groups.forEach(function (g) { got = got.concat(g); });
       if (el) el.textContent = was;
       if (!got.length) {
+        var why = (groups[0] && groups[0].why) || '';
         if (dwg.length) say('AutoCAD .dwg cannot be opened here. In AutoCAD: Save As → AutoCAD DXF, and drop that.');
-        else say('That PDF is drawn in lines, not pictures — export it as JPG or PNG, or snip it (Win+Shift+S).');
+        else if (why && why !== 'vector') {
+          say('The picture inside that PDF is in a format this cannot open. Snip it: Win+Shift+S, then Ctrl+V here.');
+        } else {
+          say('That PDF is drawn in lines, not pictures. Snip it: Win+Shift+S, then Ctrl+V here.');
+        }
       }
       done(rest.concat(got));
     }, function () { if (el) el.textContent = was; done(rest); });
