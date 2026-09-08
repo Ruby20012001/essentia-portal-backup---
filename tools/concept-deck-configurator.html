@@ -198,6 +198,15 @@
    for the picture — only the things drawn on it do */
 .deck-spots{position:absolute;inset:0;line-height:1;pointer-events:none}
 .deck-spot,.deck-spot-card,.deck-spot-in{pointer-events:auto}
+/* asked for, not assumed: the marks are put away until somebody wants them */
+.deck-spots .deck-spot{opacity:0;visibility:hidden;transition:opacity .3s}
+.deck-spots.is-shown .deck-spot,.deck-spots.is-marking .deck-spot{opacity:1;visibility:visible}
+.deck-hero-dots{position:absolute;right:0;bottom:0;z-index:4;border:0;cursor:pointer;
+  background:rgba(0,0,0,.66);color:#fff;font:inherit;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;padding:7px 11px;transition:background .15s,color .15s}
+.deck-hero-dots:hover,.deck-hero-dots:focus-visible{background:rgba(0,0,0,.82);outline:none}
+.deck-hero-dots[aria-pressed="true"]{background:var(--amber);color:#000}
+@media print{.deck-hero-dots{display:none}}
 .deck-spot{position:absolute;transform:translate(-50%,-50%);width:26px;height:26px;padding:0;border:0;
   background:transparent;cursor:pointer;z-index:2}
 .deck-spot i{display:block;width:11px;height:11px;margin:7px;border-radius:50%;background:#fff;
@@ -1865,7 +1874,12 @@ button,input,textarea,select{font:inherit;color:inherit}
            sits on the picture, which is where the marking happens. */
         '<button class="deck-hero-mark" data-mark="' + esc(s.id) + '"' +
           ' title="Mark materials" aria-label="Mark materials"><i></i></button>' +
-        '<span class="deck-mark-hint" data-mark-hint hidden>Tap the picture where the material is</span>'
+        '<span class="deck-mark-hint" data-mark-hint hidden>Tap the picture where the material is</span>' +
+        /* the picture first, the marks when they are wanted — one press shows
+           every material on it, another puts them away */
+        ((imgs[0].spots || []).length
+          ? '<button class="deck-hero-dots" data-dots aria-pressed="false">Materials</button>'
+          : '')
       : '<span>No visual yet</span>';
     return '<div class="deck-sheet-hero' + (imgs[0] ? '' : ' deck-sheet-hero--none') + '">' + hero +
         '<button class="deck-x" data-sheet-close aria-label="Close">&times;</button></div>' +
@@ -2174,6 +2188,8 @@ button,input,textarea,select{font:inherit;color:inherit}
       if (hint) hint.hidden = !marking;
       var layer = el.querySelector('[data-spots]');
       if (layer) layer.classList.toggle('is-marking', marking);
+      var dots = el.querySelector('[data-dots]');
+      if (dots && marking) { dots.setAttribute('aria-pressed', 'true'); if (layer) layer.classList.add('is-shown'); }
       var hero = el.querySelector('.deck-sheet-hero');
       if (hero) hero.classList.toggle('is-marking', marking);
       if (!marking) { el.dispatchEvent(new CustomEvent('deck:changed', { bubbles: true })); }
@@ -2608,6 +2624,15 @@ button,input,textarea,select{font:inherit;color:inherit}
       /* a hand on the controls means the reader is steering, not watching */
       if (e.target.closest('[data-prev]')) { stopAuto(); step(-1); return; }
       if (e.target.closest('[data-next]')) { stopAuto(); step(1); return; }
+      var dotsBtn = e.target.closest('[data-dots]');
+      if (dotsBtn) {
+        var layer0 = el.querySelector('[data-spots]');
+        var on = dotsBtn.getAttribute('aria-pressed') === 'true';
+        dotsBtn.setAttribute('aria-pressed', on ? 'false' : 'true');
+        if (layer0) layer0.classList.toggle('is-shown', !on);
+        if (on) clearSpot();
+        return;
+      }
       var markBtn = e.target.closest('[data-mark]');
       if (markBtn) { toggleMarking(markBtn); return; }
       var spotBtn = e.target.closest('[data-spot]');
