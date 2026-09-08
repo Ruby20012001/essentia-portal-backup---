@@ -1963,6 +1963,11 @@ button,input,textarea,select{font:inherit;color:inherit}
       var i = spaces.findIndex(function (s) { return String(s.id) === String(id); });
       if (i < 0) return;
       at = i;
+      /* The panel is written out fresh here, so the ring comes back off and the
+       hint comes back hidden. If marking were left on in the variable, the deck
+       would look finished and behave as though it were still being marked —
+       pressing a mark would open its name to be edited instead of showing it. */
+      marking = false;
       sheetIn.innerHTML = sheetHtml(spaces[i], i, spaces.length, state);
       sheet.setAttribute('data-open', '1');
       sheetIn.parentNode.scrollTop = 0;
