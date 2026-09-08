@@ -137,6 +137,15 @@ which writes the build time into the file and the filename together.
    becoming an argument. A space with no area is not in the table, and a deck
    with no figures has no chapter.
 
+   **Mark the materials on the render.** Press *Mark materials* under a
+   space, click the picture where a thing is — the floor, a veneer, a handle —
+   and write its name. In the deck those marks blink quietly on the render;
+   pressing one takes the picture to it and writes the name on a line drawn back
+   to the exact spot, the way a materials board does. Marks are held as
+   fractions of the picture, so they stay where they were put at any size, and
+   on paper they print as a list under the render because nothing there can be
+   pressed.
+
 6. **Narrative** — the note the client reads before the spaces, and the
    representational-purpose disclaimer.
 7. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.

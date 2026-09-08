@@ -191,8 +191,31 @@
 /* the panel's contents are swapped as one block, so that block — not the
    scroller — is the flex column; without this the footer nav floats mid-sheet */
 .deck-sheet-body > [data-sheet-in]{display:flex;flex-direction:column;flex:1;min-height:100%}
-.deck-sheet-hero{position:relative;background:var(--wash);line-height:0;flex:none}
-.deck-sheet-hero img{width:100%;height:auto;display:block;max-height:46vh;object-fit:cover}
+.deck-sheet-hero{position:relative;overflow:hidden;background:var(--wash);line-height:0;flex:none}
+.deck-sheet-hero img{width:100%;height:auto;display:block;max-height:46vh;object-fit:cover;
+  transition:transform .45s cubic-bezier(.2,.7,.3,1)}
+.deck-spots{position:absolute;inset:0;line-height:1}
+.deck-spot{position:absolute;transform:translate(-50%,-50%);width:26px;height:26px;padding:0;border:0;
+  background:transparent;cursor:pointer;z-index:2}
+.deck-spot i{display:block;width:11px;height:11px;margin:7px;border-radius:50%;background:#fff;
+  box-shadow:0 0 0 2px rgba(0,0,0,.4),0 0 0 0 rgba(255,255,255,.7);animation:deckSpot 2s infinite}
+@keyframes deckSpot{0%,100%{box-shadow:0 0 0 2px rgba(0,0,0,.4),0 0 0 0 rgba(255,255,255,.7)}
+  55%{box-shadow:0 0 0 2px rgba(0,0,0,.4),0 0 0 11px rgba(255,255,255,0)}}
+.deck-spot.is-live i{background:var(--amber);animation:none;box-shadow:0 0 0 2px rgba(0,0,0,.5)}
+.deck-spots.is-open .deck-spot:not(.is-live){opacity:.25}
+.deck-spot-card{position:absolute;z-index:3;max-width:min(74%,280px);background:rgba(0,0,0,.86);color:#fff;
+  padding:10px 12px;font-size:13px;line-height:1.5}
+.deck-spot-card b{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--amber);margin-bottom:3px}
+.deck-spot-card span{display:block;margin-top:5px;font-size:11px;color:#c9c9c9}
+.deck-spot-line{position:absolute;inset:0;width:100%;height:100%;z-index:1;opacity:0;transition:opacity .2s}
+.deck-spot-line[data-on]{opacity:.95}
+.deck-spot-line line{stroke:#fff;stroke-width:1.5}
+.deck-spot-list{margin:8px 0 0;padding-left:18px}
+.deck-spot-list li{font-size:12px;color:var(--soft);margin-bottom:3px}
+.deck-spot-list b{color:var(--ink);font-weight:400}
+@media (prefers-reduced-motion:reduce){.deck-spot i{animation:none}.deck-sheet-hero img{transition:none}}
+@media print{.deck-spots{display:none}}
 .deck-sheet-hero--none{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;line-height:1.5}
 .deck-sheet-hero--none span{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
 .deck-x{position:absolute;top:12px;right:12px;width:32px;height:32px;border:0;background:rgba(255,255,255,.92);
@@ -500,6 +523,17 @@ button,input,textarea,select{font:inherit;color:inherit}
 .modal-body{flex:1;overflow:auto;padding:16px;display:flex;align-items:flex-start;justify-content:center;background:#000}
 .placer{position:relative;line-height:0;max-width:100%;cursor:crosshair}
 .placer img{max-width:100%;height:auto;display:block}
+.spotter-body{flex-direction:column;align-items:stretch;gap:12px;background:var(--canvas)}
+.spotter-strip{display:flex;gap:8px;flex-wrap:wrap}
+.spotter-strip button{width:74px;height:56px;padding:0;border:1px solid var(--line-strong);background:#000;
+  cursor:pointer;line-height:0;position:relative}
+.spotter-strip button[aria-current="true"]{border-color:var(--amber)}
+.spotter-strip img{width:100%;height:100%;object-fit:cover}
+.spotter-list{display:flex;flex-direction:column;gap:8px}
+.spotter-row{display:flex;gap:8px;align-items:center}
+.spotter-row .no{flex:none;width:22px;height:22px;border-radius:50%;background:var(--amber);color:#000;
+  font-size:11px;display:flex;align-items:center;justify-content:center}
+.spotter-row input{flex:1;min-width:0}
 .placer .pp{position:absolute;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;
   background:#000;color:#fff;border:2px solid #fff;font-size:11px;display:flex;align-items:center;justify-content:center}
 .placer .pp--other{background:transparent;border-color:rgba(255,255,255,.45);color:rgba(255,255,255,.55)}
@@ -671,6 +705,22 @@ button,input,textarea,select{font:inherit;color:inherit}
       </div>
     </div>
     <div class="modal-body"><div class="placer" id="placerCanvas"></div></div>
+  </div>
+</div>
+
+<div class="modal" id="spotter" aria-hidden="true">
+  <div class="modal-veil" data-close-spotter></div>
+  <div class="modal-box">
+    <div class="modal-head">
+      <div><span id="spotterTitle" style="font-size:13px"></span>
+        <span class="f-hint" style="display:block">Click the picture where the material is, then write its name. That is what the client reads.</span></div>
+      <div style="display:flex;gap:8px"><button class="btn btn--sm" data-close-spotter>Done</button></div>
+    </div>
+    <div class="modal-body spotter-body">
+      <div class="spotter-strip" id="spotterStrip"></div>
+      <div class="placer" id="spotterCanvas"></div>
+      <div class="spotter-list" id="spotterList"></div>
+    </div>
   </div>
 </div>
 
@@ -1316,7 +1366,13 @@ button,input,textarea,select{font:inherit;color:inherit}
           return '<figure class="deck-shot">' +
             '<img loading="lazy" decoding="async" data-sp="' + esc(s.id) + '" data-ix="' + k +
             '" src="' + im.src + '" alt="' + esc(s.name) + '">' +
-            '<span class="deck-rev">' + esc(im.rev) + '</span></figure>';
+            '<span class="deck-rev">' + esc(im.rev) + '</span></figure>' +
+            (((im.spots || []).length)
+              ? '<ul class="deck-spot-list">' + im.spots.map(function (q) {
+                  return '<li><b>' + esc(q.name || 'Material') + '</b>' +
+                    (q.material ? ' — ' + esc(q.material) : '') + '</li>';
+                }).join('') + '</ul>'
+              : '');
         }).join('') +
         (s.docs || []).filter(function (d) { return d.src; }).map(function (d, k) {
           return '<figure class="deck-shot deck-shot--doc">' +
@@ -1732,6 +1788,29 @@ button,input,textarea,select{font:inherit;color:inherit}
       '<div class="deck-sheet-body" role="dialog" aria-modal="true"><div data-sheet-in></div></div></div>';
   }
 
+  /* WHAT A THING IS CALLED, AND WHAT IT IS MADE OF.
+
+     A client looks at a render and cannot ask the question they actually have:
+     that wood on the door — what is it called, and what is it. So each render
+     can carry marks. Press one and the picture goes to it and says both, on a
+     line drawn back to the exact spot, the way a materials board does.
+
+     Held as fractions of the picture, not pixels, so a mark stays where it was
+     put whatever size the picture is shown at. */
+  function spotsHtml(im, k) {
+    var list = (im && im.spots) || [];
+    return '<div class="deck-spots" data-spots data-ix="' + k + '">' +
+      list.map(function (q, j) {
+        return '<button class="deck-spot" data-spot="' + j + '"' +
+          ' style="left:' + ((+q.x || 0) * 100).toFixed(2) + '%;top:' + ((+q.y || 0) * 100).toFixed(2) + '%"' +
+          ' aria-label="' + esc(q.name || 'Material') + '"><i></i></button>';
+      }).join('') +
+      '<svg class="deck-spot-line" data-spot-line aria-hidden="true">' +
+        '<line x1="0" y1="0" x2="0" y2="0"></line></svg>' +
+      '<div class="deck-spot-card" data-spot-card hidden></div>' +
+    '</div>';
+  }
+
   function sheetHtml(s, i, total, state) {
     var imgs = s.images || [];
     /* A drawing that belongs to one room — the working sheet for it, or the
@@ -1750,7 +1829,8 @@ button,input,textarea,select{font:inherit;color:inherit}
       : '';
     var hero = imgs[0]
       ? '<img src="' + imgs[0].src + '" alt="' + esc(s.name) + '" data-hero>' +
-        '<span class="deck-hero-rev" data-hero-rev>' + esc(imgs[0].rev) + '</span>'
+        '<span class="deck-hero-rev" data-hero-rev>' + esc(imgs[0].rev) + '</span>' +
+        spotsHtml(imgs[0], 0)
       : '<span>No visual yet</span>';
     return '<div class="deck-sheet-hero' + (imgs[0] ? '' : ' deck-sheet-hero--none') + '">' + hero +
         '<button class="deck-x" data-sheet-close aria-label="Close">&times;</button></div>' +
@@ -2039,6 +2119,58 @@ button,input,textarea,select{font:inherit;color:inherit}
       inp.click();
     }
     /* a document, full screen, to be read rather than admired */
+    var ZOOM = 2.4;
+    function clearSpot() {
+      var hero = el.querySelector('[data-hero]');
+      if (hero) { hero.style.transform = ''; hero.style.transformOrigin = ''; }
+      var layer = el.querySelector('[data-spots]');
+      if (layer) layer.classList.remove('is-open');
+      var card = el.querySelector('[data-spot-card]');
+      if (card) { card.hidden = true; card.innerHTML = ''; }
+      var line = el.querySelector('[data-spot-line]');
+      if (line) line.setAttribute('data-on', '');
+    }
+    function showSpot(btn) {
+      var layer = btn.closest('[data-spots]');
+      var host = layer && layer.parentNode;
+      var s = spaces[at];
+      if (!layer || !host || !s) return;
+      var im = (s.images || [])[+layer.getAttribute('data-ix')];
+      var q = im && (im.spots || [])[+btn.getAttribute('data-spot')];
+      if (!q) return;
+      var hero = host.querySelector('[data-hero]');
+      if (hero) {
+        /* the picture goes to the mark rather than the reader hunting for it */
+        hero.style.transformOrigin = (q.x * 100).toFixed(2) + '% ' + (q.y * 100).toFixed(2) + '%';
+        hero.style.transform = 'scale(' + ZOOM + ')';
+      }
+      layer.classList.add('is-open');
+      layer.querySelectorAll('[data-spot]').forEach(function (b) {
+        b.classList.toggle('is-live', b === btn);
+      });
+      var card = layer.querySelector('[data-spot-card]');
+      /* the name is the whole of it, unless a deck was written when this asked
+         for two things — then the first is the label above the second */
+      card.innerHTML = q.material
+        ? '<b>' + esc(q.name || 'Material') + '</b>' + esc(q.material)
+        : esc(q.name || '');
+      card.hidden = false;
+      /* the card sits on the emptier half, and a line goes back to the mark */
+      var W = layer.clientWidth, H = layer.clientHeight;
+      var dx = q.x * W, dy = q.y * H;
+      var below = q.y < 0.55;
+      var cw = Math.min(card.offsetWidth || 240, W - 24);
+      var cx = Math.min(Math.max(dx - cw / 2, 12), W - cw - 12);
+      var cy = below ? Math.min(dy + 54, H - card.offsetHeight - 12) : Math.max(dy - card.offsetHeight - 54, 12);
+      card.style.left = cx + 'px';
+      card.style.top = cy + 'px';
+      var line = layer.querySelector('[data-spot-line]');
+      var ln = line.querySelector('line');
+      ln.setAttribute('x1', dx); ln.setAttribute('y1', dy);
+      ln.setAttribute('x2', Math.min(Math.max(dx, cx + 14), cx + cw - 14));
+      ln.setAttribute('y2', below ? cy : cy + card.offsetHeight);
+      line.setAttribute('data-on', '1');
+    }
     function openBig(img) {
       var lb = el.querySelector('[data-lb]');
       if (!lb) return;
@@ -2293,10 +2425,13 @@ button,input,textarea,select{font:inherit;color:inherit}
         if (autoDir === d) stopAuto(); else startAuto(d);
         return;
       }
-      if (e.target.closest('[data-sheet-close]')) { close(); return; }
+      if (e.target.closest('[data-sheet-close]')) { clearSpot(); close(); return; }
       /* a hand on the controls means the reader is steering, not watching */
       if (e.target.closest('[data-prev]')) { stopAuto(); step(-1); return; }
       if (e.target.closest('[data-next]')) { stopAuto(); step(1); return; }
+      var spotBtn = e.target.closest('[data-spot]');
+      if (spotBtn) { showSpot(spotBtn); return; }
+      if (e.target.closest('[data-hero]') || e.target.closest('[data-spot-card]')) { clearSpot(); return; }
       var th = e.target.closest('[data-thumb]');
       if (th) {
         var k = +th.getAttribute('data-thumb');
@@ -2305,6 +2440,13 @@ button,input,textarea,select{font:inherit;color:inherit}
         if (hero && s.images[k]) hero.src = s.images[k].src;
         var rv = sheetIn.querySelector('[data-hero-rev]');
         if (rv && s.images[k]) rv.textContent = s.images[k].rev || '';
+        clearSpot();
+        var layer = sheetIn.querySelector('[data-spots]');
+        if (layer && s.images[k]) {
+          var tmp = document.createElement('div');
+          tmp.innerHTML = spotsHtml(s.images[k], k);
+          layer.replaceWith(tmp.firstChild);
+        }
         sheetIn.querySelectorAll('[data-thumb]').forEach(function (b) {
           b.setAttribute('aria-current', String(+b.getAttribute('data-thumb') === k));
         });
@@ -2761,6 +2903,17 @@ function renderSpaces() {
             '<span class="tray-rev">' + esc(im.rev || '') + '</span>' +
             '</div>';
         }).join('') + '</div>' +
+        /* what a thing is called and what it is made of — marked on the
+           picture it can be seen in, not typed into a paragraph */
+        (revs.length
+          ? '<button type="button" class="btn btn--sm btn--ghost" data-spot-edit="' + i + '"' +
+            ' style="margin-top:10px">Mark materials' +
+            (function () {
+              var t = 0;
+              revs.forEach(function (im) { t += ((im.spots || []).length); });
+              return t ? ' · ' + t : '';
+            })() + '</button>'
+          : '') +
       '</div></div>';
     }).join('');
 
@@ -2817,6 +2970,9 @@ function renderSpaces() {
   });
   /* one way in, two places to press it: the zone, and the + at the end of the
      series where the eye already is after reading the numbers */
+  host.querySelectorAll('[data-spot-edit]').forEach(function (b) {
+    b.addEventListener('click', function () { openSpotter(+b.getAttribute('data-spot-edit'), 0); });
+  });
   host.querySelectorAll('[data-spdoc-k]').forEach(function (el) {
     var q = el.getAttribute('data-spdoc-i').split('_');
     el.addEventListener('input', function () {
@@ -2922,6 +3078,75 @@ function openPlacer(i) {
         (i + 1 < 10 ? '0' : '') + (i + 1) + '</span>' : '');
   $('#placer').setAttribute('data-open', '1');
 }
+/* ── marking materials on a render ─────────────────────────────────────
+   The same idea as a pin on the plan, one level in: a mark on the picture
+   itself, carrying what the thing is called and what it is made of. */
+var spotSpace = -1, spotImg = 0;
+function openSpotter(i, k) {
+  var sp = S.spaces[i];
+  if (!sp || !(sp.images || []).length) { toast('Add a render to this space first.'); return; }
+  spotSpace = i; spotImg = Math.min(k, sp.images.length - 1);
+  renderSpotter();
+  $('#spotter').setAttribute('data-open', '1');
+}
+function renderSpotter() {
+  var sp = S.spaces[spotSpace]; if (!sp) return;
+  var im = sp.images[spotImg]; if (!im) return;
+  $('#spotterTitle').textContent = (sp.name || 'Untitled space') + ' — ' + (im.rev || 'render');
+  $('#spotterStrip').innerHTML = sp.images.map(function (o, k) {
+    return '<button data-spot-pick="' + k + '" aria-current="' + (k === spotImg) + '">' +
+      '<img src="' + o.src + '" alt=""></button>';
+  }).join('');
+  $('#spotterCanvas').innerHTML = '<img src="' + im.src + '" alt="">' +
+    (im.spots || []).map(function (q, j) {
+      return '<span class="pp pp--live" style="left:' + (q.x * 100) + '%;top:' + (q.y * 100) + '%">' +
+        (j + 1) + '</span>';
+    }).join('');
+  $('#spotterList').innerHTML = (im.spots || []).map(function (q, j) {
+    return '<div class="spotter-row"><span class="no">' + (j + 1) + '</span>' +
+      '<input type="text" placeholder="Natural teak veneer" data-spot-k="name" data-spot-j="' + j + '" value="' + esc(q.name || '') + '">' +
+      '<button class="btn btn--sm btn--danger" data-spot-del="' + j + '">Remove</button></div>';
+  }).join('');
+  $('#spotterList').querySelectorAll('[data-spot-k]').forEach(function (el) {
+    el.addEventListener('input', function () {
+      var q = S.spaces[spotSpace].images[spotImg].spots[+el.getAttribute('data-spot-j')];
+      if (q) { q[el.getAttribute('data-spot-k')] = el.value; paint(); }
+    });
+  });
+  $('#spotterList').querySelectorAll('[data-spot-del]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      S.spaces[spotSpace].images[spotImg].spots.splice(+b.getAttribute('data-spot-del'), 1);
+      renderSpotter(); renderSpaces(); paint();
+    });
+  });
+  $('#spotterStrip').querySelectorAll('[data-spot-pick]').forEach(function (b) {
+    b.addEventListener('click', function () { spotImg = +b.getAttribute('data-spot-pick'); renderSpotter(); });
+  });
+}
+$('#spotterCanvas').addEventListener('click', function (e) {
+  if (spotSpace < 0) return;
+  var img = $('#spotterCanvas img'); if (!img) return;
+  var r = img.getBoundingClientRect();
+  /* a picture that has not been laid out yet has no width, and every click on
+     it would land in the same corner */
+  if (!(r.width > 0) || !(r.height > 0)) return;
+  var im = S.spaces[spotSpace].images[spotImg];
+  im.spots = im.spots || [];
+  im.spots.push({
+    x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)),
+    y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)),
+    name: '', material: ''
+  });
+  renderSpotter(); renderSpaces(); paint();
+  var last = $('#spotterList').querySelector('.spotter-row:last-child input');
+  if (last) last.focus();
+});
+document.querySelectorAll('[data-close-spotter]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    $('#spotter').removeAttribute('data-open');
+    spotSpace = -1; renderSpaces(); paint();
+  });
+});
 $('#placerCanvas').addEventListener('click', function (e) {
   if (placerIdx < 0) return;
   var img = $('#placerCanvas img'); if (!img) return;
