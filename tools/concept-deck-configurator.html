@@ -197,6 +197,13 @@
 .deck-thumb{position:relative;overflow:hidden;width:56px;height:42px;border:1px solid var(--rule);padding:0;background:var(--wash);cursor:pointer;line-height:0}
 .deck-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .deck-thumb[aria-current="true"]{border-color:var(--ink)}
+.deck-spacedocs{margin-top:20px;padding-top:16px;border-top:1px solid var(--rule)}
+.deck-spacedocs-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:9px}
+.deck-spacedoc{margin:0;width:120px;border:1px solid var(--rule);background:var(--wash);cursor:pointer}
+.deck-spacedoc img{display:block;width:100%;height:86px;object-fit:cover}
+.deck-spacedoc figcaption{padding:6px 7px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--soft);border-top:1px solid var(--rule);background:var(--paper);line-height:1.4}
+.deck-shot--doc figcaption{padding:9px 0 0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--soft)}
 .deck-shot{position:relative;display:block;margin:10px 0 0}
 .deck-shot img{display:block;width:100%}
 /* print-color-adjust, or a printer drops the panel and prints white on white */
@@ -441,6 +448,9 @@ button,input,textarea,select{font:inherit;color:inherit}
   line-height:1.6;background:rgba(0,0,0,.78);color:var(--amber);padding:0 4px}
 .tray-item .tray-rev{position:absolute;right:2px;bottom:2px;font-size:9px;letter-spacing:.08em;
   line-height:1.6;background:rgba(0,0,0,.78);color:#fff;padding:0 4px}
+.spdoc{display:flex;gap:8px;align-items:center;margin-top:8px}
+.spdoc img{flex:none;width:56px;height:42px;object-fit:cover;border:1px solid var(--line-strong);background:#fff}
+.spdoc input{flex:1;min-width:0}
 .droprow{display:flex;gap:8px;align-items:stretch;margin-top:12px}
 .droprow .drop{flex:1;min-width:0}
 .drop-side{flex:none;border:1px dashed var(--line-strong);background:transparent;color:var(--secondary);
@@ -970,6 +980,13 @@ button,input,textarea,select{font:inherit;color:inherit}
             '<img loading="lazy" decoding="async" data-sp="' + esc(s.id) + '" data-ix="' + k +
             '" src="' + im.src + '" alt="' + esc(s.name) + '">' +
             '<span class="deck-rev">' + esc(im.rev) + '</span></figure>';
+        }).join('') +
+        (s.docs || []).filter(function (d) { return d.src; }).map(function (d, k) {
+          return '<figure class="deck-shot deck-shot--doc">' +
+            '<img loading="lazy" decoding="async" data-spdoc="' + esc(s.id) + '" data-ix="' + k +
+            '" src="' + d.src + '" alt="' + esc(d.label || 'Drawing') + '">' +
+            '<figcaption>' + esc(d.label || 'Drawing') +
+              (d.date ? ' · ' + esc(d.date) : '') + '</figcaption></figure>';
         }).join('') + '</section>';
     }).join('');
   }
@@ -1250,6 +1267,8 @@ button,input,textarea,select{font:inherit;color:inherit}
     (slim.documents || []).forEach(function (d) { d.src = ''; });
     (slim.spaces || []).forEach(function (s) {
       (s.images || []).forEach(function (im) { im.src = ''; });
+      (s.docs || []).forEach(function (d) { d.src = ''; });
+    (s.docs || []).forEach(function (d) { d.src = ''; });
     });
     return '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n' +
       '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' +
@@ -1313,6 +1332,14 @@ button,input,textarea,select{font:inherit;color:inherit}
       if (!s.images[k]) s.images[k] = { src: '', w: 0, h: 0 };
       if (!s.images[k].src) s.images[k].src = img.getAttribute('src');
     });
+    el.querySelectorAll('[data-spdoc]').forEach(function (img) {
+      var s = byId[img.getAttribute('data-spdoc')];
+      if (!s) return;
+      var k = +img.getAttribute('data-ix');
+      s.docs = s.docs || [];
+      if (!s.docs[k]) s.docs[k] = { src: '', label: '' };
+      if (!s.docs[k].src) s.docs[k].src = img.getAttribute('src');
+    });
   }
 
   function footHtml(state) {
@@ -1369,6 +1396,20 @@ button,input,textarea,select{font:inherit;color:inherit}
 
   function sheetHtml(s, i, total, state) {
     var imgs = s.images || [];
+    /* A drawing that belongs to one room — the working sheet for it, or the
+       page of the estimate that prices it — belongs with the room, not in the
+       chapter at the foot of the deck with the drawings for the whole job. */
+    var docs = (s.docs || []).filter(function (d) { return d.src; });
+    var docStrip = docs.length
+      ? '<div class="deck-spacedocs"><span class="deck-chip-l">Drawings &amp; estimate for this space</span>' +
+        '<div class="deck-spacedocs-row">' + docs.map(function (d, k) {
+          return '<figure class="deck-spacedoc">' +
+            '<img loading="lazy" decoding="async" data-spdoc="' + esc(s.id) + '" data-ix="' + k +
+              '" src="' + d.src + '" alt="' + esc(d.label || 'Drawing') + '">' +
+            '<figcaption>' + esc(d.label || 'Drawing') +
+              (d.date ? ' · ' + esc(d.date) : '') + '</figcaption></figure>';
+        }).join('') + '</div></div>'
+      : '';
     var hero = imgs[0]
       ? '<img src="' + imgs[0].src + '" alt="' + esc(s.name) + '" data-hero>' +
         '<span class="deck-hero-rev" data-hero-rev>' + esc(imgs[0].rev) + '</span>'
@@ -1392,6 +1433,7 @@ button,input,textarea,select{font:inherit;color:inherit}
         '<div class="deck-sheet-body-copy">' + esc(s.body || '') + '</div>' +
         (s.quote ? '<p class="deck-sheet-quote">' + esc(s.quote) + '</p>' : '') +
         specHtml(s, true, state) +
+        docStrip +
         '<div class="deck-actions">' +
           '<button class="deck-btn deck-btn--solid" data-share-one="' + esc(s.id) + '">Share this space</button>' +
           '<button class="deck-btn" data-jpg-one="' + esc(s.id) + '">Save as image</button>' +
@@ -1401,9 +1443,10 @@ button,input,textarea,select{font:inherit;color:inherit}
              is a long way from the room being discussed. These two put them
              within reach of the room instead: attach one, or look at one, with
              the space still open. */
-          '<button class="deck-btn" data-add="documents">Upload the drawing</button>' +
-          '<button class="deck-btn" data-see-doc' + (hasDoc(state) ? '' :
-            ' disabled title="No drawing uploaded yet"') + '>See the drawing</button>' +
+          '<button class="deck-btn" data-add-space-doc="' + esc(s.id) + '">Upload the drawing</button>' +
+          '<button class="deck-btn" data-see-doc="' + esc(s.id) + '"' +
+            ((docs.length || hasDoc(state)) ? '' : ' disabled title="No drawing uploaded yet"') +
+            '>See the drawing</button>' +
           '<button class="deck-btn" data-locate="' + esc(s.id) + '">See it on the plan</button>' +
           '<button class="deck-btn" data-pdf-all>The whole deck</button>' +
         '</div>' +
@@ -1624,6 +1667,32 @@ button,input,textarea,select{font:inherit;color:inherit}
       var next = tmp.firstChild;
       if (next) old.replaceWith(next);
     }
+    /* held at 2600px like the job's own drawings — these are read, not admired */
+    function addSpaceDoc(id, btn) {
+      var sp = (state.spaces || []).filter(function (x) { return String(x.id) === String(id); })[0];
+      if (!sp) return;
+      var inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+      inp.onchange = function () {
+        var list = Array.prototype.slice.call(inp.files || [])
+          .filter(function (f) { return /^image\//.test(f.type); });
+        if (!list.length) return;
+        var label = btn.textContent;
+        btn.disabled = true; btn.textContent = 'Adding…';
+        Promise.all(list.map(function (f) { return importInto(f, 2600, 0.92); })).then(function (ims) {
+          if (!sp.docs) sp.docs = [];
+          Array.prototype.push.apply(sp.docs, ims.map(function (im) {
+            return { src: im.src, w: im.w, h: im.h, label: '', date: '' };
+          }));
+          var liveSp = spaces.filter(function (x) { return String(x.id) === String(id); })[0];
+          if (liveSp && liveSp.docs !== sp.docs) liveSp.docs = sp.docs;
+          btn.disabled = false; btn.textContent = label;
+          el.dispatchEvent(new CustomEvent('deck:changed', { bubbles: true }));
+          open(id);
+        }, function () { btn.disabled = false; btn.textContent = label; });
+      };
+      inp.click();
+    }
     /* a document, full screen, to be read rather than admired */
     function openBig(img) {
       var lb = el.querySelector('[data-lb]');
@@ -1801,11 +1870,17 @@ button,input,textarea,select{font:inherit;color:inherit}
         }
         return;
       }
-      if (e.target.closest('[data-see-doc]')) {
-        var firstDoc = el.querySelector('#documents img[data-doc]');
+      var seeDoc = e.target.closest('[data-see-doc]');
+      if (seeDoc) {
+        /* this room's own drawing first, the job's only if it has none */
+        var id = seeDoc.getAttribute('data-see-doc');
+        var mine = id && el.querySelector('img[data-spdoc="' + String(id).replace(/"/g, '') + '"]');
+        var firstDoc = mine || el.querySelector('#documents img[data-doc]');
         if (firstDoc) openBig(firstDoc);
         return;
       }
+      var addSpDoc = e.target.closest('[data-add-space-doc]');
+      if (addSpDoc) { addSpaceDoc(addSpDoc.getAttribute('data-add-space-doc'), addSpDoc); return; }
       var addSp = e.target.closest('[data-add-space]');
       if (addSp) { addToSpace(addSp.getAttribute('data-add-space'), addSp); return; }
       var addPl = e.target.closest('[data-add-plate]');
@@ -1829,7 +1904,7 @@ button,input,textarea,select{font:inherit;color:inherit}
       var addZone = e.target.closest('[data-add]');
       if (addZone) { pickInto(addZone.getAttribute('data-add'), addZone); return; }
       if (e.target.closest('[data-save-self]')) { saveSelf(e.target.closest('[data-save-self]')); return; }
-      var big = e.target.closest('[data-doc]');
+      var big = e.target.closest('[data-doc],[data-spdoc]');
       if (big) { openBig(big); return; }
       if (e.target.closest('[data-lb-close]')) {
         el.querySelector('[data-lb]').removeAttribute('data-open');
@@ -2285,6 +2360,21 @@ function renderSpaces() {
           '<div class="drop" tabindex="0" data-img-drop="' + i + '">Click, drop, or paste the visuals for this space (the first one is the hero)</div>' +
           '<button type="button" class="drop-side" data-img-add="' + i + '" title="Add the next render">+ ' + nextRev + '</button>' +
         '</div>' +
+        /* the room's own drawing and its page of the estimate, kept with the
+           room rather than in the chapter for the whole job */
+        '<div class="droprow" style="margin-top:14px">' +
+          '<div class="drop" tabindex="0" data-spdoc-drop="' + i + '">Drawing or estimate page for this space</div>' +
+        '</div>' +
+        (s.docs || []).map(function (d, k) {
+          return '<div class="spdoc">' +
+            '<img src="' + d.src + '" alt="">' +
+            '<input type="text" placeholder="Working drawing" data-spdoc-k="label" data-spdoc-i="' +
+              i + '_' + k + '" value="' + esc(d.label || '') + '">' +
+            '<input type="text" placeholder="04.06.2026" data-spdoc-k="date" data-spdoc-i="' +
+              i + '_' + k + '" value="' + esc(d.date || '') + '">' +
+            '<button class="btn btn--sm btn--danger" data-spdoc-del="' + i + '_' + k + '">Remove</button>' +
+          '</div>';
+        }).join('') +
         '<div class="tray">' + revs.map(function (im, k) {
           return '<div class="tray-item"><img src="' + im.src + '" alt="">' +
             '<button class="tray-x" data-img-del="' + i + '_' + k + '" title="Remove">&times;</button>' +
@@ -2349,6 +2439,49 @@ function renderSpaces() {
   });
   /* one way in, two places to press it: the zone, and the + at the end of the
      series where the eye already is after reading the numbers */
+  host.querySelectorAll('[data-spdoc-k]').forEach(function (el) {
+    var q = el.getAttribute('data-spdoc-i').split('_');
+    el.addEventListener('input', function () {
+      var d = ((S.spaces[+q[0]] || {}).docs || [])[+q[1]];
+      if (d) { d[el.getAttribute('data-spdoc-k')] = el.value; paint(); }
+    });
+  });
+  host.querySelectorAll('[data-spdoc-del]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var q = b.getAttribute('data-spdoc-del').split('_');
+      (S.spaces[+q[0]].docs || []).splice(+q[1], 1);
+      renderAll();
+    });
+  });
+  host.querySelectorAll('[data-spdoc-drop]').forEach(function (d) {
+    var i = +d.getAttribute('data-spdoc-drop');
+    function take(files) {
+      var fs = Array.prototype.slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); });
+      if (!fs.length) return;
+      var was = d.textContent;
+      d.textContent = 'Importing ' + fs.length + '…';
+      /* larger than a render: a drawing is read, and an estimate page is the
+         densest thing anyone will be asked to read in this deck */
+      Promise.all(fs.map(function (f) { return importImage(f, 2600, 0.92, false); }))
+        .then(function (ims) {
+          var sp = S.spaces[i];
+          sp.docs = (sp.docs || []).concat(ims.map(function (im) {
+            return { src: im.src, w: im.w, h: im.h, label: '', date: '' };
+          }));
+          renderAll(); toast(ims.length + ' page' + (ims.length > 1 ? 's' : '') + ' added.');
+        })
+        .catch(function (e) { d.textContent = was; toast(e.message); renderAll(); });
+    }
+    d.addEventListener('click', function () {
+      var inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+      inp.onchange = function () { take(inp.files); };
+      inp.click();
+    });
+    d.addEventListener('dragover', function (e) { e.preventDefault(); d.classList.add('over'); });
+    d.addEventListener('dragleave', function () { d.classList.remove('over'); });
+    d.addEventListener('drop', function (e) { e.preventDefault(); d.classList.remove('over'); take(e.dataTransfer.files); });
+  });
   host.querySelectorAll('[data-img-add]').forEach(function (b) {
     b.addEventListener('click', function () {
       var d = host.querySelector('[data-img-drop="' + b.getAttribute('data-img-add') + '"]');
@@ -2650,7 +2783,7 @@ function saveLocal() {
   try {
     var light = JSON.parse(JSON.stringify(S));
     light.plates.forEach(function (p) { p.src = ''; });
-    light.spaces.forEach(function (s) { s.images = []; });
+    light.spaces.forEach(function (s) { s.images = []; s.docs = []; });
     /* dropped entirely rather than emptied — a row with no picture left behind
        is a row you have to delete by hand next time the tool opens */
     light.documents = [];
@@ -2688,6 +2821,7 @@ function exportDeck() {
   (slim.documents || []).forEach(function (d) { d.src = ''; });
   slim.spaces.forEach(function (s) {
     (s.images || []).forEach(function (im) { im.src = ''; });
+    (s.docs || []).forEach(function (d) { d.src = ''; });
   });
 
   var html =
@@ -2731,7 +2865,8 @@ $('#bAddPlate').addEventListener('click', function () {
 });
 $('#bAddSpace').addEventListener('click', function () {
   S.spaces.push({ id: uid(), include: true, name: '', floor: (S.plates[0] || {}).label || '',
-    dims: '', area: '', estimate: '', includes: '', summary: '', body: '', quote: '', plate: 0, x: null, y: null, images: [] });
+    dims: '', area: '', estimate: '', includes: '', summary: '', body: '', quote: '', plate: 0, x: null, y: null,
+    images: [], docs: [] });
   renderAll();
   var rows = $('#spaces').querySelectorAll('[data-space-row]');
   var last = rows[rows.length - 1];
@@ -2756,7 +2891,7 @@ $('#fLoad').addEventListener('change', function () {
       if (!S.plates) S.plates = [{ label: 'Ground floor', src: '', w: 0, h: 0 }];
       if (!S.narrative) S.narrative = blank().narrative;
       if (!S.documents) S.documents = [];
-      S.spaces.forEach(function (s) { if (!s.id) s.id = uid(); if (!s.images) s.images = []; });
+      S.spaces.forEach(function (s) { if (!s.id) s.id = uid(); if (!s.images) s.images = []; if (!s.docs) s.docs = []; });
       boot(); toast('Draft opened.');
     } catch (e) { toast('That file is not a deck draft.'); }
     $('#fLoad').value = '';
@@ -2854,7 +2989,7 @@ function boot() {
     S = saved;
     if (!S.plates) S.plates = [{ label: 'Ground floor', src: '', w: 0, h: 0 }];
     if (!S.documents) S.documents = [];
-    S.spaces.forEach(function (sp) { if (!sp.id) sp.id = uid(); if (!sp.images) sp.images = []; });
+    S.spaces.forEach(function (sp) { if (!sp.id) sp.id = uid(); if (!sp.images) sp.images = []; if (!sp.docs) sp.docs = []; });
     boot();
     b.remove();
     toast('Last session restored — text only. Re-attach the plan and the visuals.');

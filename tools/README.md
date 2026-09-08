@@ -176,11 +176,18 @@ see it on the plan, and the whole deck.
 rather than going back to the form for each of fifteen spaces. It works in the
 exported deck too, and the footer will then write the deck out again with them.
 
-**Upload the drawing** and **See the drawing** sit beside it. The drawings live
-in their own chapter at the foot of the deck, a long way from the room being
-discussed; these two put them within reach of it — attach one, or open one full
-screen to read, with the space still open. *See the drawing* appears only once
-there is a drawing to see.
+**Upload the drawing** and **See the drawing** sit beside it, and inside a space
+they belong to *that space*: the working sheet for the room, or the page of the
+estimate that prices it, attached to the room rather than to the job. They show
+under the room's writing as **Drawings & estimate for this space**, open full
+screen when pressed, and print under that room. *See the drawing* falls back to
+the job's own drawings when the room has none of its own, and switches off when
+there are neither.
+
+In the editor the same thing sits under each space: a zone reading **Drawing or
+estimate page for this space**, and each page attached gets a name and a date —
+that name is what the client sees on it. Held at 2600px, because these are read
+rather than admired.
 
 **Share this space** is the one for a phone: it draws the JPG and hands it to
 the share sheet, so it goes to WhatsApp without ever becoming a file anyone has
