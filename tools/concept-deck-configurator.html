@@ -833,7 +833,7 @@ button,input,textarea,select{font:inherit;color:inherit}
       /* The + in the sheet's own corner reissues that sheet. This one is a
          different drawing altogether — another floor, a section, whatever else
          is being worked from — and there is no limit to how many. */
-      '<button class="deck-more" data-add-plate="new">+ &nbsp;Add another drawing</button>' +
+      '<button class="deck-more" data-add-plate="new">+ &nbsp;Upload drawing</button>' +
       '<p class="deck-hint">Tap a number to open that space — its size, and what it is for.</p>' +
       '<p class="deck-hint-static">Every space is set out in full below, in the order it is numbered.</p>' +
       '</section>';
@@ -860,7 +860,13 @@ button,input,textarea,select{font:inherit;color:inherit}
           '<span class="deck-card-body">' +
             '<span class="deck-card-no">' + esc(s.no) + (s.floor ? ' · ' + esc(s.floor) : '') + '</span>' +
             '<span class="deck-card-name">' + esc(s.name) + '</span>' +
-            (s.dims ? '<span class="deck-card-dims">' + esc(s.dims) + '</span>' : '') +
+            /* size and area together — the area is what the estimate is
+               worked out from, so hiding it makes the arithmetic unreadable */
+            ((s.dims || num(s.area) > 0)
+              ? '<span class="deck-card-dims">' +
+                esc([s.dims, num(s.area) > 0 ? num(s.area).toLocaleString('en-IN') + ' sq ft' : '']
+                  .filter(Boolean).join('  ·  ')) + '</span>'
+              : '') +
           '</span></button>' +
           '<button class="deck-card-add" data-add-space="' + esc(s.id) + '"' +
             ' title="Add a picture to ' + esc(s.name) + '" aria-label="Add a picture to ' +
@@ -905,7 +911,7 @@ button,input,textarea,select{font:inherit;color:inherit}
             (d.date ? ' · ' + esc(d.date) : '') + '</figcaption>' +
         '</figure>';
       }).join('') +
-      '<button class="deck-more" data-add="documents">+ &nbsp;Add another document</button>' +
+      '<button class="deck-more" data-add="documents">+ &nbsp;Upload document</button>' +
       '</section>';
   }
 
@@ -1742,11 +1748,14 @@ button,input,textarea,select{font:inherit;color:inherit}
              broke every card in the deck. */
           var showing = ce.getAttribute('aria-expanded') === 'true';
           var rate = num((state.project || {}).rate);
-          var work = (cs.estimateDerived && rate > 0 && num(cs.area) > 0)
-            ? num(cs.area).toLocaleString('en-IN') + ' sq ft  ×  ' + rupees(rate) + ' / sq ft' : '';
+          var work = (rate > 0 && num(cs.area) > 0)
+            ? num(cs.area).toLocaleString('en-IN') + ' sq ft  ×  ' + rupees(rate) +
+              '  =  ' + cs.estimate
+            : '';
           ce.setAttribute('aria-expanded', showing ? 'false' : 'true');
-          ce.innerHTML = showing ? 'Click for estimate'
-            : esc(cs.estimate) + (work ? '<small>' + esc(work) + '</small>' : '');
+          /* the working already ends in the figure, so printing the figure
+             above it as well says the same number twice */
+          ce.innerHTML = showing ? 'Click for estimate' : esc(work || cs.estimate);
         }
         return;
       }
