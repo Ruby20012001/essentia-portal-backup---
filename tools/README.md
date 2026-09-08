@@ -168,6 +168,12 @@ see it on the plan, and the whole deck.
 rather than going back to the form for each of fifteen spaces. It works in the
 exported deck too, and the footer will then write the deck out again with them.
 
+**Upload the drawing** and **See the drawing** sit beside it. The drawings live
+in their own chapter at the foot of the deck, a long way from the room being
+discussed; these two put them within reach of it — attach one, or open one full
+screen to read, with the space still open. *See the drawing* appears only once
+there is a drawing to see.
+
 **Share this space** is the one for a phone: it draws the JPG and hands it to
 the share sheet, so it goes to WhatsApp without ever becoming a file anyone has
 to find. Where sharing a file is not offered, it saves the image instead.

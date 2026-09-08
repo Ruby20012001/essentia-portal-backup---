@@ -1373,6 +1373,13 @@ button,input,textarea,select{font:inherit;color:inherit}
           '<button class="deck-btn" data-jpg-one="' + esc(s.id) + '">Save as image</button>' +
           '<button class="deck-btn" data-pdf-one="' + esc(s.id) + '">Save as PDF</button>' +
           '<button class="deck-btn" data-add-space="' + esc(s.id) + '">Add pictures here</button>' +
+          /* The drawings sit in their own chapter at the foot of the deck, which
+             is a long way from the room being discussed. These two put them
+             within reach of the room instead: attach one, or look at one, with
+             the space still open. */
+          '<button class="deck-btn" data-add="documents">Upload the drawing</button>' +
+          (((state || {}).documents || []).some(function (d) { return d.src; })
+            ? '<button class="deck-btn" data-see-doc>See the drawing</button>' : '') +
           '<button class="deck-btn" data-locate="' + esc(s.id) + '">See it on the plan</button>' +
           '<button class="deck-btn" data-pdf-all>The whole deck</button>' +
         '</div>' +
@@ -1593,6 +1600,17 @@ button,input,textarea,select{font:inherit;color:inherit}
       var next = tmp.firstChild;
       if (next) old.replaceWith(next);
     }
+    /* a document, full screen, to be read rather than admired */
+    function openBig(img) {
+      var lb = el.querySelector('[data-lb]');
+      if (!lb) return;
+      lb.querySelector('[data-lb-img]').src = img.getAttribute('src');
+      var fig = img.closest('figure');
+      var cap = fig && fig.querySelector('figcaption');
+      lb.querySelector('[data-lb-cap]').textContent = cap ? cap.textContent : '';
+      lb.setAttribute('data-open', '1');
+      lb.scrollTop = 0;
+    }
     function pickInto(key, zone) {
       var inp = document.createElement('input');
       inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
@@ -1759,6 +1777,11 @@ button,input,textarea,select{font:inherit;color:inherit}
         }
         return;
       }
+      if (e.target.closest('[data-see-doc]')) {
+        var firstDoc = el.querySelector('#documents img[data-doc]');
+        if (firstDoc) openBig(firstDoc);
+        return;
+      }
       var addSp = e.target.closest('[data-add-space]');
       if (addSp) { addToSpace(addSp.getAttribute('data-add-space'), addSp); return; }
       var addPl = e.target.closest('[data-add-plate]');
@@ -1782,17 +1805,8 @@ button,input,textarea,select{font:inherit;color:inherit}
       var addZone = e.target.closest('[data-add]');
       if (addZone) { pickInto(addZone.getAttribute('data-add'), addZone); return; }
       if (e.target.closest('[data-save-self]')) { saveSelf(e.target.closest('[data-save-self]')); return; }
-      var big = e.target.closest('[data-dwg],[data-est]');
-      if (big) {
-        var lb = el.querySelector('[data-lb]');
-        lb.querySelector('[data-lb-img]').src = big.getAttribute('src');
-        var fig = big.closest('figure');
-        var cap = fig && fig.querySelector('figcaption');
-        lb.querySelector('[data-lb-cap]').textContent = cap ? cap.textContent : '';
-        lb.setAttribute('data-open', '1');
-        lb.scrollTop = 0;
-        return;
-      }
+      var big = e.target.closest('[data-doc]');
+      if (big) { openBig(big); return; }
       if (e.target.closest('[data-lb-close]')) {
         el.querySelector('[data-lb]').removeAttribute('data-open');
         return;
