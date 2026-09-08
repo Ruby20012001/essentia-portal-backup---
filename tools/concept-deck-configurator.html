@@ -499,6 +499,8 @@ button,input,textarea,select{font:inherit;color:inherit}
 .f{display:flex;flex-direction:column;gap:6px;min-width:0}
 .f--wide{grid-column:1 / -1}
 .f label{font-size:11px;color:var(--secondary);letter-spacing:.02em}
+.head-backup{align-self:center;font-size:11px;color:var(--secondary);letter-spacing:.02em;max-width:210px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .f input[type=text],.f input[type=number],.f textarea,.f select{
   background:var(--surface);border:1px solid var(--line-strong);color:var(--ink);padding:9px 11px;
   font-size:13px;font-weight:300;width:100%;border-radius:2px}
@@ -644,6 +646,8 @@ button,input,textarea,select{font:inherit;color:inherit}
         <div class="head-actions">
           <button class="btn" id="bPreview">Preview</button>
           <button class="btn" id="bSave">Save draft</button>
+          <button class="btn" id="bBackup" title="Keep a copy in a folder OneDrive or SharePoint syncs">Back up</button>
+          <span class="head-backup" id="backupState" hidden></span>
           <button class="btn" id="bJpgAll">All as images</button>
           <button class="btn" id="bPrint">Print / PDF</button>
           <button class="btn btn--solid" id="bExport">Export deck</button>
@@ -3777,8 +3781,153 @@ function saveLocal() {
     light.documents = [];
     light.logo = '';
     localStorage.setItem('essentia.deck.draft', JSON.stringify(light));
+    backupDue = true;
   } catch (e) { /* private window, full quota — the .json draft is the real save */ }
 }
+/* ── the copy that is somewhere else ──────────────────────────────────
+
+   A deck is an afternoon of somebody's work and it lives in one file. That
+   the file is the whole of it is the point of this tool, and also its danger:
+   the laptop that holds it is the only thing holding it.
+
+   So the tool can be pointed once at a folder — the one OneDrive keeps in
+   step with SharePoint — and from then on every draft lands there too, with
+   the version history that comes with it. Nothing is uploaded by this file:
+   it writes to a folder on the machine, and the machine syncs it. Which is
+   why it still works with the network down, and why the copy is on the server
+   the moment the network is back.
+
+   Where a browser will not hand out a folder, Back up writes the draft to
+   Downloads instead and says which of the two it did. A backup you believe in
+   and do not have is worse than none. */
+var backupDir = null, backupDue = false, backupBusy = false, backupDay = '';
+
+function idbKv(write, value) {
+  return new Promise(function (res, rej) {
+    var open;
+    try { open = indexedDB.open('essentia.deck', 1); } catch (e) { rej(e); return; }
+    open.onupgradeneeded = function () { open.result.createObjectStore('kv'); };
+    open.onerror = function () { rej(open.error); };
+    open.onsuccess = function () {
+      var db = open.result, got;
+      try {
+        var tx = db.transaction('kv', write ? 'readwrite' : 'readonly');
+        var st = tx.objectStore('kv');
+        if (write) st.put(value, 'backupDir'); else got = st.get('backupDir');
+        tx.oncomplete = function () { db.close(); res(got ? got.result : null); };
+        tx.onerror = function () { db.close(); rej(tx.error); };
+      } catch (e) { db.close(); rej(e); }
+    };
+  });
+}
+
+function backupSay(msg) {
+  var el = $('#backupState');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.hidden = !msg;
+}
+function clockNow() {
+  var d = new Date();
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+function dayNow() {
+  var d = new Date();
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return String(d.getDate()).padStart(2, '0') + MON[d.getMonth()];
+}
+
+function backupAllowed(dir, ask) {
+  if (!dir || !dir.queryPermission) return Promise.resolve(true);
+  return dir.queryPermission({ mode: 'readwrite' }).then(function (state) {
+    if (state === 'granted') return true;
+    if (!ask || !dir.requestPermission) return false;
+    return dir.requestPermission({ mode: 'readwrite' }).then(function (s2) { return s2 === 'granted'; });
+  }).catch(function () { return false; });
+}
+
+function writeInto(dir, name, blob) {
+  return dir.getFileHandle(name, { create: true }).then(function (fh) {
+    return fh.createWritable().then(function (w) {
+      return w.write(blob).then(function () { return w.close(); });
+    });
+  });
+}
+
+/* the draft is the real save: it carries the pictures, the marks and the
+   writing, and the deck can be built again from it */
+function draftBlob() {
+  return new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
+}
+function draftName(dated) {
+  var base = slug(S.project.code || S.project.name) + '-deck-draft';
+  return dated ? base + '-' + dayNow() + '.json' : base + '.json';
+}
+
+function chooseBackupFolder() {
+  if (!window.showDirectoryPicker) {
+    toast('This browser cannot be given a folder. Use Chrome or Edge, or Back up writes to Downloads.');
+    return Promise.resolve(false);
+  }
+  return window.showDirectoryPicker({ id: 'essentia-deck', mode: 'readwrite', startIn: 'documents' })
+    .then(function (dir) {
+      backupDir = dir;
+      return idbKv(true, dir).catch(function () { /* the folder still works for this session */ })
+        .then(function () { return true; });
+    })
+    .catch(function () { return false; });   /* the picker was closed */
+}
+
+function backupNow(quiet) {
+  if (backupBusy) return Promise.resolve(false);
+  backupBusy = true;
+  var start = backupDir
+    ? backupAllowed(backupDir, !quiet)
+    : (quiet ? Promise.resolve(false) : chooseBackupFolder());
+  return start.then(function (ok) {
+    if (!ok || !backupDir) {
+      if (quiet) return false;
+      /* no folder — then the honest fallback, and say which one happened */
+      download(draftName(true), draftBlob());
+      backupSay('Backed up to Downloads · ' + clockNow());
+      toast('No folder set, so the backup went to Downloads. Press Back up again to choose a folder.');
+      return false;
+    }
+    var blob = draftBlob();
+    return writeInto(backupDir, draftName(false), blob).then(function () {
+      /* one copy per day kept beside the current one: a mistake noticed on
+         Thursday is not helped by Thursday's file having overwritten it */
+      var today = dayNow();
+      if (backupDay === today) return null;
+      backupDay = today;
+      return writeInto(backupDir, draftName(true), blob);
+    }).then(function () {
+      backupDue = false;
+      backupSay('Backed up ' + clockNow() + ' · ' + (backupDir.name || 'folder'));
+      if (!quiet) toast('Backed up into ' + (backupDir.name || 'the folder') + '.');
+      return true;
+    });
+  }).catch(function () {
+    backupSay('Backup failed \u2014 press Back up');
+    if (!quiet) toast('That folder could not be written to. Choose another with Back up.');
+    return false;
+  }).then(function (r) { backupBusy = false; return r; });
+}
+
+/* on opening, the folder from last time — the browser may still want to be
+   asked, and it can only ask when something is pressed, so it is offered
+   rather than done */
+function backupRestore() {
+  if (!window.showDirectoryPicker) return;
+  idbKv(false).then(function (dir) {
+    if (!dir) return;
+    backupDir = dir;
+    backupAllowed(dir, false).then(function (ok) {
+      backupSay(ok ? 'Backing up to ' + (dir.name || 'folder') : 'Press Back up to reconnect ' + (dir.name || 'the folder'));
+    });
+  }).catch(function () { /* no store, private window */ });
+}
+
 function download(name, blob) {
   var u = URL.createObjectURL(blob);
   var a = document.createElement('a');
@@ -3833,9 +3982,20 @@ function exportDeck() {
   var stamp = String(d.getDate()).padStart(2, '0') +
     ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] +
     '-' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0');
-  download(slug(S.project.code || S.project.name) + '-concept-deck-' + stamp + '.html',
-           new Blob([html], { type: 'text/html' }));
+  var deckName = slug(S.project.code || S.project.name) + '-concept-deck-' + stamp + '.html';
+  var deckBlob = new Blob([html], { type: 'text/html' });
+  download(deckName, deckBlob);
   toast('Deck exported — ' + (html.length / 1048576).toFixed(1) + ' MB. Readable with or without scripts.');
+  /* the file that went to the client is the one somebody asks for in a year,
+     so a copy goes to the backup folder too, if there is one */
+  if (backupDir) {
+    backupAllowed(backupDir, false).then(function (ok) {
+      if (!ok) return;
+      writeInto(backupDir, deckName, deckBlob)
+        .then(function () { backupSay('Deck copied to ' + (backupDir.name || 'the folder') + ' · ' + clockNow()); })
+        .catch(function () { backupSay('Deck not copied \u2014 press Back up'); });
+    });
+  }
 }
 
 /* ── wiring ───────────────────────────────────────────────────────────── */
@@ -3862,6 +4022,12 @@ $('#bAddSpace').addEventListener('click', function () {
 });
 $('#bSample').addEventListener('click', function () { S = sample(); boot(); toast('IREO Corridors sample loaded — attach the plan and the renders.'); });
 $('#bBlank').addEventListener('click', function () { S = blank(S.type); boot(); toast('New blank deck.'); });
+$('#bBackup').addEventListener('click', function () { backupNow(false); });
+/* quarter of an hour is the most work anybody should be asked to redo, and
+   it only writes when something has changed */
+setInterval(function () { if (backupDir && backupDue) backupNow(true); }, 15 * 60 * 1000);
+backupRestore();
+
 $('#bSave').addEventListener('click', function () {
   download(slug(S.project.code || S.project.name) + '-deck-draft.json',
     new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' }));

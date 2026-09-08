@@ -193,6 +193,28 @@ the real save. The tool also keeps the *text* of your last session in the
 browser so a crash does not lose the writing, but images are not kept there;
 re-attach them or reopen the draft.
 
+### Where the copy lives
+
+Nothing here depends on a link, a login or a server: the tool is one file, and
+so is every deck it makes. That is the point of it, and also the danger — the
+laptop holding the file is the only thing holding it.
+
+`BACK UP` answers that. Press it once and the browser asks which folder; point
+it at the OneDrive folder that syncs to SharePoint. From then on the draft is
+written there — `<project>-deck-draft.json`, overwritten, plus one dated copy a
+day beside it — every fifteen minutes when something has changed, and whenever
+the button is pressed. Exporting a deck drops that file in the same folder, so
+the file a client was actually sent is still there a year later. The tool
+uploads nothing itself: it writes to a folder on the machine, and the machine
+syncs it, which is why it works with the network down and lands on the server
+the moment the network is back.
+
+The state of it reads next to the button — *Backed up 18:12 · essentia decks*.
+Chrome and Edge may ask to reconnect the folder when the tool is reopened; that
+is one press. Where a browser will not hand over a folder at all, `BACK UP`
+writes the draft to Downloads and says that is what it did, rather than looking
+as though it had done more.
+
 ### What is on the page, and what is behind a number
 
 Under the grid of spaces sit two buttons that need no tapping to find:
