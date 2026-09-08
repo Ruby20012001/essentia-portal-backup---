@@ -146,6 +146,12 @@ which writes the build time into the file and the filename together.
    on paper they print as a list under the render because nothing there can be
    pressed.
 
+   Enter puts the name on the mark. In the tool that is enough — the editor
+   picks it up and the draft holds it. In a deck opened on its own there is
+   nothing behind the page, so marking raises **Keep these names** on the
+   picture: it writes the whole deck out again, renders and all, under a
+   stamped filename. Until that is pressed the names live only in the open tab.
+
 6. **Narrative** — the note the client reads before the spaces, and the
    representational-purpose disclaimer.
 7. **Publish gates** — all nine must pass before `EXPORT DECK` unlocks.
