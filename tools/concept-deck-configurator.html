@@ -690,6 +690,9 @@ button,input,textarea,select{font:inherit;color:inherit}
      Counted on every draw rather than stamped once, so deleting or reordering a
      space closes the gap it left. A space left out of the deck is counted by
      nothing, because the client never sees it. */
+  function hasDoc(state) {
+    return ((state || {}).documents || []).some(function (d) { return d.src; });
+  }
   function revName(no) { return 'R' + pad2(no); }
   function numberRenders(state) {
     var no = 0;
@@ -886,6 +889,11 @@ button,input,textarea,select{font:inherit;color:inherit}
       '<div class="deck-actions deck-actions--page">' +
         '<button class="deck-btn deck-btn--solid" data-jpg-all>Save all spaces as images</button>' +
         '<button class="deck-btn" data-pdf-all>Save the whole deck as PDF</button>' +
+        /* the same two that sit inside a room, out here as well, because the
+           drawing is asked for as often from the grid as from a space */
+        '<button class="deck-btn" data-add="documents">Upload the drawing</button>' +
+        '<button class="deck-btn" data-see-doc' + (hasDoc(state) ? '' : ' disabled') +
+          '>See the drawing</button>' +
       '</div>' +
       '</section>';
   }
@@ -1378,8 +1386,8 @@ button,input,textarea,select{font:inherit;color:inherit}
              within reach of the room instead: attach one, or look at one, with
              the space still open. */
           '<button class="deck-btn" data-add="documents">Upload the drawing</button>' +
-          (((state || {}).documents || []).some(function (d) { return d.src; })
-            ? '<button class="deck-btn" data-see-doc>See the drawing</button>' : '') +
+          '<button class="deck-btn" data-see-doc' + (hasDoc(state) ? '' :
+            ' disabled title="No drawing uploaded yet"') + '>See the drawing</button>' +
           '<button class="deck-btn" data-locate="' + esc(s.id) + '">See it on the plan</button>' +
           '<button class="deck-btn" data-pdf-all>The whole deck</button>' +
         '</div>' +
