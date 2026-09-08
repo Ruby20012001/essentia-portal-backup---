@@ -304,6 +304,24 @@ instrument: it sits at CP/SLD on the Drawing Ladder, it never replaces a GFC
 set, and it is never an input to a PIO. The Triangle of Agreement is untouched
 by it.
 
+### The editor, already full
+
+The tool opens on a sample carrying the plan, the pins and the writing but no
+renders — they are five and a half megabytes, and a tool nobody has opened yet
+should not weigh that. That is right for a new project and wrong for one already
+finished: marking materials on IREO’s renders means having IREO’s renders in the
+editor.
+
+```bash
+node tools/build-loaded-editor.mjs tools/concept-deck-configurator.html tools/samples/ireo-corridors-concept-deck.html <out.html>
+```
+
+It takes a built deck, puts the pictures back into the state that deck carries
+(each picture is in the file once, in the markup, with the state’s src stripped)
+and writes a copy of the tool that opens on all of it — plan, fifteen pins,
+twenty-six renders, the writing. Everything else in the tool works as it does
+anywhere else.
+
 ### Sample
 
 [samples/ireo-corridors-concept-deck.html](samples/ireo-corridors-concept-deck.html)
