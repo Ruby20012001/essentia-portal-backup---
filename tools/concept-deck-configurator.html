@@ -772,9 +772,173 @@ button,input,textarea,select{font:inherit;color:inherit}
       return out;
     });
   }
+  /* AUTOCAD.
+
+     .dwg is AutoCAD's own binary format and nothing short of a CAD engine can
+     open it. .dxf is the drawing written out as text — the same lines, arcs and
+     text, in a format anyone can read — and AutoCAD writes it from Save As. So
+     that is what this reads, and .dwg is told to save one.
+
+     What it draws: lines, polylines, arcs, circles, text, and the blocks a plan
+     is actually made of, placed at their own scale and rotation. What it does
+     not: hatches, dimensions' arrowheads, splines, line weights, colour. This is
+     a picture of a drawing for a client to look at, not a CAD viewer. */
+  function dxfPairs(text) {
+    var raw = text.split(/\r\n|\r|\n/), out = [];
+    for (var i = 0; i + 1 < raw.length; i += 2) {
+      out.push([parseInt(raw[i], 10), raw[i + 1]]);
+    }
+    return out;
+  }
+  function dxfRead(text) {
+    var pairs = dxfPairs(text);
+    var blocks = {}, model = [], into = model, cur = null, block = null;
+    var flush = function () { if (cur) { into.push(cur); cur = null; } };
+    for (var i = 0; i < pairs.length; i++) {
+      var code = pairs[i][0], val = pairs[i][1];
+      if (code === 0) {
+        flush();
+        if (val === 'BLOCK') { block = { name: '', bx: 0, by: 0, ents: [] }; into = block.ents; }
+        else if (val === 'ENDBLK') { if (block && block.name) blocks[block.name] = block; block = null; into = model; }
+        else if (/^(LINE|LWPOLYLINE|POLYLINE|VERTEX|SEQEND|ARC|CIRCLE|TEXT|MTEXT|INSERT|SOLID)$/.test(val)) {
+          cur = { type: val, xs: [], ys: [], v: {} };
+        }
+        continue;
+      }
+      if (block && !block.name && code === 2) { block.name = val; continue; }
+      if (!cur) continue;
+      if (code === 10) cur.xs.push(parseFloat(val));
+      else if (code === 20) cur.ys.push(parseFloat(val));
+      else cur.v[code] = val;
+    }
+    flush();
+    return { model: model, blocks: blocks };
+  }
+  /* every entity, in one coordinate system, so the whole drawing can be sized
+     before a single line of it is drawn */
+  function dxfFlatten(ents, blocks, m, out, depth) {
+    if (depth > 8) return;
+    var at = function (x, y) { return [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]]; };
+    var scaleOf = Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2])) || 1;
+    var poly = null;
+    ents.forEach(function (e) {
+      var n = e.type, x = e.xs, y = e.ys, v = e.v;
+      if (n === 'LINE' && x.length) {
+        /* a line ends at 11/21, not at a second 10/20 — the commonest entity
+           in any drawing, and the one this quietly dropped */
+        var ex = parseFloat(v[11]), ey = parseFloat(v[21]);
+        if (isFinite(ex) && isFinite(ey)) out.push(['l'].concat(at(x[0], y[0]), at(ex, ey)));
+      } else if (n === 'LWPOLYLINE') {
+        for (var k = 0; k + 1 < x.length; k++) out.push(['l'].concat(at(x[k], y[k]), at(x[k + 1], y[k + 1])));
+        if ((+v[70] & 1) && x.length > 2) out.push(['l'].concat(at(x[x.length - 1], y[y.length - 1]), at(x[0], y[0])));
+      } else if (n === 'POLYLINE') { poly = { xs: [], ys: [], closed: (+v[70] & 1) };
+      } else if (n === 'VERTEX' && poly && x.length) { poly.xs.push(x[0]); poly.ys.push(y[0]);
+      } else if (n === 'SEQEND' && poly) {
+        for (var j = 0; j + 1 < poly.xs.length; j++) {
+          out.push(['l'].concat(at(poly.xs[j], poly.ys[j]), at(poly.xs[j + 1], poly.ys[j + 1])));
+        }
+        if (poly.closed && poly.xs.length > 2) {
+          out.push(['l'].concat(at(poly.xs[poly.xs.length - 1], poly.ys[poly.ys.length - 1]), at(poly.xs[0], poly.ys[0])));
+        }
+        poly = null;
+      } else if ((n === 'ARC' || n === 'CIRCLE') && x.length) {
+        var c = at(x[0], y[0]), r = parseFloat(v[40] || 0) * scaleOf;
+        if (!(r > 0)) return;
+        var a0 = n === 'ARC' ? parseFloat(v[50] || 0) : 0;
+        var a1 = n === 'ARC' ? parseFloat(v[51] || 360) : 360;
+        out.push(['a', c[0], c[1], r, a0, a1]);
+      } else if ((n === 'TEXT' || n === 'MTEXT') && x.length && v[1]) {
+        var q = at(x[0], y[0]);
+        out.push(['t', q[0], q[1], (parseFloat(v[40] || 2.5) || 2.5) * scaleOf,
+          String(v[1]).replace(/\\[A-Za-z][^;]*;/g, '').replace(/[{}]/g, '')]);
+      } else if (n === 'INSERT' && x.length) {
+        var b = blocks[v[2]];
+        if (!b) return;
+        var sx = parseFloat(v[41] || 1) || 1, sy = parseFloat(v[42] || 1) || 1;
+        var rot = (parseFloat(v[50] || 0) || 0) * Math.PI / 180;
+        var cos = Math.cos(rot), sin = Math.sin(rot);
+        /* the block's own frame: rotate and scale about the insert point */
+        var im = [
+          cos * sx, sin * sx, -sin * sy, cos * sy,
+          x[0] - (b.bx || 0) * cos * sx + (b.by || 0) * sin * sy,
+          y[0] - (b.bx || 0) * sin * sx - (b.by || 0) * cos * sy
+        ];
+        var mm = [
+          m[0] * im[0] + m[2] * im[1], m[1] * im[0] + m[3] * im[1],
+          m[0] * im[2] + m[2] * im[3], m[1] * im[2] + m[3] * im[3],
+          m[0] * im[4] + m[2] * im[5] + m[4], m[1] * im[4] + m[3] * im[5] + m[5]
+        ];
+        dxfFlatten(b.ents, blocks, mm, out, (depth || 0) + 1);
+      }
+    });
+  }
+  function dxfPng(file, maxEdge) {
+    var read = file.text ? file.text() : new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onload = function () { res(String(fr.result)); };
+      fr.onerror = function () { rej(new Error('Could not read ' + file.name)); };
+      fr.readAsText(file);
+    });
+    return read.then(function (text) {
+      var d = dxfRead(text), prims = [];
+      dxfFlatten(d.model, d.blocks, [1, 0, 0, 1, 0, 0], prims, 0);
+      if (!prims.length) return [];
+      var lo = [Infinity, Infinity], hi = [-Infinity, -Infinity];
+      var see = function (x, y) {
+        if (!isFinite(x) || !isFinite(y)) return;
+        if (x < lo[0]) lo[0] = x; if (y < lo[1]) lo[1] = y;
+        if (x > hi[0]) hi[0] = x; if (y > hi[1]) hi[1] = y;
+      };
+      prims.forEach(function (q) {
+        if (q[0] === 'l') { see(q[1], q[2]); see(q[3], q[4]); }
+        else if (q[0] === 'a') { see(q[1] - q[3], q[2] - q[3]); see(q[1] + q[3], q[2] + q[3]); }
+        else see(q[1], q[2]);
+      });
+      var w = hi[0] - lo[0], h = hi[1] - lo[1];
+      if (!(w > 0) || !(h > 0)) return [];
+      var pad = 0.03 * Math.max(w, h);
+      lo[0] -= pad; lo[1] -= pad; w += pad * 2; h += pad * 2;
+      var sc = Math.min(maxEdge / w, maxEdge / h);
+      var CW = Math.max(2, Math.round(w * sc)), CH = Math.max(2, Math.round(h * sc));
+      var cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
+      var c = cv.getContext('2d');
+      c.fillStyle = '#fff'; c.fillRect(0, 0, CW, CH);
+      c.strokeStyle = '#1a1a1a'; c.fillStyle = '#1a1a1a';
+      c.lineWidth = Math.max(1, Math.round(Math.min(CW, CH) / 900));
+      c.lineJoin = 'round'; c.lineCap = 'round';
+      /* DXF counts upward, a canvas counts downward */
+      var X = function (x) { return (x - lo[0]) * sc; };
+      var Y = function (y) { return CH - (y - lo[1]) * sc; };
+      c.beginPath();
+      prims.forEach(function (q) {
+        if (q[0] === 'l') { c.moveTo(X(q[1]), Y(q[2])); c.lineTo(X(q[3]), Y(q[4])); }
+        else if (q[0] === 'a') {
+          c.moveTo(X(q[1] + q[3] * Math.cos(q[4] * Math.PI / 180)), Y(q[2] + q[3] * Math.sin(q[4] * Math.PI / 180)));
+          c.arc(X(q[1]), Y(q[2]), q[3] * sc, -q[4] * Math.PI / 180, -q[5] * Math.PI / 180, true);
+        }
+      });
+      c.stroke();
+      prims.forEach(function (q) {
+        if (q[0] !== 't') return;
+        var px = q[3] * sc;
+        if (px < 4 || px > CH / 3) return;
+        c.font = '400 ' + px.toFixed(1) + 'px Lato, sans-serif';
+        c.fillText(q[4], X(q[1]), Y(q[2]));
+      });
+      return [new File([dataToBytes(cv.toDataURL('image/png'))],
+        file.name.replace(/\.[a-z]+$/i, '') + '.png', { type: 'image/png' })];
+    });
+  }
+  function dataToBytes(uri) {
+    var b = atob(uri.slice(uri.indexOf(',') + 1)), a = new Uint8Array(b.length);
+    for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+    return a;
+  }
+
+  var FOREIGN = /\.(pdf|dxf|dwg)$/i;
   function pdfIn(files) {
     return Array.prototype.slice.call(files || []).some(function (f) {
-      return /pdf$/i.test(f.type || '') || /\.pdf$/i.test(f.name || '');
+      return /pdf$/i.test(f.type || '') || FOREIGN.test(f.name || '');
     });
   }
   /* Expands any PDFs into the pictures inside them and hands the whole lot
@@ -782,17 +946,27 @@ button,input,textarea,select{font:inherit;color:inherit}
      drop that does nothing teaches people the tool is broken. */
   function unpdf(files, el, done) {
     var all = Array.prototype.slice.call(files || []);
-    var pdfs = all.filter(function (f) { return /pdf$/i.test(f.type || '') || /\.pdf$/i.test(f.name || ''); });
-    var rest = all.filter(function (f) { return pdfs.indexOf(f) < 0; });
+    var odd = all.filter(function (f) { return /pdf$/i.test(f.type || '') || FOREIGN.test(f.name || ''); });
+    var rest = all.filter(function (f) { return odd.indexOf(f) < 0; });
+    var dwg = odd.filter(function (f) { return /\.dwg$/i.test(f.name || ''); });
     var was = el ? el.textContent : '';
-    if (el) el.textContent = 'Reading ' + pdfs.length + ' PDF' + (pdfs.length > 1 ? 's' : '') + '…';
-    Promise.all(pdfs.map(pdfJpegs)).then(function (groups) {
+    var say = function (msg) {
+      if (!el) return;
+      el.textContent = msg;
+      setTimeout(function () { el.textContent = was; }, 7000);
+    };
+    if (el) el.textContent = 'Reading ' + odd.length + ' file' + (odd.length > 1 ? 's' : '') + '…';
+    Promise.all(odd.map(function (f) {
+      if (/\.dwg$/i.test(f.name || '')) return [];
+      if (/\.dxf$/i.test(f.name || '')) return dxfPng(f, 2600).catch(function () { return []; });
+      return pdfJpegs(f).catch(function () { return []; });
+    })).then(function (groups) {
       var got = [];
       groups.forEach(function (g) { got = got.concat(g); });
       if (el) el.textContent = was;
-      if (!got.length && el) {
-        el.textContent = 'That PDF is drawn in lines, not pictures — export it as JPG or PNG, or snip it (Win+Shift+S).';
-        setTimeout(function () { el.textContent = was; }, 6000);
+      if (!got.length) {
+        if (dwg.length) say('AutoCAD .dwg cannot be opened here. In AutoCAD: Save As → AutoCAD DXF, and drop that.');
+        else say('That PDF is drawn in lines, not pictures — export it as JPG or PNG, or snip it (Win+Shift+S).');
       }
       done(rest.concat(got));
     }, function () { if (el) el.textContent = was; done(rest); });
@@ -1776,7 +1950,7 @@ button,input,textarea,select{font:inherit;color:inherit}
       var pl = (state.plates || [])[i];
       if (!pl) return;
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*,application/pdf';
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf,.dxf,.dwg';
       inp.onchange = function () { take(inp.files); };
       function take(files) {
         if (pdfIn(files)) { unpdf(files, btn, take); return; }
@@ -1816,7 +1990,7 @@ button,input,textarea,select{font:inherit;color:inherit}
       var sp = (state.spaces || []).filter(function (x) { return String(x.id) === String(id); })[0];
       if (!sp) return;
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*,application/pdf'; inp.multiple = true;
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf,.dxf,.dwg'; inp.multiple = true;
       inp.onchange = function () {
         take(inp.files);
       };
@@ -1854,7 +2028,7 @@ button,input,textarea,select{font:inherit;color:inherit}
     }
     function pickInto(key, zone) {
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*,application/pdf'; inp.multiple = true;
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf,.dxf,.dwg'; inp.multiple = true;
       inp.onchange = function () { addFiles(key, inp.files, zone); };
       inp.click();
     }
@@ -1961,7 +2135,7 @@ button,input,textarea,select{font:inherit;color:inherit}
       var sp = (state.spaces || []).filter(function (x) { return String(x.id) === String(id); })[0];
       if (!sp) return;
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*,application/pdf'; inp.multiple = true;
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf,.dxf,.dwg'; inp.multiple = true;
       inp.onchange = function () {
         take(inp.files);
       };
@@ -2448,7 +2622,7 @@ function renderPlates() {
     }
     d.addEventListener('click', function () {
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*,application/pdf';
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf,.dxf,.dwg';
       inp.onchange = function () { take(inp.files); };
       inp.click();
     });
@@ -2636,7 +2810,7 @@ function renderSpaces() {
     }
     d.addEventListener('click', function () {
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*,application/pdf'; inp.multiple = true;
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf,.dxf,.dwg'; inp.multiple = true;
       inp.onchange = function () { take(inp.files); };
       inp.click();
     });
@@ -2666,7 +2840,7 @@ function renderSpaces() {
     }
     d.addEventListener('click', function () {
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*,application/pdf'; inp.multiple = true;
+      inp.type = 'file'; inp.accept = 'image/*,application/pdf,.dxf,.dwg'; inp.multiple = true;
       inp.onchange = function () { take(inp.files); };
       inp.click();
     });
@@ -2851,7 +3025,7 @@ Object.keys(DOCSETS).forEach(function (key) {
   var d = $(DOCSETS[key].drop);
   d.addEventListener('click', function () {
     var inp = document.createElement('input');
-    inp.type = 'file'; inp.accept = 'image/*,application/pdf'; inp.multiple = true;
+    inp.type = 'file'; inp.accept = 'image/*,application/pdf,.dxf,.dwg'; inp.multiple = true;
     inp.onchange = function () { addDocs(key, inp.files); };
     inp.click();
   });

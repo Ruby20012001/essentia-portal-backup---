@@ -66,12 +66,21 @@ which writes the build time into the file and the filename together.
    **paste a snip**: `Win+Shift+S`, drag over the drawing in whatever is showing
    it, then `Ctrl+V` on the plate.
 
-   **A PDF is read where any picture is taken.** A page that is a photograph or
-   a scan holds a JPEG whole, and the tool lifts it straight out — no library,
-   no network. A page drawn in vector — AutoCAD, InDesign — holds no picture at
-   all, and no code short of a full PDF renderer will make one; the zone says so
-   in as many words and tells you to export it as JPG or PNG, or snip it. The
-   same is true of every other zone: documents, a space's own drawing, renders.
+   **A PDF or a DXF is read where any picture is taken** — the plan, the
+   documents, a space's own drawing, the renders, in the editor and inside the
+   deck alike.
+
+   | Dropped | What happens |
+   |---|---|
+   | JPG · PNG | attached |
+   | **PDF** that is a photograph or a scan | the JPEG inside it is lifted straight out |
+   | PDF drawn in vector | nothing to lift — export it as JPG/PNG, or snip it (`Win+Shift+S`) |
+   | **DXF** | drawn: lines, polylines, arcs, circles, text, and the blocks placed at their own scale and rotation |
+   | DWG | AutoCAD's own binary — *Save As → AutoCAD DXF* and drop that |
+
+   The zone says which of these happened rather than failing quietly. What the
+   DXF reader does not draw: hatches, splines, line weights, colour. It is a
+   picture of a drawing for a client to look at, not a CAD viewer.
 4. **Spaces** — add each space, pick the name from the list for the project type
    so naming does not drift, **choose its floor** from the plates you added, set
    the **dimensions, area and estimate**, then **Place pin** and click the plan.
