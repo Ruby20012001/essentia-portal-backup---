@@ -658,24 +658,26 @@ button,input,textarea,select{font:inherit;color:inherit}
      stamped would survive a space being deleted or moved and the series would
      read R01, R04, R09 — unique, and useless as a sequence. A space left out of
      the deck takes no numbers with it, because the client never sees it. */
-  /* A render is named after the space it is of. Space 07 on the plan has
-     render R07, and if it has more than one they run R07, R07.2, R07.3 — so
-     the grid reads R01, R02, R03 straight down, the way the numbers on the
-     drawing do, and a picture forwarded on its own still says which pin it
-     belongs to. A space left out of the deck is numbered by nothing, because
-     the client never sees it and the numbers after it must not shift. */
-  function revName(no, k) { return 'R' + pad2(no) + (k ? '.' + (k + 1) : ''); }
+  /* One count for the whole deck. Every render in it has a number of its own —
+     R01, R02, R03 — running in the order the deck runs, first space first, and
+     the last render of the last space holds the last number. No repeats and no
+     decimal points: a plain number is what people say out loud and type into an
+     email.
+
+     Counted on every draw rather than stamped once and kept. A stamped number
+     would outlive a space being deleted or reordered and the count would read
+     R01, R04, R09 — every render still named, and no longer a sequence anybody
+     could follow. A space left out of the deck is counted by nothing, because
+     the client never sees it. */
+  function revName(no) { return 'R' + pad2(no); }
   function numberRenders(state) {
-    var no = 0;
+    var run = 0;
     (state.spaces || []).forEach(function (s) {
-      if (s.include === false) {
-        (s.images || []).forEach(function (im) { im.rev = ''; });
-        return;
-      }
-      no += 1;
-      (s.images || []).forEach(function (im, k) { im.rev = revName(no, k); });
+      (s.images || []).forEach(function (im) {
+        im.rev = (s.include === false) ? '' : revName(run += 1);
+      });
     });
-    return no;
+    return run;
   }
 
   /* size · area · estimate, in that order, skipping whatever is not filled in.
@@ -2051,11 +2053,12 @@ function renderSpaces() {
     S.spaces.map(function (s, i) {
       var pinned = typeof s.x === 'number' && typeof s.y === 'number';
       var nImg = (s.images || []).length;
-      /* What the next render here will be called — this space's own number,
-         and its position within the space. Named before it is even picked. */
-      if (s.include !== false) run += 1;
+      /* What the next render here will be called: the one after this space's
+         last. Everything below it shifts up by one, which is what a count does.
+         Named before the picture is even picked. */
       var revs = s.images || [];
-      var nextRev = window.EssentiaDeck.revName(run, revs.length);
+      var nextRev = window.EssentiaDeck.revName(run + revs.length + 1);
+      if (s.include !== false) run += revs.length;
       return '<div class="row" data-space-row="' + i + '">' +
         '<div class="row-head">' +
           '<label class="check" style="gap:6px"><input type="checkbox" data-inc="' + i + '"' + (s.include !== false ? ' checked' : '') + '></label>' +

@@ -89,16 +89,17 @@ which writes the build time into the file and the filename together.
    the hero; the rest become the thumbnail strip. `↑` on any thumbnail makes it
    the one the client opens on.
 
-   **Every render is named after the space it is of.** Space 07 on the plan has
-   render **R07**; where a space holds more than one they run R07, R07.2, R07.3.
-   So the grid reads R01, R02, R03 straight down, the way the numbers on the
-   drawing do, and an old render can sit in the deck beside the current one with
-   both still named. Beside the drop zone, in the same place on every space,
-   sits a small **`+ R07.4`** — it names the render about to be added before the
-   picture is even picked, and pressing it opens the same picker the zone does.
-   (In the client's panel the same control is a **`+`** at the end of the
-   thumbnail strip.) A space left out of the deck takes no number, so the ones
-   after it do not shift.
+   **Every render has a number of its own — R01, R02, R03 —** one count for the
+   whole deck, running in the order the deck runs. Twenty-six renders means R01
+   to R26, no repeats and no decimal points: a plain number is what people say
+   out loud and type into an email. A card in the grid shows the number of the
+   picture on it, so a space holding four renders takes four numbers and the
+   next space carries on from there. Beside the drop zone, in the same place on
+   every space, sits a small **`+ R07`** — it names the render about to be added
+   before the picture is even picked, and pressing it opens the same picker the
+   zone does. (In the client's panel the same control is a **`+`** at the end of
+   the thumbnail strip.) A space left out of the deck is counted by nothing,
+   because the client never sees it.
 
    Each space carries four pieces of writing: the **one line** (what it is),
    the **paragraph** (why it sits there), and a **quotable** — one sentence,
@@ -157,10 +158,9 @@ picture. The render's number is drawn *into* the image rather than beside it,
 because this file gets forwarded, cropped and re-saved by people who will never
 see the deck it came from.
 
-**Every render is named after the space it is of.** Space 07 on the plan has
-render **R07**; where a space has more than one they run R07, R07.2, R07.3. So
-the grid reads R01, R02, R03 straight down, the way the numbers on the drawing
-do, and a picture that arrives on its own still says which pin it belongs to.
+**Every render has a number of its own**, counted across the whole deck in the
+order it runs — R01 to R26 on a deck of twenty-six. No repeats, so a picture
+that arrives on its own can be named exactly, and answered exactly.
 
 The name is in the corner of the picture itself — on the cards, in the panel, on
 the thumbnails, on the shared JPG and on every render in the printed lookbook.
