@@ -1737,12 +1737,15 @@ button,input,textarea,select{font:inherit;color:inherit}
       if (ce) {
         var cs = spaces.filter(function (x) { return String(x.id) === ce.getAttribute('data-card-est'); })[0];
         if (cs) {
-          var open = ce.getAttribute('aria-expanded') === 'true';
+          /* NOT named open: var is function-scoped, and this handler already
+             has an open() — the one that opens a space. Shadowing it here
+             broke every card in the deck. */
+          var showing = ce.getAttribute('aria-expanded') === 'true';
           var rate = num((state.project || {}).rate);
           var work = (cs.estimateDerived && rate > 0 && num(cs.area) > 0)
             ? num(cs.area).toLocaleString('en-IN') + ' sq ft  ×  ' + rupees(rate) + ' / sq ft' : '';
-          ce.setAttribute('aria-expanded', open ? 'false' : 'true');
-          ce.innerHTML = open ? 'Click for estimate'
+          ce.setAttribute('aria-expanded', showing ? 'false' : 'true');
+          ce.innerHTML = showing ? 'Click for estimate'
             : esc(cs.estimate) + (work ? '<small>' + esc(work) + '</small>' : '');
         }
         return;
