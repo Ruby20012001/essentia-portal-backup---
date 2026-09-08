@@ -2279,20 +2279,23 @@ button,input,textarea,select{font:inherit;color:inherit}
       if (!(r.width > 0)) return;
       var fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
       var im = currentImage();
-      var near = -1, best = 0.075;
+      /* whatever they touched, tell them what it is: the nearest marked
+         material, however far — a zoom with nothing said is a question left
+         hanging */
+      var near = -1, best = Infinity;
       ((im && im.spots) || []).forEach(function (q, j) {
         var d = Math.sqrt(Math.pow(q.x - fx, 2) + Math.pow(q.y - fy, 2));
         if (d < best) { best = d; near = j; }
       });
       if (near > -1 && layer) {
         var btn = layer.querySelector('[data-spot="' + near + '"]');
-        if (btn) { showSpot(btn); return; }
+        if (btn) { showSpot(btn, fx, fy); return; }
       }
       hero.style.transformOrigin = (fx * 100).toFixed(2) + '% ' + (fy * 100).toFixed(2) + '%';
       hero.style.transform = 'scale(' + ZOOM + ')';
       if (layer) layer.classList.remove('is-open');
     }
-    function showSpot(btn) {
+    function showSpot(btn, atX, atY) {
       var layer = btn.closest('[data-spots]');
       var host = layer && layer.parentNode;
       var s = spaces[at];
@@ -2303,7 +2306,8 @@ button,input,textarea,select{font:inherit;color:inherit}
       var hero = host.querySelector('[data-hero]');
       if (hero) {
         /* the picture goes to the mark rather than the reader hunting for it */
-        hero.style.transformOrigin = (q.x * 100).toFixed(2) + '% ' + (q.y * 100).toFixed(2) + '%';
+        var ox = (atX == null ? q.x : atX), oy = (atY == null ? q.y : atY);
+        hero.style.transformOrigin = (ox * 100).toFixed(2) + '% ' + (oy * 100).toFixed(2) + '%';
         hero.style.transform = 'scale(' + ZOOM + ')';
       }
       layer.classList.add('is-open');
