@@ -2905,15 +2905,16 @@ function renderSpaces() {
         }).join('') + '</div>' +
         /* what a thing is called and what it is made of — marked on the
            picture it can be seen in, not typed into a paragraph */
-        (revs.length
-          ? '<button type="button" class="btn btn--sm btn--ghost" data-spot-edit="' + i + '"' +
-            ' style="margin-top:10px">Mark materials' +
-            (function () {
-              var t = 0;
-              revs.forEach(function (im) { t += ((im.spots || []).length); });
-              return t ? ' · ' + t : '';
-            })() + '</button>'
-          : '') +
+        /* always there, even before a render is. Hidden until a picture exists,
+           it is a feature nobody finds — the first thing anyone does is open a
+           space and look for what they were told about. */
+        '<button type="button" class="btn btn--sm btn--ghost" data-spot-edit="' + i + '"' +
+          ' style="margin-top:10px">Mark materials' +
+          (function () {
+            var t = 0;
+            revs.forEach(function (im) { t += ((im.spots || []).length); });
+            return t ? ' · ' + t : '';
+          })() + '</button>' +
       '</div></div>';
     }).join('');
 
