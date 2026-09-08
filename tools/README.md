@@ -129,6 +129,13 @@ an open space. Fifteen spaces means fifteen of them down the grid, so filling in
 a deck is a pass down the page rather than fifteen rounds of open, attach,
 close. None of them print.
 
+A card whose space has a figure also carries **`Click for estimate`** under it.
+Pressed, it shows the money and the arithmetic behind it — 139 sq ft × ₹ 1,200
+per sq ft — and pressing again puts it away. It waits behind a press rather than
+being printed on the card, because a number a client meets before they have
+looked at the room is the only thing they will remember about it. The space
+never opens; a card with no figure carries no control.
+
 Under the plan and under the documents sits **`+ Add another drawing`** and
 **`+ Add another document`**. The corner `+` reissues the sheet it sits on;
 these add a new one, as many as the project needs — a second floor, a section,

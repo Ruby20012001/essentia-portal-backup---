@@ -101,7 +101,13 @@
 
 /* space index */
 .deck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px}
-.deck-card-wrap{position:relative;display:flex}
+.deck-card-wrap{position:relative;display:flex;flex-direction:column}
+.deck-card-est{width:100%;border:1px solid var(--rule);border-top:0;background:var(--paper);color:var(--soft);
+  padding:10px 14px;font:inherit;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  text-align:left;cursor:pointer;transition:color .15s,border-color .15s}
+.deck-card-est:hover,.deck-card-est:focus-visible{color:var(--ink);border-color:var(--rule-strong);outline:none}
+.deck-card-est[aria-expanded="true"]{color:var(--ink);font-size:15px;letter-spacing:0;text-transform:none}
+.deck-card-est small{display:block;margin-top:4px;font-size:10px;letter-spacing:.06em;color:var(--faint)}
 .deck-card{width:100%;border:1px solid var(--rule);background:var(--paper);text-align:left;padding:0;cursor:pointer;
   font:inherit;color:inherit;display:flex;flex-direction:column;transition:border-color .15s}
 /* the same + wherever a picture sits: on a card, on the plan, on a document */
@@ -111,7 +117,7 @@
 .deck-card-add:hover,.deck-card-add:focus-visible,
 .deck-plate-add:hover,.deck-plate-add:focus-visible,
 .deck-dwg-add:hover,.deck-dwg-add:focus-visible{opacity:1;background:var(--ink);outline:none}
-@media print{.deck-card-add,.deck-plate-add,.deck-dwg-add,.deck-more{display:none}}
+@media print{.deck-card-add,.deck-plate-add,.deck-dwg-add,.deck-more,.deck-card-est{display:none}}
 .deck-more{display:block;width:100%;margin-top:12px;padding:13px;border:1px dashed var(--rule-strong);
   background:transparent;color:var(--soft);font:inherit;font-size:11px;letter-spacing:.14em;
   text-transform:uppercase;cursor:pointer;transition:color .15s,border-color .15s}
@@ -858,7 +864,17 @@ button,input,textarea,select{font:inherit;color:inherit}
           '</span></button>' +
           '<button class="deck-card-add" data-add-space="' + esc(s.id) + '"' +
             ' title="Add a picture to ' + esc(s.name) + '" aria-label="Add a picture to ' +
-            esc(s.name) + '">+</button></div>';
+            esc(s.name) + '">+</button>' +
+          /* The figure is not printed on the card. A number a client meets
+             before they have looked at the room is the only thing they will
+             remember about it — so it waits behind a press, on the card that
+             is already open in front of them, rather than making them open
+             the space to find out. */
+          (String(s.estimate || '').trim()
+            ? '<button class="deck-card-est" data-card-est="' + esc(s.id) + '"' +
+              ' aria-expanded="false">Click for estimate</button>'
+            : '') +
+          '</div>';
       }).join('') + '</div>' +
       /* on the page itself, so nothing has to be tapped first to find them */
       '<div class="deck-actions deck-actions--page">' +
@@ -1717,6 +1733,20 @@ button,input,textarea,select{font:inherit;color:inherit}
     }
 
     on('click', function (e) {
+      var ce = e.target.closest('[data-card-est]');
+      if (ce) {
+        var cs = spaces.filter(function (x) { return String(x.id) === ce.getAttribute('data-card-est'); })[0];
+        if (cs) {
+          var open = ce.getAttribute('aria-expanded') === 'true';
+          var rate = num((state.project || {}).rate);
+          var work = (cs.estimateDerived && rate > 0 && num(cs.area) > 0)
+            ? num(cs.area).toLocaleString('en-IN') + ' sq ft  ×  ' + rupees(rate) + ' / sq ft' : '';
+          ce.setAttribute('aria-expanded', open ? 'false' : 'true');
+          ce.innerHTML = open ? 'Click for estimate'
+            : esc(cs.estimate) + (work ? '<small>' + esc(work) + '</small>' : '');
+        }
+        return;
+      }
       var addSp = e.target.closest('[data-add-space]');
       if (addSp) { addToSpace(addSp.getAttribute('data-add-space'), addSp); return; }
       var addPl = e.target.closest('[data-add-plate]');
