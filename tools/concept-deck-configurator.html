@@ -2445,11 +2445,18 @@ button,input,textarea,select{font:inherit;color:inherit}
         b.classList.toggle('is-live', b === btn);
       });
       var card = layer.querySelector('[data-spot-card]');
-      /* the name is the whole of it, unless a deck was written when this asked
-         for two things — then the first is the label above the second */
-      card.innerHTML = q.material
-        ? '<b>' + esc(q.name || 'Material') + '</b>' + esc(q.material)
-        : esc(q.name || '');
+      /* Two things are asked at once — what is that, and what is it made of.
+         A mark is written 'the thing \u00b7 what it is', so it splits at the
+         middle dot into the name and the material under it. A mark with only
+         a name stays one line rather than inventing a second. */
+      var thing = String(q.name || ''), spec = q.material || '';
+      if (!spec) {
+        var mid = thing.indexOf('\u00b7');
+        if (mid > -1) { spec = thing.slice(mid + 1).trim(); thing = thing.slice(0, mid).trim(); }
+      }
+      card.innerHTML = spec
+        ? '<b>' + esc(thing || 'Material') + '</b>' + esc(spec)
+        : esc(thing);
       card.hidden = false;
       /* the card sits on the emptier half, and a line goes back to the mark */
       /* The line starts where the picture was touched, because that is the

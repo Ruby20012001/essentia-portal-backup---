@@ -141,7 +141,16 @@ which writes the build time into the file and the filename together.
    space, click the picture where a thing is — the floor, a veneer, a handle —
    and write its name. In the deck those marks blink quietly on the render;
    pressing one takes the picture to it and writes the name on a line drawn back
-   to the exact spot, the way a materials board does. Marks are held as
+   to the exact spot, the way a materials board does.
+
+   A tap anywhere on the picture answers, not only a tap on a mark: the picture
+   goes to the point touched and names the nearest thing marked. That is only
+   as good as the marking is dense — five marks on a render means four wrong
+   answers for every right one — so IREO's renders carry twelve to twenty-four
+   each, ceiling to floor, and a tap lands on what is under it. Write a mark as
+   *the thing · what it is* and the answer comes in two lines: **Wall tile**
+   above *Canyon Beige 600x1200, Kajaria*. A mark with only a name stays one
+   line rather than inventing a second. Marks are held as
    fractions of the picture, so they stay where they were put at any size, and
    on paper they print as a list under the render because nothing there can be
    pressed.

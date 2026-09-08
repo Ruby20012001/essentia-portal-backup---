@@ -1,409 +1,304 @@
 {
-  "_note": "Materials marked on the IREO renders. Where the client-fixed schedule names the material (FIXED STONE AND TILES AS PER SITE, 3D dept folder) that name is used verbatim; everything else is named for what is visible, never for a supplier nobody has confirmed. Positions are fractions of the picture.",
+  "_note": "Materials marked on the IREO renders. Where the client-fixed schedule names the material (FIXED STONE AND TILES AS PER SITE, 3D dept folder) that name is used verbatim; everything else is named for what is visible, never for a supplier nobody has confirmed. Positions are fractions of the picture. Every render carries enough marks that a tap almost anywhere lands on the thing being pointed at rather than on the nearest of five.",
   "entrance foyer": {
     "0": [
-      {
-        "x": 0.18,
-        "y": 0.45,
-        "name": "Laminate door · Synchro 5355SY2, Greenlam"
-      },
-      {
-        "x": 0.285,
-        "y": 0.53,
-        "name": "Distribution boards, set into the return"
-      },
-      {
-        "x": 0.76,
-        "y": 0.2,
-        "name": "Textured wall covering"
-      },
-      {
-        "x": 0.795,
-        "y": 0.56,
-        "name": "Art on the wall you face"
-      },
-      {
-        "x": 0.33,
-        "y": 0.87,
-        "name": "Italian marble floor · Bianco Siena, with an inlay border"
-      }
+      { "x": 0.47, "y": 0.05, "name": "Recessed downlight" },
+      { "x": 0.64, "y": 0.10, "name": "False ceiling · plaster, painted" },
+      { "x": 0.10, "y": 0.28, "name": "Wall panelling · veneer, vertical grain" },
+      { "x": 0.30, "y": 0.30, "name": "Full-height veneer shutters" },
+      { "x": 0.16, "y": 0.57, "name": "Laminate door · Synchro 5355SY2, Greenlam" },
+      { "x": 0.15, "y": 0.63, "name": "Lever handle · matt black" },
+      { "x": 0.285, "y": 0.53, "name": "Distribution boards, set into the return" },
+      { "x": 0.40, "y": 0.57, "name": "Stone console · red veined marble" },
+      { "x": 0.53, "y": 0.22, "name": "Veneer door frame" },
+      { "x": 0.76, "y": 0.16, "name": "Textured wall covering" },
+      { "x": 0.795, "y": 0.50, "name": "Art on the wall you face" },
+      { "x": 0.76, "y": 0.84, "name": "Skirting · painted" },
+      { "x": 0.27, "y": 0.87, "name": "Floor inlay border · marble strips" },
+      { "x": 0.55, "y": 0.92, "name": "Italian marble floor · Bianco Siena" }
     ]
   },
   "formal living area": {
     "0": [
-      {
-        "x": 0.22,
-        "y": 0.42,
-        "name": "Wood-panelled wall"
-      },
-      {
-        "x": 0.565,
-        "y": 0.19,
-        "name": "Cluster pendant, glass globes"
-      },
-      {
-        "x": 0.73,
-        "y": 0.45,
-        "name": "Sheer and heavy drapes"
-      },
-      {
-        "x": 0.325,
-        "y": 0.52,
-        "name": "Nine-piece art grid"
-      },
-      {
-        "x": 0.105,
-        "y": 0.86,
-        "name": "Italian marble · Bianco Siena"
-      }
+      { "x": 0.35, "y": 0.05, "name": "False ceiling · shadow groove" },
+      { "x": 0.49, "y": 0.07, "name": "Recessed ceiling light" },
+      { "x": 0.565, "y": 0.19, "name": "Cluster pendant, glass globes" },
+      { "x": 0.20, "y": 0.35, "name": "Wood-panelled wall · veneer" },
+      { "x": 0.05, "y": 0.30, "name": "Mirror panel" },
+      { "x": 0.325, "y": 0.52, "name": "Nine-piece art grid" },
+      { "x": 0.40, "y": 0.56, "name": "Wall light · brass" },
+      { "x": 0.46, "y": 0.50, "name": "Sheer curtain" },
+      { "x": 0.73, "y": 0.45, "name": "Drape · linen" },
+      { "x": 0.58, "y": 0.55, "name": "Glazing · casement windows" },
+      { "x": 0.88, "y": 0.55, "name": "Table lamp" },
+      { "x": 0.87, "y": 0.28, "name": "Veneer wall, backlit" },
+      { "x": 0.30, "y": 0.85, "name": "Armchair · upholstery" },
+      { "x": 0.40, "y": 0.80, "name": "Cushions" },
+      { "x": 0.11, "y": 0.83, "name": "Side table · red veined marble" },
+      { "x": 0.09, "y": 0.70, "name": "Table lamp · ribbed base" },
+      { "x": 0.66, "y": 0.97, "name": "Italian marble · Bianco Siena" }
     ]
   },
   "kitchen": {
     "0": [
-      {
-        "x": 0.19,
-        "y": 0.74,
-        "name": "Shutters · Dutch Cream HG-366, Coast to Coast"
-      },
-      {
-        "x": 0.31,
-        "y": 0.56,
-        "name": "Stone counter · Nasoli Flower"
-      },
-      {
-        "x": 0.44,
-        "y": 0.36,
-        "name": "Fluted glass wall units"
-      },
-      {
-        "x": 0.58,
-        "y": 0.57,
-        "name": "Built-in ovens"
-      },
-      {
-        "x": 0.55,
-        "y": 0.92,
-        "name": "Floor tile · Emporio Marfil 600x600, Kajaria"
-      }
+      { "x": 0.39, "y": 0.15, "name": "Recessed downlight" },
+      { "x": 0.55, "y": 0.06, "name": "False ceiling · plaster" },
+      { "x": 0.10, "y": 0.15, "name": "Fluted shutters · tall unit" },
+      { "x": 0.14, "y": 0.43, "name": "Chimney hood · stainless" },
+      { "x": 0.07, "y": 0.50, "name": "Backsplash · stone, book-matched" },
+      { "x": 0.17, "y": 0.59, "name": "Hob · induction" },
+      { "x": 0.31, "y": 0.56, "name": "Stone counter · Nasoli Flower" },
+      { "x": 0.19, "y": 0.74, "name": "Shutters · Dutch Cream HG-366, Coast to Coast" },
+      { "x": 0.04, "y": 0.84, "name": "Skirting vent" },
+      { "x": 0.30, "y": 0.47, "name": "Window" },
+      { "x": 0.44, "y": 0.36, "name": "Fluted glass wall units" },
+      { "x": 0.47, "y": 0.53, "name": "Backsplash · stone" },
+      { "x": 0.58, "y": 0.57, "name": "Built-in ovens" },
+      { "x": 0.58, "y": 0.32, "name": "Tall unit · handleless shutters" },
+      { "x": 0.69, "y": 0.50, "name": "Integrated refrigerator" },
+      { "x": 0.86, "y": 0.20, "name": "Wall units · handleless" },
+      { "x": 0.87, "y": 0.47, "name": "Niche · veneer, with light" },
+      { "x": 0.95, "y": 0.51, "name": "Sink mixer · brushed" },
+      { "x": 0.89, "y": 0.61, "name": "Sink · undermount" },
+      { "x": 0.55, "y": 0.92, "name": "Floor tile · Emporio Marfil 600x600, Kajaria" }
     ]
   },
   "powder washroom": {
     "0": [
-      {
-        "x": 0.2,
-        "y": 0.3,
-        "name": "Veined stone walls"
-      },
-      {
-        "x": 0.36,
-        "y": 0.62,
-        "name": "Stone vanity, one piece"
-      },
-      {
-        "x": 0.62,
-        "y": 0.35,
-        "name": "Fluted screen at the window"
-      },
-      {
-        "x": 0.45,
-        "y": 0.76,
-        "name": "Light under the vanity"
-      },
-      {
-        "x": 0.45,
-        "y": 0.9,
-        "name": "Italian marble floor · Bianco Siena"
-      }
+      { "x": 0.38, "y": 0.16, "name": "Mirror, full height" },
+      { "x": 0.15, "y": 0.30, "name": "Veined stone walls" },
+      { "x": 0.03, "y": 0.45, "name": "Laminate door" },
+      { "x": 0.02, "y": 0.58, "name": "Lever handle · matt black" },
+      { "x": 0.34, "y": 0.50, "name": "Wall-mounted basin mixer" },
+      { "x": 0.36, "y": 0.62, "name": "Stone vanity, one piece" },
+      { "x": 0.50, "y": 0.68, "name": "Vanity shutter · stone-clad" },
+      { "x": 0.50, "y": 0.58, "name": "Towels" },
+      { "x": 0.62, "y": 0.35, "name": "Fluted screen at the window" },
+      { "x": 0.63, "y": 0.73, "name": "Stone ledge" },
+      { "x": 0.74, "y": 0.62, "name": "Vase" },
+      { "x": 0.88, "y": 0.45, "name": "Framed art" },
+      { "x": 0.85, "y": 0.68, "name": "Health faucet" },
+      { "x": 0.80, "y": 0.86, "name": "Wall-hung WC" },
+      { "x": 0.45, "y": 0.79, "name": "Light under the vanity" },
+      { "x": 0.35, "y": 0.93, "name": "Veined stone floor, laid with the walls" }
     ]
   },
   "master bedroom": {
     "0": [
-      {
-        "x": 0.79,
-        "y": 0.28,
-        "name": "Wood-panelled head wall"
-      },
-      {
-        "x": 0.72,
-        "y": 0.55,
-        "name": "Woven headboard"
-      },
-      {
-        "x": 0.28,
-        "y": 0.22,
-        "name": "Full-height wardrobe run"
-      },
-      {
-        "x": 0.14,
-        "y": 0.45,
-        "name": "Stone console under the television"
-      },
-      {
-        "x": 0.33,
-        "y": 0.73,
-        "name": "Laminate floor · Egger EPL 109, Mansonia Walnut"
-      }
+      { "x": 0.53, "y": 0.03, "name": "Ceiling fan" },
+      { "x": 0.36, "y": 0.05, "name": "False ceiling · cove light" },
+      { "x": 0.16, "y": 0.13, "name": "Full-height wardrobe run" },
+      { "x": 0.31, "y": 0.42, "name": "Wardrobe · handleless shutter" },
+      { "x": 0.17, "y": 0.44, "name": "Television, wall-hung" },
+      { "x": 0.14, "y": 0.73, "name": "Stone console under the television" },
+      { "x": 0.22, "y": 0.68, "name": "Ring sculpture on the console" },
+      { "x": 0.42, "y": 0.52, "name": "Sheer curtain" },
+      { "x": 0.41, "y": 0.33, "name": "Drape · linen" },
+      { "x": 0.49, "y": 0.42, "name": "Art panel" },
+      { "x": 0.57, "y": 0.33, "name": "Glazing · balcony door" },
+      { "x": 0.79, "y": 0.28, "name": "Wood-panelled head wall" },
+      { "x": 0.79, "y": 0.06, "name": "Fluted veneer band" },
+      { "x": 0.89, "y": 0.34, "name": "Wall light · sculptural" },
+      { "x": 0.86, "y": 0.58, "name": "Woven headboard" },
+      { "x": 0.72, "y": 0.58, "name": "Cushions" },
+      { "x": 0.60, "y": 0.76, "name": "Bed linen" },
+      { "x": 0.54, "y": 0.69, "name": "Throw · checked wool" },
+      { "x": 0.78, "y": 0.84, "name": "Bedside table · veneer" },
+      { "x": 0.98, "y": 0.52, "name": "Laminate door · Synchro 5355SY2, Greenlam" },
+      { "x": 0.33, "y": 0.88, "name": "Laminate floor · Egger EPL 109, Mansonia Walnut" },
+      { "x": 0.47, "y": 0.95, "name": "Rug" }
     ]
   },
   "master bathroom": {
     "0": [
-      {
-        "x": 0.55,
-        "y": 0.28,
-        "name": "Full-width mirror"
-      },
-      {
-        "x": 0.36,
-        "y": 0.6,
-        "name": "Italian marble counter · Bianco Siena"
-      },
-      {
-        "x": 0.28,
-        "y": 0.78,
-        "name": "Cabinet · Valencia Ash 5355 SY2, Greenlam"
-      },
-      {
-        "x": 0.87,
-        "y": 0.42,
-        "name": "Wall tile · Canyon Beige 600x1200, Kajaria"
-      },
-      {
-        "x": 0.36,
-        "y": 0.9,
-        "name": "Light under the vanity"
-      }
+      { "x": 0.36, "y": 0.06, "name": "Recessed downlight" },
+      { "x": 0.66, "y": 0.05, "name": "False ceiling" },
+      { "x": 0.08, "y": 0.30, "name": "Laminate door · Synchro 5355SY2, Greenlam" },
+      { "x": 0.11, "y": 0.63, "name": "Lever handle · matt black" },
+      { "x": 0.19, "y": 0.32, "name": "Wall tile · Canyon Beige 600x1200, Kajaria" },
+      { "x": 0.55, "y": 0.28, "name": "Full-width mirror" },
+      { "x": 0.22, "y": 0.54, "name": "Switch plates" },
+      { "x": 0.37, "y": 0.57, "name": "Basin mixer" },
+      { "x": 0.36, "y": 0.62, "name": "Italian marble counter · Bianco Siena" },
+      { "x": 0.28, "y": 0.76, "name": "Cabinet · Valencia Ash 5355 SY2, Greenlam" },
+      { "x": 0.36, "y": 0.90, "name": "Light under the vanity" },
+      { "x": 0.52, "y": 0.80, "name": "Open stone shelf" },
+      { "x": 0.59, "y": 0.72, "name": "Health faucet" },
+      { "x": 0.66, "y": 0.84, "name": "Wall-hung WC" },
+      { "x": 0.70, "y": 0.66, "name": "Stone cladding, WC wall" },
+      { "x": 0.82, "y": 0.45, "name": "Framed art" },
+      { "x": 0.95, "y": 0.30, "name": "Window" },
+      { "x": 0.93, "y": 0.64, "name": "Wall tile · Canyon Beige 600x1200, Kajaria" },
+      { "x": 0.45, "y": 0.96, "name": "Stone floor" }
     ]
   },
   "bedroom-2": {
     "0": [
-      {
-        "x": 0.55,
-        "y": 0.32,
-        "name": "Textured wall covering"
-      },
-      {
-        "x": 0.55,
-        "y": 0.53,
-        "name": "Veneer band with cove light"
-      },
-      {
-        "x": 0.5,
-        "y": 0.62,
-        "name": "Upholstered headboard"
-      },
-      {
-        "x": 0.2,
-        "y": 0.45,
-        "name": "Full-height wardrobes"
-      },
-      {
-        "x": 0.3,
-        "y": 0.93,
-        "name": "Laminate floor · Egger EPL 109, Mansonia Walnut"
-      }
+      { "x": 0.30, "y": 0.06, "name": "Linear profile light" },
+      { "x": 0.50, "y": 0.14, "name": "Ceiling fan" },
+      { "x": 0.68, "y": 0.06, "name": "False ceiling · cove" },
+      { "x": 0.05, "y": 0.10, "name": "Air conditioner, set into the return" },
+      { "x": 0.05, "y": 0.52, "name": "Laminate door · Synchro 5355SY2, Greenlam" },
+      { "x": 0.20, "y": 0.45, "name": "Full-height wardrobes" },
+      { "x": 0.19, "y": 0.66, "name": "Wardrobe pull · recessed" },
+      { "x": 0.55, "y": 0.32, "name": "Textured wall covering" },
+      { "x": 0.60, "y": 0.40, "name": "Framed art, pair" },
+      { "x": 0.55, "y": 0.53, "name": "Veneer band with cove light" },
+      { "x": 0.50, "y": 0.62, "name": "Upholstered headboard" },
+      { "x": 0.33, "y": 0.69, "name": "Table lamp · glass" },
+      { "x": 0.28, "y": 0.78, "name": "Bedside table" },
+      { "x": 0.75, "y": 0.73, "name": "Bedside table" },
+      { "x": 0.56, "y": 0.66, "name": "Cushions" },
+      { "x": 0.55, "y": 0.80, "name": "Bed linen" },
+      { "x": 0.55, "y": 0.90, "name": "Bed base · upholstered" },
+      { "x": 0.83, "y": 0.35, "name": "Drape · linen" },
+      { "x": 0.93, "y": 0.45, "name": "Glazing · balcony door" },
+      { "x": 0.30, "y": 0.93, "name": "Laminate floor · Egger EPL 109, Mansonia Walnut" },
+      { "x": 0.65, "y": 0.97, "name": "Rug" }
     ]
   },
   "balcony": {
     "0": [
-      {
-        "x": 0.42,
-        "y": 0.45,
-        "name": "Textured wall finish"
-      },
-      {
-        "x": 0.44,
-        "y": 0.78,
-        "name": "Sculptural bench"
-      },
-      {
-        "x": 0.72,
-        "y": 0.75,
-        "name": "Planter along the rail"
-      },
-      {
-        "x": 0.85,
-        "y": 0.6,
-        "name": "Metal railing"
-      },
-      {
-        "x": 0.35,
-        "y": 0.9,
-        "name": "Outdoor floor"
-      }
+      { "x": 0.50, "y": 0.05, "name": "Soffit · painted" },
+      { "x": 0.50, "y": 0.10, "name": "Recessed downlight" },
+      { "x": 0.17, "y": 0.20, "name": "Textured wall finish" },
+      { "x": 0.09, "y": 0.35, "name": "Sliding door · glazing" },
+      { "x": 0.11, "y": 0.66, "name": "Sliding door handle" },
+      { "x": 0.28, "y": 0.45, "name": "Window" },
+      { "x": 0.45, "y": 0.42, "name": "Wall sculpture · red drops" },
+      { "x": 0.58, "y": 0.30, "name": "Olive tree, in the planter" },
+      { "x": 0.72, "y": 0.50, "name": "Parapet · rendered" },
+      { "x": 0.66, "y": 0.64, "name": "Planter along the rail" },
+      { "x": 0.85, "y": 0.58, "name": "Metal railing" },
+      { "x": 0.45, "y": 0.74, "name": "Sculptural bench" },
+      { "x": 0.40, "y": 0.92, "name": "Outdoor floor · wood-look tile" }
     ]
   },
   "home office": {
     "0": [
-      {
-        "x": 0.235,
-        "y": 0.33,
-        "name": "Upholstered wall panel"
-      },
-      {
-        "x": 0.345,
-        "y": 0.27,
-        "name": "Brass swing-arm light"
-      },
-      {
-        "x": 0.3,
-        "y": 0.7,
-        "name": "Wall-hung veneer desk"
-      },
-      {
-        "x": 0.545,
-        "y": 0.42,
-        "name": "Sheer curtain"
-      },
-      {
-        "x": 0.76,
-        "y": 0.66,
-        "name": "Veneer storage on a stone plinth"
-      }
+      { "x": 0.45, "y": 0.06, "name": "Fluted pelmet" },
+      { "x": 0.63, "y": 0.03, "name": "False ceiling" },
+      { "x": 0.10, "y": 0.30, "name": "Textured wall covering" },
+      { "x": 0.235, "y": 0.35, "name": "Upholstered wall panel" },
+      { "x": 0.335, "y": 0.28, "name": "Brass swing-arm light" },
+      { "x": 0.30, "y": 0.67, "name": "Wall-hung veneer desk" },
+      { "x": 0.27, "y": 0.83, "name": "Drawer unit" },
+      { "x": 0.42, "y": 0.45, "name": "Window" },
+      { "x": 0.545, "y": 0.42, "name": "Sheer curtain" },
+      { "x": 0.56, "y": 0.24, "name": "Drape · linen" },
+      { "x": 0.47, "y": 0.72, "name": "Chair · upholstered, wood legs" },
+      { "x": 0.63, "y": 0.42, "name": "Mirror, full height" },
+      { "x": 0.76, "y": 0.55, "name": "Veneer storage" },
+      { "x": 0.72, "y": 0.90, "name": "Stone plinth · red marble" },
+      { "x": 0.63, "y": 0.73, "name": "Stone plinth · red marble" },
+      { "x": 0.80, "y": 0.28, "name": "Leaning art" },
+      { "x": 0.97, "y": 0.45, "name": "Laminate door · Synchro 5355SY2, Greenlam" },
+      { "x": 0.94, "y": 0.63, "name": "Lever handle" },
+      { "x": 0.55, "y": 0.93, "name": "Rug" },
+      { "x": 0.88, "y": 0.96, "name": "Stone floor" }
     ]
   },
   "kid's bedroom": {
     "0": [
-      {
-        "x": 0.87,
-        "y": 0.4,
-        "name": "Climbing wall with holds"
-      },
-      {
-        "x": 0.17,
-        "y": 0.52,
-        "name": "Upholstered headboard with reading lights"
-      },
-      {
-        "x": 0.4,
-        "y": 0.4,
-        "name": "Wardrobes with red pulls"
-      },
-      {
-        "x": 0.63,
-        "y": 0.5,
-        "name": "Laminate door · Synchro 5355SY2, Greenlam"
-      },
-      {
-        "x": 0.83,
-        "y": 0.72,
-        "name": "Laminate floor · Egger EPL 109, Mansonia Walnut"
-      }
+      { "x": 0.44, "y": 0.03, "name": "Ceiling fan" },
+      { "x": 0.38, "y": 0.13, "name": "Recessed downlight" },
+      { "x": 0.52, "y": 0.13, "name": "Smoke detector" },
+      { "x": 0.74, "y": 0.05, "name": "Linear light" },
+      { "x": 0.14, "y": 0.28, "name": "Framed art" },
+      { "x": 0.05, "y": 0.17, "name": "Textured wall covering" },
+      { "x": 0.40, "y": 0.38, "name": "Wardrobes · handleless" },
+      { "x": 0.345, "y": 0.49, "name": "Wardrobes with red pulls" },
+      { "x": 0.60, "y": 0.21, "name": "Overhead storage" },
+      { "x": 0.66, "y": 0.27, "name": "Air conditioner" },
+      { "x": 0.63, "y": 0.45, "name": "Laminate door · Synchro 5355SY2, Greenlam" },
+      { "x": 0.61, "y": 0.51, "name": "Lever handle" },
+      { "x": 0.87, "y": 0.30, "name": "Climbing wall with holds" },
+      { "x": 0.95, "y": 0.42, "name": "Gym ring" },
+      { "x": 0.83, "y": 0.52, "name": "Peg wall · shelves" },
+      { "x": 0.17, "y": 0.55, "name": "Upholstered headboard" },
+      { "x": 0.23, "y": 0.51, "name": "Reading light · swing arm" },
+      { "x": 0.17, "y": 0.64, "name": "Cushions" },
+      { "x": 0.40, "y": 0.68, "name": "Bed linen" },
+      { "x": 0.53, "y": 0.78, "name": "Throw · herringbone" },
+      { "x": 0.30, "y": 0.86, "name": "Bed base · upholstered" },
+      { "x": 0.07, "y": 0.85, "name": "Bedside table" },
+      { "x": 0.88, "y": 0.72, "name": "Laminate floor · Egger EPL 109, Mansonia Walnut" },
+      { "x": 0.55, "y": 0.95, "name": "Rug" }
     ]
   },
   "kid's bath": {
     "0": [
-      {
-        "x": 0.45,
-        "y": 0.45,
-        "name": "Glass shower enclosure"
-      },
-      {
-        "x": 0.85,
-        "y": 0.76,
-        "name": "Blue-veined stone vanity"
-      },
-      {
-        "x": 0.87,
-        "y": 0.6,
-        "name": "Counter-top basin"
-      },
-      {
-        "x": 0.15,
-        "y": 0.75,
-        "name": "Wall tile · Canyon Beige 600x1200, Kajaria"
-      },
-      {
-        "x": 0.45,
-        "y": 0.9,
-        "name": "Italian marble floor · Bianco Siena"
-      }
+      { "x": 0.38, "y": 0.07, "name": "Recessed downlight" },
+      { "x": 0.62, "y": 0.05, "name": "False ceiling" },
+      { "x": 0.15, "y": 0.35, "name": "Framed art" },
+      { "x": 0.05, "y": 0.55, "name": "Wall tile · Canyon Beige 600x1200, Kajaria" },
+      { "x": 0.385, "y": 0.145, "name": "Rain shower head" },
+      { "x": 0.32, "y": 0.47, "name": "Shower mixer" },
+      { "x": 0.45, "y": 0.32, "name": "Glass shower enclosure" },
+      { "x": 0.44, "y": 0.20, "name": "Window blind" },
+      { "x": 0.44, "y": 0.55, "name": "Window" },
+      { "x": 0.60, "y": 0.21, "name": "Shower shelf" },
+      { "x": 0.34, "y": 0.72, "name": "Stone stool" },
+      { "x": 0.70, "y": 0.58, "name": "Flush plate" },
+      { "x": 0.73, "y": 0.66, "name": "Health faucet" },
+      { "x": 0.67, "y": 0.79, "name": "Wall-hung WC" },
+      { "x": 0.87, "y": 0.61, "name": "Counter-top basin" },
+      { "x": 0.85, "y": 0.78, "name": "Blue-veined stone vanity" },
+      { "x": 0.95, "y": 0.28, "name": "Mirror with etched border" },
+      { "x": 0.96, "y": 0.73, "name": "Towel rail" },
+      { "x": 0.45, "y": 0.90, "name": "Italian marble floor · Bianco Siena" }
     ]
   },
   "bath-2": {
     "0": [
-      {
-        "x": 0.5,
-        "y": 0.35,
-        "name": "Full-width mirror"
-      },
-      {
-        "x": 0.4,
-        "y": 0.63,
-        "name": "Italian marble counter · Bianco Siena"
-      },
-      {
-        "x": 0.45,
-        "y": 0.85,
-        "name": "Open shelf under the counter"
-      },
-      {
-        "x": 0.85,
-        "y": 0.2,
-        "name": "Wall tile · Canyon Beige 600x1200, Kajaria"
-      },
-      {
-        "x": 0.1,
-        "y": 0.55,
-        "name": "Laminate door · Synchro 5355SY2, Greenlam"
-      }
+      { "x": 0.36, "y": 0.04, "name": "Recessed downlight" },
+      { "x": 0.62, "y": 0.06, "name": "False ceiling" },
+      { "x": 0.08, "y": 0.40, "name": "Laminate door · Synchro 5355SY2, Greenlam" },
+      { "x": 0.11, "y": 0.63, "name": "Lever handle · matt black" },
+      { "x": 0.18, "y": 0.18, "name": "Wall tile · Canyon Beige 600x1200, Kajaria" },
+      { "x": 0.50, "y": 0.36, "name": "Full-width mirror" },
+      { "x": 0.36, "y": 0.58, "name": "Basin mixer" },
+      { "x": 0.22, "y": 0.60, "name": "Towels" },
+      { "x": 0.44, "y": 0.65, "name": "Italian marble counter · Bianco Siena" },
+      { "x": 0.70, "y": 0.55, "name": "Vase" },
+      { "x": 0.40, "y": 0.85, "name": "Open shelf under the counter" },
+      { "x": 0.65, "y": 0.87, "name": "Towels, folded" },
+      { "x": 0.45, "y": 0.93, "name": "Light under the vanity" },
+      { "x": 0.93, "y": 0.28, "name": "Window" },
+      { "x": 0.88, "y": 0.62, "name": "Stone reveal at the window" },
+      { "x": 0.55, "y": 0.98, "name": "Stone floor" }
     ]
   },
   "utility": {
     "0": [
-      {
-        "x": 0.45,
-        "y": 0.8,
-        "name": "Handleless shutters"
-      },
-      {
-        "x": 0.35,
-        "y": 0.45,
-        "name": "Open shelves"
-      },
-      {
-        "x": 0.15,
-        "y": 0.68,
-        "name": "Counter with sink"
-      },
-      {
-        "x": 0.78,
-        "y": 0.48,
-        "name": "Built-in appliance"
-      },
-      {
-        "x": 0.5,
-        "y": 0.93,
-        "name": "Tiled floor"
-      }
+      { "x": 0.55, "y": 0.04, "name": "Track light" },
+      { "x": 0.40, "y": 0.25, "name": "Wall finish · textured paint" },
+      { "x": 0.35, "y": 0.37, "name": "Open shelves" },
+      { "x": 0.30, "y": 0.50, "name": "Open shelf" },
+      { "x": 0.05, "y": 0.12, "name": "Wall unit" },
+      { "x": 0.08, "y": 0.66, "name": "Counter with sink" },
+      { "x": 0.03, "y": 0.62, "name": "Sink mixer" },
+      { "x": 0.30, "y": 0.68, "name": "Counter · stone" },
+      { "x": 0.32, "y": 0.80, "name": "Handleless shutters" },
+      { "x": 0.78, "y": 0.48, "name": "Built-in appliance" },
+      { "x": 0.75, "y": 0.20, "name": "Tall unit · handleless" },
+      { "x": 0.90, "y": 0.78, "name": "Dark counter" },
+      { "x": 0.45, "y": 0.93, "name": "Tiled floor" }
     ]
   },
   "store room": {
     "0": [
-      {
-        "x": 0.75,
-        "y": 0.35,
-        "name": "Full-height storage"
-      },
-      {
-        "x": 0.3,
-        "y": 0.25,
-        "name": "Handleless shutters"
-      },
-      {
-        "x": 0.3,
-        "y": 0.52,
-        "name": "Cove light under the wall units"
-      },
-      {
-        "x": 0.3,
-        "y": 0.72,
-        "name": "Counter run"
-      },
-      {
-        "x": 0.8,
-        "y": 0.93,
-        "name": "Dark floor"
-      }
+      { "x": 0.15, "y": 0.12, "name": "Wall units · handleless" },
+      { "x": 0.50, "y": 0.15, "name": "Overhead storage" },
+      { "x": 0.80, "y": 0.10, "name": "Full-height storage" },
+      { "x": 0.83, "y": 0.45, "name": "Handleless shutters" },
+      { "x": 0.30, "y": 0.47, "name": "Cove light under the wall units" },
+      { "x": 0.16, "y": 0.58, "name": "Sockets" },
+      { "x": 0.30, "y": 0.63, "name": "Counter run" },
+      { "x": 0.55, "y": 0.66, "name": "Wall finish · painted" },
+      { "x": 0.55, "y": 0.80, "name": "Base unit · handleless" },
+      { "x": 0.20, "y": 0.87, "name": "Counter front" },
+      { "x": 0.85, "y": 0.95, "name": "Dark floor" }
     ]
   }
 }
