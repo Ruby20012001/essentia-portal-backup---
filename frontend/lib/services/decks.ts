@@ -12,17 +12,17 @@ import type { SessionUser } from "@/lib/auth/session";
  *
  * The deck tool has been one offline HTML file, which is right for a laptop
  * and wrong for five designers working the same deck. Here the deck lives in
- * the portal: everyone signed in may read one, the named design team may
- * change one, and the name against a change is the account that made it
- * rather than a name somebody typed into a box.
+ * the portal: the named design team reads and changes one, everybody else is
+ * kept out, and the name against a change is the account that made it rather
+ * than a name somebody typed into a box.
  *
  * Three rules this file exists to keep:
  *   · nothing deletes — a deck is archived, and the activity trail is
  *     append-only with no update path anywhere in the code;
  *   · a save carries the version it opened, so two people on one deck get a
  *     refusal instead of one of them losing an afternoon;
- *   · pictures never travel with the state — they are rows of their own,
- *     addressed by slot, fetched only when a picture is actually shown.
+ *   · a deck is the client's plan and their money — the door is a named list,
+ *     not "anybody who is signed in".
  */
 
 export type DeckStage = "concept" | "execution";
@@ -73,6 +73,25 @@ export async function canEditDecks(user: SessionUser): Promise<boolean> {
   return rows.length > 0;
 }
 
+/**
+ * Reading is the same list as changing, deliberately.
+ *
+ * A deck holds a client's plan, their renders and what the work is costed at,
+ * and the portal is signed into by people who have nothing to do with that
+ * project — the tracker's view accounts among them. Signing in is not the same
+ * as being on the job, so the door is the design team's list either way
+ * (Monica, 10 Sep 2026). Opening it wider later is one function, here.
+ */
+export async function canReadDecks(user: SessionUser): Promise<boolean> {
+  return canEditDecks(user);
+}
+
+async function requireReader(user: SessionUser): Promise<void> {
+  if (!(await canReadDecks(user))) {
+    throw new PermissionError(user, "read", "concept_deck");
+  }
+}
+
 async function requireEditor(user: SessionUser): Promise<void> {
   if (!(await canEditDecks(user))) {
     throw new PermissionError(user, "edit", "concept_deck");
@@ -97,8 +116,9 @@ function toSummary(row: DeckRow): DeckSummary {
   };
 }
 
-/** Every deck anybody signed in may read, newest work first. */
+/** Every deck the design team may read, newest work first. */
 export async function listDecks(user: SessionUser): Promise<DeckSummary[]> {
+  await requireReader(user);
   return withUserContext(user, async (q) => {
     const rows = await q<DeckRow>(
       `SELECT d.id, d.name, d.project_code, d.stage, d.version,
@@ -117,6 +137,7 @@ export async function getDeck(
   user: SessionUser,
   id: string,
 ): Promise<DeckDetail> {
+  await requireReader(user);
   const [row] = await withUserContext(user, (q) =>
     q<DeckRow>(
       `SELECT d.id, d.name, d.project_code, d.stage, d.version, d.state,
