@@ -54,6 +54,7 @@ export const DEFAULT_FILES = [
   "040_lead_password_reset.sql",
   "041_signin_codes.sql",
   "042_concept_decks.sql",
+  "043_design_team_accounts.sql",
   "900_dev_fixtures.sql",
 ];
 
