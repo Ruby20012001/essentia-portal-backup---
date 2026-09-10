@@ -448,7 +448,26 @@ button,input,textarea,select{font:inherit;color:inherit}
 .head-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-top:4px;flex-wrap:wrap}
 .head h1{margin:0;font-size:20px;font-weight:300;letter-spacing:.01em}
 .head-sub{margin:3px 0 0;font-size:12px;color:var(--secondary)}
-.head-actions{display:flex;gap:8px;flex-wrap:wrap}
+.head-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.head-who{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--secondary);
+  letter-spacing:.02em;margin-right:4px}
+.head-who input{width:130px;background:var(--surface);border:1px solid var(--line-strong);
+  color:var(--ink);font:inherit;font-size:12px;padding:6px 9px;outline:none}
+.head-who input:focus{border-color:var(--amber)}
+.head-edited{font-size:11px;color:var(--secondary);letter-spacing:.02em;margin:0 0 9px}
+.head-edited b{color:var(--ink);font-weight:400}
+.log{display:flex;flex-direction:column}
+.log-row{display:grid;grid-template-columns:120px 1fr;gap:14px;padding:10px 0;
+  border-top:1px solid var(--line);font-size:12px}
+.log-row:first-child{border-top:0}
+.log-when{color:var(--muted);font-size:11px;letter-spacing:.02em}
+.log-who{color:var(--ink)}
+.log-what{color:var(--secondary);margin-top:3px}
+.log-did{margin:5px 0 0;padding:0;list-style:none}
+.log-did li{color:var(--secondary);padding:2px 0 2px 12px;position:relative}
+.log-did li::before{content:'';position:absolute;left:0;top:10px;width:5px;height:1px;
+  background:var(--rule-strong,#5a5a5a)}
+.log-none{color:var(--muted);font-size:12px}
 .head-build{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);
   border:1px solid var(--line-strong);padding:4px 9px;vertical-align:middle;margin-left:10px}
 .head-jump{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
@@ -640,10 +659,22 @@ button,input,textarea,select{font:inherit;color:inherit}
           <h1>Concept Deck <span class="head-build" id="headBuild">build unstamped</span></h1>
           <p class="head-sub">Attach the plan, mark the spaces, add the visuals — then preview and send.</p>
           <nav class="head-jump" aria-label="Jump to a section">
-            <a href="#card-docs">Documents</a><a href="#card-cover">Cover</a><a href="#card-plates">Plates</a><a href="#card-spaces">Spaces</a><a href="#card-narrative">Narrative</a><a href="#card-gates">Gates</a>
+            <a href="#card-docs">Documents</a><a href="#card-cover">Cover</a><a href="#card-plates">Plates</a><a href="#card-spaces">Spaces</a><a href="#card-narrative">Narrative</a><a href="#card-gates">Gates</a><a href="#card-activity">Activity</a>
           </nav>
         </div>
+        <div class="head-edited" id="editedLine" hidden></div>
         <div class="head-actions">
+          <label class="head-who" for="who">Editing as
+            <input id="who" list="whoList" placeholder="your name" autocomplete="off" spellcheck="false">
+          </label>
+          <datalist id="whoList">
+            <option value="Monica Chawla"></option>
+            <option value="Vishakha"></option>
+            <option value="Akansha Malik"></option>
+            <option value="Ritu"></option>
+            <option value="Lavika"></option>
+            <option value="Jiya"></option>
+          </datalist>
           <button class="btn" id="bPreview">Preview</button>
           <button class="btn" id="bSave">Save draft</button>
           <button class="btn" id="bBackup" title="Keep a copy in a folder OneDrive or SharePoint syncs">Back up</button>
@@ -723,6 +754,11 @@ button,input,textarea,select{font:inherit;color:inherit}
         <section class="card" id="card-gates">
           <h2>Publish gates</h2>
           <div class="card-in"><div class="stat" id="gates"></div></div>
+        </section>
+
+        <section class="card" id="card-activity">
+          <h2>Activity</h2>
+          <div class="card-in"><div id="activity"></div></div>
         </section>
 
       </div>
@@ -3770,6 +3806,157 @@ function renderAll() { renderPlates(); renderSpaces(); renderDocs('documents'); 
    the editor's lists, totals and gates have to catch up */
 $('#pane').addEventListener('deck:changed', function () { renderAll(); });
 
+/* ── what was done, by whom, and when ──────────────────────────────────
+
+   The tracker knows who edited because people sign in to it. This is one file
+   on a laptop with no login at all, so it cannot know — it can only ask, and
+   remember the answer. A name typed here is a name, not proof.
+
+   What it does do properly is say what changed. Every save compares the deck
+   against the shape it had at the last save and writes the difference in
+   words: three renders added to the kitchen, five materials marked on the
+   master bedroom, the estimate rate changed. That is the half a person
+   actually needs, and it cannot be got from a file date.
+
+   The verified who exists next to this file already: SharePoint records the
+   account that saved each version. Use that when it has to be certain. */
+var WHO_KEY = 'essentia.deck.editor';
+var seenShape = null;
+
+function whoAmI() {
+  var el = $('#who');
+  return ((el && el.value) || '').trim();
+}
+
+/* a small picture of the deck with no image data in it, so two of them can be
+   held and compared without carrying five megabytes twice */
+function shapeOf(st) {
+  var p = st.project || {}, nr = st.narrative || {};
+  return {
+    cover: [p.name, p.code, p.client, p.contact, p.address, p.eyebrow, p.headline,
+            p.dateLabel, p.closing, p.designer].join('|'),
+    stage: p.stage || 'concept',
+    rate: p.rate || '',
+    basis: [p.estimateBasis, p.rateCovers, p.rateExcludes].join('|'),
+    narrative: [nr.lead, nr.quote, nr.body, nr.disclaimer].join('|'),
+    plates: (st.plates || []).map(function (x) { return (x.label || '') + (x.src ? '+' : '-'); }),
+    documents: (st.documents || []).map(function (d) { return d.label || 'document'; }),
+    spaces: (st.spaces || []).map(function (x) {
+      return {
+        id: String(x.id), name: x.name || '', include: x.include !== false,
+        words: [x.summary, x.body, x.quote, x.dims, x.floor].join('|'),
+        money: [x.area, x.estimate, x.includes].join('|'),
+        pinned: x.x != null && x.y != null,
+        shots: (x.images || []).length,
+        marks: (x.images || []).reduce(function (t, im) { return t + ((im.spots || []).length); }, 0),
+        docs: (x.docs || []).length
+      };
+    })
+  };
+}
+
+function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
+
+function whatChanged(was, now) {
+  var out = [];
+  if (!was) return out;
+  if (was.cover !== now.cover) out.push('the cover was edited');
+  if (was.stage !== now.stage) out.push('the stage was set to ' + now.stage);
+  if (was.rate !== now.rate) out.push('the rate was changed to ' + (now.rate || 'nothing'));
+  if (was.basis !== now.basis) out.push('the estimate basis was edited');
+  if (was.narrative !== now.narrative) out.push('the note was edited');
+  if (was.plates.join('~') !== now.plates.join('~')) out.push('the plan was changed');
+  var docsWas = was.documents.length, docsNow = now.documents.length;
+  if (docsNow > docsWas) out.push(plural(docsNow - docsWas, 'document') + ' added');
+  if (docsNow < docsWas) out.push(plural(docsWas - docsNow, 'document') + ' removed');
+
+  var byId = {};
+  was.spaces.forEach(function (x) { byId[x.id] = x; });
+  var seen = {};
+  now.spaces.forEach(function (x) {
+    seen[x.id] = 1;
+    var b = byId[x.id];
+    var name = x.name || 'a space';
+    if (!b) { out.push('the space ' + name + ' was added'); return; }
+    if (b.name !== x.name) out.push(b.name + ' was renamed ' + x.name);
+    if (b.shots !== x.shots) {
+      out.push((x.shots > b.shots ? plural(x.shots - b.shots, 'render') + ' added to '
+                                  : plural(b.shots - x.shots, 'render') + ' removed from ') + name);
+    }
+    if (b.marks !== x.marks) {
+      out.push((x.marks > b.marks ? plural(x.marks - b.marks, 'material') + ' marked on '
+                                  : plural(b.marks - x.marks, 'material') + ' unmarked on ') + name);
+    }
+    if (b.docs !== x.docs) {
+      out.push((x.docs > b.docs ? plural(x.docs - b.docs, 'drawing') + ' added to '
+                                : plural(b.docs - x.docs, 'drawing') + ' removed from ') + name);
+    }
+    if (b.words !== x.words) out.push(name + ' was rewritten');
+    if (b.money !== x.money) out.push('the figures for ' + name + ' were changed');
+    if (b.pinned !== x.pinned) out.push(name + (x.pinned ? ' was pinned to the plan' : ' was unpinned'));
+    if (b.include !== x.include) out.push(name + (x.include ? ' was put back in' : ' was left out'));
+  });
+  was.spaces.forEach(function (x) {
+    if (!seen[x.id]) out.push('the space ' + (x.name || 'a space') + ' was removed');
+  });
+  return out;
+}
+
+function stampEdit(what) {
+  var who = whoAmI();
+  var now = shapeOf(S);
+  var did = whatChanged(seenShape, now);
+  seenShape = now;
+  var when = new Date();
+  S.activity = S.activity || [];
+  S.activity.push({ by: who || 'not named', at: when.toISOString(), what: what || 'saved', did: did });
+  if (S.activity.length > 80) S.activity = S.activity.slice(-80);
+  S.lastEdit = { by: who || 'not named', at: when.toISOString() };
+  paintEdited();
+  renderActivity();
+  return true;
+}
+
+function whenWords(iso) {
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return String(d.getDate()).padStart(2, '0') + ' ' + MON[d.getMonth()] + ' · ' +
+    String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
+function paintEdited() {
+  var line = $('#editedLine');
+  if (!line) return;
+  var last = S.lastEdit;
+  if (!last || !last.by) { line.hidden = true; line.innerHTML = ''; return; }
+  line.hidden = false;
+  line.innerHTML = 'Last edited by <b>' + esc(last.by) + '</b> · ' + esc(whenWords(last.at));
+}
+
+function renderActivity() {
+  var host = $('#activity');
+  if (!host) return;
+  var rows = (S.activity || []).slice().reverse();
+  if (!rows.length) {
+    host.innerHTML = '<p class="log-none">Nothing yet. Put your name in the box at the top, ' +
+      'and every save writes down what changed.</p>';
+    return;
+  }
+  host.innerHTML = '<div class="log">' + rows.map(function (r) {
+    return '<div class="log-row">' +
+      '<div class="log-when">' + esc(whenWords(r.at)) + '</div>' +
+      '<div><div class="log-who">' + esc(r.by) + '</div>' +
+        '<div class="log-what">' + esc(r.what) + '</div>' +
+        ((r.did || []).length
+          ? '<ul class="log-did">' + r.did.map(function (d) {
+              return '<li>' + esc(d) + '</li>';
+            }).join('') + '</ul>'
+          : '') +
+      '</div></div>';
+  }).join('') + '</div>';
+}
+
 /* ── drafts ───────────────────────────────────────────────────────────── */
 function saveLocal() {
   try {
@@ -3958,6 +4145,9 @@ function exportDeck() {
     " " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   var pre = window.EssentiaDeck.html(S, { noIndex: true });
   var slim = JSON.parse(JSON.stringify(S));
+  /* who worked on it and what they did is an office matter — it stays in the
+     draft, not in the file that goes out of the building */
+  delete slim.activity; delete slim.lastEdit;
   slim.logo = '';
   slim.plates.forEach(function (p) { p.src = ''; });
   (slim.documents || []).forEach(function (d) { d.src = ''; });
@@ -3987,6 +4177,7 @@ function exportDeck() {
   var stamp = String(d.getDate()).padStart(2, '0') +
     ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] +
     '-' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0');
+  stampEdit('exported the deck');
   var deckName = slug(S.project.code || S.project.name) + '-concept-deck-' + stamp + '.html';
   var deckBlob = new Blob([html], { type: 'text/html' });
   download(deckName, deckBlob);
@@ -4027,13 +4218,22 @@ $('#bAddSpace').addEventListener('click', function () {
 });
 $('#bSample').addEventListener('click', function () { S = sample(); boot(); toast('IREO Corridors sample loaded — attach the plan and the renders.'); });
 $('#bBlank').addEventListener('click', function () { S = blank(S.type); boot(); toast('New blank deck.'); });
-$('#bBackup').addEventListener('click', function () { backupNow(false); });
+$('#bBackup').addEventListener('click', function () { stampEdit('backed up'); backupNow(false); });
 /* quarter of an hour is the most work anybody should be asked to redo, and
    it only writes when something has changed */
 setInterval(function () { if (backupDir && backupDue) backupNow(true); }, 15 * 60 * 1000);
 backupRestore();
 
+(function () {
+  var el = $('#who');
+  try { el.value = localStorage.getItem(WHO_KEY) || ''; } catch (e) { /* private window */ }
+  el.addEventListener('input', function () {
+    try { localStorage.setItem(WHO_KEY, el.value.trim()); } catch (e) { /* nothing to do */ }
+  });
+}());
+
 $('#bSave').addEventListener('click', function () {
+  stampEdit('saved a draft');
   download(slug(S.project.code || S.project.name) + '-deck-draft.json',
     new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' }));
   toast('Draft saved — reopen it with “Open draft”.');
@@ -4119,6 +4319,11 @@ function boot() {
   renderCover();
   renderNarrative();
   renderAll();
+  /* The shape is taken here, when the deck is opened, so the first save reports
+     what was done in this sitting rather than reciting the whole deck as new. */
+  seenShape = shapeOf(S);
+  paintEdited();
+  renderActivity();
 }
 
 /* Open on the sample, every time.
