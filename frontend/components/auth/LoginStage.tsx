@@ -39,11 +39,18 @@ export function LoginStage({
   devLogin,
   next,
   error,
+  eyebrow = "sign in page",
+  caption = "Sign in with your email",
 }: {
   entraConfigured: boolean;
   devLogin: boolean;
   next?: string;
   error?: string;
+  /* The same door, named for the room behind it. The decks have their own
+     sign-in page so the design team is not handed the tracker's — the
+     accounts, the form and the session underneath are one and the same. */
+  eyebrow?: string;
+  caption?: string;
 }) {
   // Both start in the state that needs no clock and no measurement, so the
   // server's HTML and the browser's first render agree. The greeting depends on
@@ -109,7 +116,7 @@ export function LoginStage({
             priority
           />
           <p className="mt-3 font-body text-[10px] font-light uppercase tracking-[0.3em] text-label">
-            sign in page
+            {eyebrow}
           </p>
         </div>
 
@@ -117,7 +124,7 @@ export function LoginStage({
           {/* Reserves its line before the clock is read, so nothing shifts. */}
           <p className="font-body text-lg font-light text-white">{hello ?? " "}</p>
           <p className="mt-1 font-body text-xs font-light text-secondary">
-            Sign in with your email
+            {caption}
           </p>
         </div>
 
