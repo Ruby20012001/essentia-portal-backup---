@@ -21,32 +21,47 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // ---- Semantic dark-theme tokens (prefer these going forward) ----
-        canvas: "#000000", // app + page background
-        card: "#0D0D0D", // cards, panels, alternate rows
-        surface: "#111111", // elevated surfaces, table headers
-        line: "#1E1E1E", // hairline borders
-        "line-strong": "#2A2A2A", // input borders
-        hover: "#171717", // row / control hover
-        selected: "#202020", // selected nav / active state
-        secondary: "#B5B5B5", // secondary text
-        muted: "#7A7A7A", // muted / tertiary text
-        success: "#2E7D32",
-        warning: "#FFB300",
-        error: "#D32F2F",
+        // Every token resolves through a CSS variable holding "R G B", so a
+        // theme is a different set of variables rather than a different set of
+        // classes. Nothing in the markup has to know which theme is on.
+        //
+        // The channels are bare numbers so Tailwind's opacity modifiers still
+        // compose — text-secondary/60 and bg-hover/40 keep working exactly as
+        // they did when these were hex.
+        canvas: "rgb(var(--c-canvas) / <alpha-value>)",
+        card: "rgb(var(--c-card) / <alpha-value>)",
+        surface: "rgb(var(--c-surface) / <alpha-value>)",
+        line: "rgb(var(--c-line) / <alpha-value>)",
+        "line-strong": "rgb(var(--c-line-strong) / <alpha-value>)",
+        hover: "rgb(var(--c-hover) / <alpha-value>)",
+        selected: "rgb(var(--c-selected) / <alpha-value>)",
+        secondary: "rgb(var(--c-secondary) / <alpha-value>)",
+        muted: "rgb(var(--c-muted) / <alpha-value>)",
+        success: "rgb(var(--c-success) / <alpha-value>)",
+        warning: "rgb(var(--c-warning) / <alpha-value>)",
+        error: "rgb(var(--c-error) / <alpha-value>)",
 
-        // ---- Retained brand names, remapped to the dark palette ----
-        espresso: "#000000", // was dark surface → now black surface
-        cream: "#FFFFFF", // was light surface → now white (text on dark)
-        ink: "#FFFFFF", // primary text
-        paper: "#0D0D0D", // card surface
-        label: "#B5B5B5", // secondary/label text
-        forest: "#2E7D32", // success
-        navy: "#3B5BA8", // informational (readable on black)
-        alert: "#D32F2F", // error
-        // Essentia signature gold — kept as an available accent token.
-        amber: "#A8895C",
-        "amber-deep": "#C6A06A", // lighter gold, legible on black
+        // The brand bar stays dark in both themes. It carries the white
+        // wordmark, and a logo that disappears in one theme is not a theme.
+        espresso: "#000000",
+        cream: "#FFFFFF",
+
+        ink: "rgb(var(--c-ink) / <alpha-value>)",
+        paper: "rgb(var(--c-card) / <alpha-value>)",
+        label: "rgb(var(--c-secondary) / <alpha-value>)",
+        forest: "rgb(var(--c-success) / <alpha-value>)",
+        navy: "rgb(var(--c-navy) / <alpha-value>)",
+        alert: "rgb(var(--c-error) / <alpha-value>)",
+        amber: "rgb(var(--c-amber) / <alpha-value>)",
+        "amber-deep": "rgb(var(--c-amber-deep) / <alpha-value>)",
+
+        // 209 places say text-white and mean "the primary text colour", and 36
+        // say bg-white and mean "inverted". Rather than rewrite every one of
+        // them and risk missing some, white and black are redefined to mean
+        // foreground and background — which is what they were already being
+        // used for. In dark they are still #FFF and #000.
+        white: "rgb(var(--c-ink) / <alpha-value>)",
+        black: "rgb(var(--c-canvas) / <alpha-value>)",
       },
       fontFamily: {
         // Lato only — headings and body share the family (weights differ).

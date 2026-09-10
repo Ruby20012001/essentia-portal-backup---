@@ -237,9 +237,7 @@ export function ActiveDelegations({ initial }: { initial: DelegationSummary[] })
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Detail drawer — fetches the read-only aggregation on open.          */
-/* ------------------------------------------------------------------ */
+/* Detail drawer — fetches the read-only aggregation on open. */
 
 function DetailDrawer({
   id,
@@ -416,10 +414,6 @@ function DrawerBody({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Revoke confirmation                                                 */
-/* ------------------------------------------------------------------ */
-
 function RevokeDialog({
   delegation,
   busy,
@@ -459,10 +453,6 @@ function RevokeDialog({
     </div>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/* Small building blocks                                               */
-/* ------------------------------------------------------------------ */
 
 function SummaryCard({ label, value, tone }: { label: string; value: number; tone?: string }) {
   return (
@@ -586,10 +576,6 @@ function Empty({ children }: { children: React.ReactNode }) {
     </p>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/* helpers                                                             */
-/* ------------------------------------------------------------------ */
 
 function canRevoke(status: DelegationStatus): boolean {
   return status === "active" || status === "scheduled";

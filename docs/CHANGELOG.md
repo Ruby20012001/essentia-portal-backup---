@@ -8,6 +8,191 @@
 
 ---
 
+## 2026-08-31 — S4b · the day's standup, applied
+
+Ruby's 2026-08-31 standup, with every judgement call confirmed by her before
+the migration was written. Nothing was inferred from prose.
+
+### db/034
+- **4 WIOs added** that the standup reported but the board did not carry:
+  `ED/26-27/104` (Dipmallya), `/077`, `/107`, `/132` (Neeraj), at the stages
+  Ruby confirmed. `wio_issued` left NULL for all four — the standup reports
+  their drawing state, not the date a WIO was issued, and inventing one would
+  start a 15-day clock that never really started. They read "Not tracked" until
+  the real date is entered, which is the board asking for it.
+- **3 PIO conversions marked released** — `/254` → `ED/26-27/136`, `/248` →
+  `ED/26-27/018`, `/257` → the Design Democracy row. Stage deliberately left
+  where it stood: moving it would re-stamp `since` and rewrite how long the row
+  actually sat there, which is history, not status.
+- Both changes asserted in the migration. A missed release would leave a
+  converted WIO on the clock accruing lateness it does not deserve.
+
+Board: 37 → **41 rows**, 23 Dipmallya / 18 Neeraj, 38 running.
+
+### Not done, deliberately
+- **The board was not re-stamped.** It still reads against 2026-08-25, so the
+  "PIOs released today" tile shows 0 while three rows say "PIO released". Stale,
+  not wrong — the stamp is the team's own daily act (Setup, one click), and
+  moving everyone's reading date is not a migration's business.
+- **No row was created for the Design Democracy Hyderabad doll bar.** It has
+  already converted; a row created only to be marked released the same instant
+  would put a line on a WIO→PIO tracker that never spent a day in the window.
+  It needs a real WIO number and issue date, entered on the WIOs screen.
+
+---
+
+## 2026-08-31 — S4b · the board split by team
+
+Ruby's daily standup reports the two teams separately, which partitions the
+board explicitly. Checked before use: the two lists share no WIO number.
+
+### Added
+- **db/033** — every row tagged: **22 Dipmallya / 15 Neeraj**, with a
+  migration-level assertion on those counts. A row added or renamed later fails
+  the migration loudly rather than silently inheriting a team from db/032's
+  backfill. Delays follow their WIO (13 / 11).
+- Tags are written as explicit WIO-number lists, never "everything else", so a
+  future row cannot be swept into a team by omission.
+
+### Correction
+`db/032` claimed `WIO-to-PIO-Tracker_neeraj.xlsx` was "a copy of the same sheet,
+not Neeraj's board" — its 15 rows being the 37-row export's first 15 in
+identical order with identical values. **The comparison was right; the
+conclusion was wrong.** The standup shows 11 of those 15 are Neeraj's and *none*
+are Dipmallya's: the 37-row export is the COMBINED board with Neeraj's rows
+listed first, so the file was his slice all along. Declining to seed it was
+still correct — its rows were already present and importing would have
+duplicated them. The right action was always to tag, which db/033 does.
+
+### Stated vs inferred — kept apart
+33 rows are tagged from the standup directly (or, for the unnumbered Design
+Democracy row, matched on scope). **Four are inferred** — `ED/26-27/086`,
+`/111`, `/097`, `/015` — absent from today's standup but present in Neeraj's own
+workbook, which contains zero Dipmallya rows; two corroborated by project.
+Tagged `neeraj` rather than left alone because "left alone" is not neutral: they
+would keep db/032's `dipmallya` backfill, which is the *weaker* guess. db/033
+names all four for checking.
+
+### Not applied — needs Ruby
+4 standup WIOs are not on the board (`ED/26-27/104`, `/077`, `/107`, `/132`) —
+adding them means inventing a stage and a `since`. 3 reported PIO conversions
+(`/257`, `/254`, `/248`) are unapplied — marking a row Released takes it off the
+clock, and `/257` is claimed by both teams for different scopes.
+
+---
+
+## 2026-08-31 — S4b · the two WIO teams
+
+Ruby confirmed Dipmallya and Neeraj run two teams inside the WIO team
+(`DRAFTING`), serving Dhruv Kelaya's and Neeru Bajaj's CRM portfolios — and that
+they share **one board with a team column**.
+
+### Added
+- **db/032** — `ee.tracker_teams` + `ee.tracker_wios.team_code` (backfilled to
+  `dipmallya`, then set NOT NULL: a row that cannot say whose it is is a row
+  nobody owns). Board renamed from "Dipmallya's team" to "WIO team".
+- **The team lens.** A chip row above the tabs narrows Today, WIOs and Delays
+  together, so no two screens disagree about what a team holds. Team roll-ups
+  run through the same pure `todayStats` / `holdingByStage` over
+  `forTeam(rows, code)` — filtering is never a second implementation, and a test
+  asserts the parts sum to the whole. `forTeam` fails closed: an unknown team
+  shows nothing, never everything.
+- A team with no rows says so **in words**, rather than showing eight zero tiles
+  that read as a clear day (ADR-HS-01).
+
+### Deliberately NOT done
+- **Neeraj's supplied export was not seeded.** Its 15 rows are already on the
+  board — importing would have duplicated them. (The right action turned out to
+  be tagging; see the correction in the next entry.)
+
+### Access — unchanged, deliberately
+The team column does not gate anything. Both teams sit in `DRAFTING` and both
+work the whole board; mutual cover is the reason they share one.
+
+### Tests
+227/227 (+6). Harness clean · tsc 0 · lint clean.
+
+---
+
+## 2026-08-31 — S4b · WIO → PIO Tracker
+
+Dipmallya's team's Excel tracker, rebuilt as a native portal module with a real
+backend and the team's live board carried over intact. It sits **beside** the S4
+WIO/PIO Hub, not inside it: same §30 window, different cut — S4 runs the
+department conversion checklist, S4b walks the stage chain and answers *who is
+holding this, and for how long*. Neither owns the other's rows.
+
+### Added
+- **`/wio-tracker` (S4b)** — four screens over one shared dataset: Today
+  (read-only board + roll-ups), WIOs (the working table), Delays (the log),
+  Setup (the chain and the date stamp).
+- **The derivation is pure and stored nowhere.**
+  `lib/services/wio-tracker-logic.ts` holds every computed field — days left,
+  days here, late-here, overdue, accountability, next stage, priority — with no
+  database, clock or environment. A stored status goes stale the moment nobody
+  updates it, and a board that quietly claims to be on time is worse than no
+  board (ADR-HS-01).
+- **The stage/since pairing is now one action.** Changing a WIO's stage
+  re-stamps `since` server-side in the same write, and the banner says so. In
+  the workbook that was two manual steps and the second got forgotten, which
+  made "days at this stage" quietly wrong and the whole board with it.
+- **"Today" is a stamped shared row, never `CURRENT_DATE`.** One value for
+  everyone, so nobody disagrees about what is overdue and a screenshot taken at
+  11pm reads the same as one taken at 9am. That property is why this left the
+  spreadsheet.
+- **Red stays rare.** Reserved for LATE HERE and OVERDUE only, resolved through
+  one component, asserted by test. The team explicitly rejected an earlier
+  build of this tool that turned most rows red.
+
+### Database
+- **db/030** — six `ee.tracker_*` tables, the RBAC rows, config. The stage
+  chain, window, at-risk threshold and delay reasons are ROWS, not constants
+  (ADR-EP-01): the team retunes the workflow with an UPDATE, never a deploy.
+- **db/031** — the real board: 37 WIOs, 24 open delays, 10 stages, 28 delay
+  reasons, 31 names. Verbatim and idempotent. The stamped date 2026-08-25 is
+  *derived, not guessed* — all 24 delay rows satisfy
+  `days_lost = 2026-08-25 − started`, with no exceptions. 33 of the 37 rows
+  carry no WIO issue date, and the board says so rather than reading "On track".
+- **db/900** — two dev personas in DRAFTING. Without them no fixture user could
+  work the board (every existing one is L0/L1, CRM, SITE or department-less),
+  so the module would have looked broken rather than fenced — the same trap
+  db/029 hit with the Country Head.
+
+### Access (Ruby's ruling, 2026-08-31)
+The **WIO team** (`DRAFTING`) reads and edits at **L2 and L3** — the person who
+moves a WIO each morning is a team member, not the HOD, and a board only a TL
+can touch is stale by Wednesday. CRM is read-only, with explicit
+`allowed = FALSE` rows so the policy is written down rather than merely absent.
+L0/L1 read, which **Monica's dashboard depends on**: db/004 generates L0/L1
+grants by CROSS JOIN *at that time*, so a resource type added later gets nothing
+unless granted explicitly.
+
+Dipmallya and Neeraj run **two teams inside `DRAFTING`**, split by whose project
+portfolio they serve — Dipmallya's serves Dhruv Kelaya's CRM projects, Neeraj's
+serves Neeru Bajaj's. That is why CRM holds the view tier: Dhruv and Neeru own
+the projects these WIOs serve. The pairing is recorded in `portal.app_config`
+under `tracker.teams`; the two teams are not separate departments because the
+portal's org model stops at department.
+
+> **Corrected before merge.** A first draft granted edit to five departments on
+> the assumption that everyone named in the stage chain owned the board. Wrong:
+> `INTERIOR`, `ARCH`, `3D` and `FFE` appear in `tracker_stages.waiting_on`
+> because they **hold stages** — they are tracked *by* the board, not owners of
+> it. Waiting-on is not a grant. Verified: those four now hold zero rows.
+
+### Fixed during build
+- Logging a delay checked only the delay grant, so a department fenced out of
+  the tracker entirely (Site) could still write rows onto it. Both delay writes
+  now require read on the board first.
+
+### Tests
+- 56 unit tests pinning every rule to the spec — including that exactly two
+  statuses map to red, that LATE HERE outranks At risk, that a released row
+  carries no urgency score, and that a retuned `done_by` moves the line with no
+  code change. Suite 165 → **221/221**. Harness clean · tsc 0 · lint clean.
+
+---
+
 ## 2026-07-30 — Velocity Gate 5 CLOSED
 
 Gate 5 reads "EH discount control gate enforced across **all 3** Experience

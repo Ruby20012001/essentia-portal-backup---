@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * to leadership (read:workflows scope 'all') and to anyone who is a participant
  * on the instance (an approver, delegate or the initiator). The full cross-event
  * Audit tab reads audit.log, which is leadership-only, so it is shown to
- * leadership; a participant sees the timeline and the AI advisory.
+ * leadership; a participant sees the timeline.
  */
 export default async function WorkflowDetailPage({ params }: { params: { id: string } }) {
   if (invalidId(params.id)) return <NotAvailable title="Not found" body="That workflow does not exist." />;

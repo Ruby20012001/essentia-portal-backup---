@@ -6,6 +6,7 @@ import { ProjectRiskTable } from "@/components/dashboard/ProjectRiskTable";
 import { SetupNeeded } from "@/components/dashboard/SetupNeeded";
 import { WioClockTable } from "@/components/dashboard/WioClockTable";
 import { getCurrentUser } from "@/lib/auth/session";
+import { missingPageEnv } from "@/lib/env";
 import { formatINR } from "@/lib/format";
 import { getCrmtlDashboard } from "@/lib/services/dashboard";
 
@@ -13,10 +14,7 @@ export const dynamic = "force-dynamic";
 
 /** S2 · Blueprint §04 wireframe: signal first, metrics second, detail third. */
 export default async function DashboardPage() {
-  const missing = [
-    !process.env.DATABASE_URL && "DATABASE_URL",
-    !process.env.DEV_USER_ID && "DEV_USER_ID",
-  ].filter((v): v is string => typeof v === "string");
+  const missing = missingPageEnv();
 
   if (missing.length > 0) {
     return (

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { homeHref, isRouteAllowed } from "@/lib/portal-mode";
+
 export function LoginForm({
   next,
   showDevHint,
@@ -36,7 +38,14 @@ export function LoginForm({
             setError(data.error ?? "Sign-in failed");
             return;
           }
-          router.push(next && next.startsWith("/") ? next : "/dashboard");
+          // Where "home" is depends on what this deployment serves — a
+          // tracker-only build has no dashboard, and sending someone there
+          // after a correct sign-in greets them with a render error.
+          const target =
+            next && next.startsWith("/") && isRouteAllowed(next)
+              ? next
+              : homeHref();
+          router.push(target);
           router.refresh();
         } finally {
           setBusy(false);

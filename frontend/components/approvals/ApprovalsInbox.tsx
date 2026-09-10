@@ -4,11 +4,6 @@ import { useCallback, useState } from "react";
 import type { ApprovalInboxItem } from "@/lib/services/workflow-inbox";
 
 type Banner = { tone: "error" | "success"; message: string };
-type Advisory = {
-  slaRisk?: { level: string; hoursRemaining: number | null };
-  ai?: { available: boolean; summary?: string; reason?: string };
-  disclaimer?: string;
-};
 type Detail = {
   status: string;
   groups: Array<{
@@ -25,14 +20,13 @@ type Colleague = { id: string; name: string; email: string; jobTitle: string | n
 /**
  * My Approvals — the approver's inbox. Every pending decision across all
  * workflows (PIO, parallel, conditional, SLA), delegation-aware. Per item:
- * view the chain timeline, peek an AI advisory, delegate, or approve/reject.
+ * view the chain timeline, delegate, or approve/reject.
  * Refusals surface verbatim; the system never blocks silently.
  */
 export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
   const [items, setItems] = useState(initial);
   const [banner, setBanner] = useState<Banner | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [advisories, setAdvisories] = useState<Record<string, Advisory | "loading">>({});
   const [details, setDetails] = useState<Record<string, Detail | "loading">>({});
   const [delegateFor, setDelegateFor] = useState<string | null>(null);
   const [userQuery, setUserQuery] = useState("");
@@ -67,13 +61,6 @@ export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
     } finally {
       setBusyId(null);
     }
-  }
-
-  async function loadAdvisory(item: ApprovalInboxItem) {
-    setAdvisories((a) => ({ ...a, [item.taskId]: "loading" }));
-    const res = await fetch(`/api/workflows/${item.instanceId}/advisory`);
-    const data = await res.json().catch(() => ({}));
-    setAdvisories((a) => ({ ...a, [item.taskId]: res.ok ? data : { ai: { available: false, reason: data.error } } }));
   }
 
   async function toggleChain(item: ApprovalInboxItem) {
@@ -148,7 +135,6 @@ export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
         <ul className="space-y-4">
           {items.map((item) => {
             const sla = slaLabel(item.slaDueAt);
-            const advisory = advisories[item.taskId];
             const detail = details[item.taskId];
             const delegating = delegateFor === item.taskId;
             return (
@@ -173,9 +159,6 @@ export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
                     <button type="button" onClick={() => toggleChain(item)} className={ghost}>
                       {detail ? "Hide chain" : "View chain"}
-                    </button>
-                    <button type="button" onClick={() => loadAdvisory(item)} className={ghost}>
-                      Advisory
                     </button>
                     <button
                       type="button"
@@ -220,30 +203,6 @@ export function ApprovalsInbox({ initial }: { initial: ApprovalInboxItem[] }) {
                     ) : userQuery.trim().length >= 2 ? (
                       <p className="mt-2 font-body text-xs text-label">No matching colleagues.</p>
                     ) : null}
-                  </div>
-                ) : null}
-
-                {advisory ? (
-                  <div className="mt-4 rounded-lg border border-line bg-card p-4">
-                    {advisory === "loading" ? (
-                      <p className="font-body text-sm font-light text-label">Loading advisory…</p>
-                    ) : (
-                      <div className="space-y-1.5 font-body text-sm">
-                        {advisory.slaRisk ? (
-                          <p className="text-label">
-                            <span className="font-bold text-white">SLA risk:</span> {advisory.slaRisk.level}
-                            {advisory.slaRisk.hoursRemaining != null ? ` · ${advisory.slaRisk.hoursRemaining}h remaining` : ""}
-                          </p>
-                        ) : null}
-                        <p className="text-label">
-                          <span className="font-bold text-white">AI summary:</span>{" "}
-                          {advisory.ai?.available ? advisory.ai.summary : `unavailable — ${advisory.ai?.reason ?? "not configured"}`}
-                        </p>
-                        {advisory.disclaimer ? (
-                          <p className="pt-1 text-xs font-light italic text-label">{advisory.disclaimer}</p>
-                        ) : null}
-                      </div>
-                    )}
                   </div>
                 ) : null}
 

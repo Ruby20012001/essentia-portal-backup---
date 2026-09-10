@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV } from "@/components/shell/nav";
+import { visibleNav } from "@/components/shell/nav";
 
 /**
  * The navigation list itself — shared by the desktop sidebar and the mobile
@@ -11,10 +11,13 @@ import { NAV } from "@/components/shell/nav";
  */
 export function NavGroups({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  // Filtered by launch mode: a tracker-only deployment lists the tracker and
+  // nothing else, rather than six headings over screens it does not serve.
+  const groups = visibleNav();
 
   return (
     <>
-      {NAV.map((group) => (
+      {groups.map((group) => (
         <nav key={group.label} aria-label={group.label}>
           <p className="px-3 pb-2 font-body text-[10px] font-bold uppercase tracking-[0.22em] text-muted">
             {group.label}

@@ -1,45 +1,26 @@
-import Image from "next/image";
-import { LoginForm } from "@/components/auth/LoginForm";
+import { LoginStage } from "@/components/auth/LoginStage";
 
 export const dynamic = "force-dynamic";
 
-/** S1 · sign-in. Entra ID for staff (production); password for dev/break-glass. */
+/**
+ * S1 · sign-in. Entra ID for staff (production); password for dev/break-glass.
+ *
+ * The page itself only reads the environment and hands the answers down. What
+ * it looks like — the intro, the drawn plan, the greeting — is in LoginStage,
+ * because all of that needs the browser: the reader's time of day, and whether
+ * they have asked their system for less movement. Neither is knowable here.
+ */
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { next?: string };
+  searchParams: { next?: string; error?: string };
 }) {
-  const entraConfigured = Boolean(process.env.ENTRA_TENANT_ID);
-  const devLogin = process.env.AUTH_ALLOW_DEV_LOGIN === "true";
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-espresso px-6">
-      <div className="w-full max-w-sm rounded-lg border border-line bg-card px-8 py-10">
-        <div className="mb-8 flex flex-col items-center">
-          <Image
-            src="/brand/logo-dark.png"
-            alt="essentia"
-            height={22}
-            width={112}
-            className="mb-4"
-            priority
-          />
-          <p className="font-body text-xs font-light tracking-wide text-label">
-            every client returns
-          </p>
-        </div>
-
-        {entraConfigured ? (
-          <a
-            href="/api/auth/entra/start"
-            className="mb-4 block rounded bg-navy px-5 py-2.5 text-center font-body text-sm font-bold text-cream transition-opacity hover:opacity-90"
-          >
-            Sign in with Microsoft
-          </a>
-        ) : null}
-
-        <LoginForm next={searchParams.next} showDevHint={devLogin} />
-      </div>
-    </div>
+    <LoginStage
+      entraConfigured={Boolean(process.env.ENTRA_TENANT_ID)}
+      devLogin={process.env.AUTH_ALLOW_DEV_LOGIN === "true"}
+      next={searchParams.next}
+      error={searchParams.error}
+    />
   );
 }

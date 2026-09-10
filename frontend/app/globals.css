@@ -3,14 +3,84 @@
 @tailwind utilities;
 
 @layer base {
-  /* Dark theme — native controls, scrollbars and form widgets follow suit. */
-  :root {
+  /* ------------------------------------------------------------------
+     TWO THEMES, ONE SET OF CLASSES.
+
+     Every colour token in tailwind.config.ts reads one of these variables,
+     so switching theme is switching this block — no component knows which
+     theme is on, and none had to be rewritten.
+
+     Channels are bare "R G B" numbers rather than hex, which is what lets
+     Tailwind's opacity modifiers keep working: text-secondary/60 still
+     composes to rgb(var(--c-secondary) / 0.6).
+
+     Dark is the default and stays exactly the palette this portal has
+     always had. Light is the addition — warm rather than clinical, because
+     an interior practice's white is never #FFFFFF stark.
+
+     [data-theme] is matched anywhere, not only on :root, so a subtree can
+     pin its own theme. The sign-in page does: it sits on a photograph and
+     is dark whatever the rest of the portal is doing.
+     ------------------------------------------------------------------ */
+  :root,
+  [data-theme="dark"] {
     color-scheme: dark;
+
+    --c-canvas: 0 0 0;
+    --c-card: 13 13 13;
+    --c-surface: 17 17 17;
+    --c-line: 30 30 30;
+    --c-line-strong: 42 42 42;
+    --c-hover: 23 23 23;
+    --c-selected: 32 32 32;
+    --c-ink: 255 255 255;
+    --c-secondary: 181 181 181;
+    --c-muted: 122 122 122;
+    --c-success: 46 125 50;
+    --c-warning: 255 179 0;
+    --c-error: 211 47 47;
+    --c-navy: 59 91 168;
+    --c-amber: 168 137 92;
+    --c-amber-deep: 198 160 106;
+  }
+
+  [data-theme="light"] {
+    color-scheme: light;
+
+    /* Paper, not screen. The canvas is a warm off-white and cards sit a
+       shade brighter than it, so a card reads as lifted — the same
+       relationship the dark theme has, inverted rather than abandoned. */
+    --c-canvas: 247 246 244;
+    --c-card: 255 255 255;
+    --c-surface: 241 239 236;
+    --c-line: 227 224 219;
+    --c-line-strong: 209 205 198;
+    --c-hover: 239 237 233;
+    --c-selected: 230 226 220;
+
+    /* Not #000 on #FFF. Full black on white is harsher than paper ever is,
+       and at 300-weight Lato it buzzes. */
+    --c-ink: 26 24 22;
+    --c-secondary: 85 82 77;
+    --c-muted: 122 117 110;
+
+    /* The status colours are darkened, not reused: the dark theme's green
+       and amber were picked to carry on black and fail contrast on white. */
+    --c-success: 27 94 32;
+    --c-warning: 158 100 0;
+    --c-error: 176 32 32;
+    --c-navy: 42 68 133;
+    --c-amber: 138 108 66;
+    --c-amber-deep: 122 94 56;
+  }
+
+  html {
+    background-color: rgb(var(--c-canvas));
   }
 
   body {
-    background-color: #000000;
-    color: #ffffff;
+    background-color: rgb(var(--c-canvas));
+    color: rgb(var(--c-ink));
   }
 
   /* No blue browser focus outline anywhere; keyboard focus gets a subtle
@@ -20,12 +90,266 @@
   }
 
   :focus-visible {
-    outline: 2px solid #ffffff;
+    outline: 2px solid rgb(var(--c-ink));
     outline-offset: 1px;
   }
 
   ::selection {
-    background-color: #202020;
-    color: #ffffff;
+    background-color: rgb(var(--c-selected));
+    color: rgb(var(--c-ink));
+  }
+}
+
+/* =====================================================================
+   PRINT — "Save as PDF" on the tracker is the browser's own print, so what
+   lands in the file is the very view on screen rather than a second
+   rendering of the board that could quietly drift from it.
+
+   Three things have to change on paper:
+
+   1. Only the board prints. The portal's header, nav and tab strip are ways
+      of getting somewhere, which a sheet of paper cannot offer.
+   2. Ink, not the dark theme. Printing white-on-black wastes a cartridge and
+      reads badly; the colours flip for print only.
+   3. Nothing may be scrolled away. On screen a wide table scrolls sideways
+      and a long one scrolls down — on paper both would simply be cut off, so
+      the overflow is released and the header row repeats on each page.
+   ===================================================================== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #print-area,
+  #print-area * {
+    visibility: visible;
+  }
+
+  #print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  [data-print="hide"] {
+    display: none !important;
+  }
+
+  /* Shown only on paper — the heading the screen gets from the shell. */
+  [data-print="only"] {
+    display: block !important;
+    margin-bottom: 8pt;
+  }
+
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  #print-area,
+  #print-area * {
+    background: transparent !important;
+    color: #000000 !important;
+    border-color: #999999 !important;
+    box-shadow: none !important;
+  }
+
+  #print-area .overflow-x-auto,
+  #print-area .overflow-y-auto {
+    overflow: visible !important;
+  }
+
+  #print-area table {
+    width: 100% !important;
+    font-size: 8pt;
+  }
+
+  /* The column headings repeat on every page; a row is never split across two. */
+  #print-area thead {
+    display: table-header-group;
+  }
+
+  #print-area tr {
+    break-inside: avoid;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Two documents, one print pipeline.
+
+   "Save this view" prints the board as it stands. "Save 1-page summary"
+   prints SummarySheet instead — a different document for a reader who will
+   not open the tracker, not the same one made smaller.
+
+   The mode is on #print-area rather than a body class so that the page and
+   the thing being printed cannot get out of step: React sets it, renders,
+   and only then is print() called.
+   --------------------------------------------------------------------- */
+@media print {
+  /* The summary never prints unless it was asked for. */
+  [data-print="summary"] {
+    display: none !important;
+  }
+
+  #print-area[data-mode="summary"] [data-print="board"] {
+    display: none !important;
+  }
+
+  #print-area[data-mode="summary"] [data-print="summary"] {
+    display: block !important;
+  }
+
+  /* One page is the whole promise of the summary — it must not spill. */
+  #print-area[data-mode="summary"] {
+    font-size: 8pt;
+  }
+
+  #print-area[data-mode="summary"] table {
+    font-size: inherit;
+  }
+}
+
+/* =====================================================================
+   SIGN-IN — the wordmark, a wipe, then the form.
+
+   A room behind the card, drifting slowly. A still photograph on a login
+   screen reads as a poster; one that moves, barely, reads as a place someone
+   is standing in.
+
+   The photograph is Unsplash — free to use, and deliberately NOT a client
+   render. A render is one project and this page belongs to every project;
+   putting a named residence on a page open to the internet buys nothing.
+
+   Over it: the brand's own amber, so the warmth is essentia's rather than
+   the photograph's, and a gradient that settles the bottom edge so the
+   footer line does not fight the image.
+
+   Every animation here is decoration and every one is switched off under
+   prefers-reduced-motion.
+   ===================================================================== */
+
+.login-photo {
+  /* Softened on purpose. The room is atmosphere, not the subject — sharp, it
+     competes with the one thing on this page that matters, which is the field
+     someone has to type into. The extra scale keeps the blur from bleeding a
+     pale edge in, since blur samples beyond the box. */
+  filter: blur(2px) saturate(0.96) brightness(1.12);
+  animation: login-drift 46s ease-in-out infinite alternate;
+}
+
+@keyframes login-drift {
+  from {
+    transform: scale(1.12) translate3d(-1%, 0, 0);
+  }
+  to {
+    transform: scale(1.2) translate3d(1%, -1%, 0);
+  }
+}
+
+.login-light {
+  background:
+    radial-gradient(58% 50% at 68% 32%, rgba(168, 137, 92, 0.22), transparent 70%),
+    radial-gradient(70% 60% at 20% 80%, rgba(0, 0, 0, 0.55), transparent 72%);
+  animation: login-glow 28s ease-in-out infinite alternate;
+}
+
+@keyframes login-glow {
+  from {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* The intro: the wordmark alone, then a wipe upward. clip-path rather than
+   opacity, so it reads as a curtain drawn back and not a light dimmed. */
+.login-intro {
+  clip-path: inset(0 0 0 0);
+  transition:
+    clip-path 900ms cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 900ms ease;
+}
+
+.login-intro--gone {
+  clip-path: inset(0 0 100% 0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.login-mark {
+  animation: login-mark-in 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes login-mark-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-photo,
+  .login-light,
+  .login-mark {
+    animation: none;
+  }
+
+  .login-photo {
+    transform: scale(1.12);
+  }
+
+  .login-intro {
+    transition: none;
+  }
+}
+
+/* The bedside lamp, breathing.
+
+   A photograph cannot dim its own light, so this sits exactly over the lamp in
+   the render and brightens instead. Positioned in percentages of the frame so
+   it stays on the lamp at any window size, and slow enough — nine seconds out,
+   nine back — that it reads as a room settling rather than a pulse. Anything
+   faster looks like a fault. */
+.login-lamp {
+  /* The pendant, breathing. A photograph cannot dim its own light, so the glow
+     sits over the shade in the frame and brightens in its place. Percentages,
+     not pixels, so it stays on the lamp whatever the window size — and screen
+     blending, so it adds light rather than painting a pale disc over it. */
+  background:
+    radial-gradient(11% 9% at 49% 25%, rgba(255, 214, 150, 0.6), transparent 68%),
+    radial-gradient(30% 22% at 49% 30%, rgba(224, 150, 84, 0.24), transparent 74%),
+    radial-gradient(45% 40% at 62% 62%, rgba(224, 150, 84, 0.12), transparent 76%);
+  mix-blend-mode: screen;
+  animation: login-lamp-breathe 16s ease-in-out infinite alternate;
+}
+
+@keyframes login-lamp-breathe {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-lamp {
+    animation: none;
+    opacity: 0.7;
   }
 }

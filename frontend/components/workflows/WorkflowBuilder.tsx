@@ -315,8 +315,6 @@ export function WorkflowBuilder({
   );
 }
 
-/* ---------------------------------------------------------------- */
-
 function GroupCard({
   index,
   group,

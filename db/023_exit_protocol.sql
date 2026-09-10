@@ -1,6 +1,6 @@
 -- =====================================================================
 -- 023 — EXIT PROTOCOL: THE SIX REMOVAL ACTIONS AT 11:59PM (Velocity Gate #4)
---   CLAUDE.md (permanent constraint): "Exit protocol fires at exactly 11:59pm —
+--   Permanent constraint: "Exit protocol fires at exactly 11:59pm —
 --   all 6 removal actions simultaneously." Brief §36 lists them: Teams channels
 --   removed, WhatsApp groups removed, SSO revoked, email auto-responder
 --   activated, phone call forwarding activated — plus approval authority
@@ -37,6 +37,6 @@ CREATE INDEX IF NOT EXISTS idx_exit_actions_user
 INSERT INTO portal.scheduled_jobs
   (name, description, schedule_kind, schedule_expr, enabled, max_attempts, backoff_base_seconds) VALUES
   ('exit-protocol',
-   'Fire the exit protocol — all six removal actions — at 11:59pm on exit_date (CLAUDE.md) — Velocity Gate #4.',
+   'Fire the exit protocol — all six removal actions — at 11:59pm on exit_date — Velocity Gate #4.',
    'daily', '23:59', TRUE, 3, 300)
 ON CONFLICT (name) DO NOTHING;

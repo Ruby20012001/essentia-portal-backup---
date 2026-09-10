@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 /**
  * Velocity Gate 5 — the Country Head's sign-off, taken one discount at a time.
  * A refusal from the service is shown verbatim: the portal never blocks
- * silently, it says exactly what is wrong (CLAUDE.md anti-busy rules).
+ * silently, it says exactly what is wrong (house anti-busy rules).
  */
 export function ApproveDiscountButton({ saleId, label }: { saleId: string; label: string }) {
   const router = useRouter();

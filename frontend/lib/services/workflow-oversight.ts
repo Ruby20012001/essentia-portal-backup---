@@ -1,5 +1,5 @@
 import { query } from "@/lib/db";
-import { computeSlaRisk, type SlaRisk } from "@/lib/services/workflow-advisory";
+import { computeSlaRisk, type SlaRisk } from "@/lib/services/workflow-sla-risk";
 import { RESOURCE_REF_SQL, RESOURCE_REF_JOINS } from "@/lib/services/workflow-inbox";
 
 /**
