@@ -52,6 +52,15 @@ export function homeHref(mode: PortalMode = portalMode()): string {
  */
 const TRACKER_MODE_PREFIXES = [
   "/wio-tracker",
+  // The concept decks and their own sign-in page. This deployment runs in
+  // tracker mode, so a route missing from this list is not merely unlinked —
+  // signing in at /deck-login sent the design team to the tracker instead,
+  // which is the one place they are not allowed (10 Sep 2026).
+  "/decks",
+  "/deck-login",
+  "/api/decks",
+  // the deck tool itself, served from public/tools
+  "/tools",
   // The open, read-only board (app/board). Served in tracker mode too —
   // it is the one page most of essentia will ever open.
   "/board",

@@ -31,6 +31,9 @@ export const NAV: NavGroup[] = [
       // The Hub runs the department conversion checklist; the Tracker walks
       // the stage chain and answers who is holding what.
       { label: "WIO → PIO Tracker", href: "/wio-tracker", screen: "S4b" },
+      // The client-facing document, beside the work it describes. Who may
+      // open it is decided by the page, against the design team's own list.
+      { label: "Concept decks", href: "/decks", screen: "S5b" },
       { label: "VisionCAM", href: "/visioncam", screen: "S3" },
       { label: "Production Facility — NH8", href: "/factory", screen: "S10" },
     ],
