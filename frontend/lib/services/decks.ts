@@ -74,16 +74,18 @@ export async function canEditDecks(user: SessionUser): Promise<boolean> {
 }
 
 /**
- * Reading is the same list as changing, deliberately.
+ * Reading is open to everybody signed in; changing is the named list.
  *
- * A deck holds a client's plan, their renders and what the work is costed at,
- * and the portal is signed into by people who have nothing to do with that
- * project — the tracker's view accounts among them. Signing in is not the same
- * as being on the job, so the door is the design team's list either way
- * (Monica, 10 Sep 2026). Opening it wider later is one function, here.
+ * Monica asked for the tracker's shape — the whole company sees the work, the
+ * people doing it are the only ones who can change it (10 Sep 2026). Signing
+ * in is the door: a deck carries a client's plan, their renders and what the
+ * work is costed at, so it is not put behind a link anybody could forward.
+ *
+ * Making it readable without signing in at all is a deliberate further step,
+ * and would want its own route outside the portal shell, the way /board is.
  */
 export async function canReadDecks(user: SessionUser): Promise<boolean> {
-  return canEditDecks(user);
+  return Boolean(user?.id);
 }
 
 async function requireReader(user: SessionUser): Promise<void> {

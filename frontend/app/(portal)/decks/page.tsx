@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
-import { canEditDecks, canReadDecks, listDecks } from "@/lib/services/decks";
+import { canEditDecks, listDecks } from "@/lib/services/decks";
 
 export const dynamic = "force-dynamic";
 
 /**
  * S? · Concept decks (Brief §29) — the design room's client-facing document.
  *
- * The named design team reads and changes; nobody else gets in. The tool is
+ * Everybody signed in reads; the named design team changes. The tool is
  * the same single file it has always been, served from /tools/concept-deck.html
  * and pointed at a deck by its id — so what a designer works in here is what
  * they already know, and the deck it writes is the same file a client opens.
@@ -24,26 +24,6 @@ export default async function DecksPage() {
   }
 
   const user = await getCurrentUser();
-
-  /* A deck is a client's plan and what their work is costed at. Being signed
-     in to the portal is not the same as being on the job, so the door is the
-     design team's own list — everybody else is told so plainly rather than
-     shown an empty page they will ask about. */
-  if (!(await canReadDecks(user))) {
-    return (
-      <Frame>
-        <div className="border border-line bg-card px-5 py-6">
-          <p className="text-sm text-primary">This is the design team&apos;s.</p>
-          <p className="mt-2 text-sm leading-relaxed text-secondary">
-            Decks carry a client&apos;s plan, their renders and their figures, so
-            they open only for the people working on them. If you need one, ask
-            the design team to send it — a deck exports as a single file that
-            opens anywhere.
-          </p>
-        </div>
-      </Frame>
-    );
-  }
 
   const [decks, canEdit] = await Promise.all([
     listDecks(user),
@@ -66,9 +46,14 @@ export default async function DecksPage() {
             New deck
           </Link>
         ) : (
-          <span className="text-xs uppercase tracking-[0.14em] text-muted">
-            View only
-          </span>
+          /* Not a scolding — the way in. Somebody reading a deck who turns out
+             to be on the job should not have to ask anybody how to get a pen. */
+          <Link
+            href="/deck-login"
+            className="border border-amber px-3 py-2 text-xs uppercase tracking-[0.14em] text-amber hover:bg-hover"
+          >
+            Sign in to edit
+          </Link>
         )}
       </div>
 
@@ -111,9 +96,9 @@ export default async function DecksPage() {
       )}
 
       <p className="mt-6 text-xs leading-relaxed text-muted">
-        Who changed what is kept against the account that changed it, not a name
-        typed into a box. Nothing here is deleted — a deck is archived, and the
-        trail behind it stays.
+        {canEdit
+          ? "Who changed what is kept against the account that changed it, not a name typed into a box. Nothing here is deleted — a deck is archived, and the trail behind it stays."
+          : "Anybody signed in can read a deck. Changing one is the design team's, and every change is kept against the account that made it."}
       </p>
     </Frame>
   );
