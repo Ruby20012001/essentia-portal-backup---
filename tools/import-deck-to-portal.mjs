@@ -150,7 +150,53 @@ try {
       `from ${path.basename(input)}`,
     ]]);
 
+  /* The pictures do not travel with the deck.
+
+     A deck of twenty-six renders is five and a half megabytes; a serverless
+     response stops at four and a half, so sending them together sent nothing
+     at all and the tool sat there showing its own empty sample. Each picture
+     is its own row now, addressed by slot, and the state points at the route
+     that serves it — so the deck itself is a few tens of kilobytes and the
+     pictures arrive one at a time, cached after the first look. */
+  let pictures = 0;
+  const keep = async (slot, dataUri) => {
+    const m = /^data:([^;,]+)[^,]*,(.*)$/s.exec(dataUri || '');
+    if (!m) return dataUri;
+    const bytes = Buffer.from(m[2], 'base64');
+    await client.query(
+      `INSERT INTO ee.concept_deck_images (deck_id, slot, mime, bytes)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (deck_id, slot)
+       DO UPDATE SET bytes = EXCLUDED.bytes, mime = EXCLUDED.mime`,
+      [id, slot, m[1], bytes]);
+    pictures += 1;
+    return `/api/decks/${id}/images/${encodeURIComponent(slot)}`;
+  };
+
+  const isData = (v) => typeof v === 'string' && v.startsWith('data:');
+  if (isData(state.logo)) state.logo = await keep('logo', state.logo);
+  for (const [k, plate] of (state.plates || []).entries()) {
+    if (isData(plate.src)) plate.src = await keep(`plate:${k}`, plate.src);
+  }
+  for (const [k, doc] of (state.documents || []).entries()) {
+    if (isData(doc.src)) doc.src = await keep(`doc:${k}`, doc.src);
+  }
+  for (const space of state.spaces || []) {
+    for (const [k, im] of (space.images || []).entries()) {
+      if (isData(im.src)) im.src = await keep(`space:${space.id}:img:${k}`, im.src);
+    }
+    for (const [k, d] of (space.docs || []).entries()) {
+      if (isData(d.src)) d.src = await keep(`space:${space.id}:doc:${k}`, d.src);
+    }
+  }
+
+  await client.query(
+    'UPDATE ee.concept_decks SET state = $2::jsonb WHERE id = $1',
+    [id, JSON.stringify(state)]);
+
+  const kb = Math.round(JSON.stringify(state).length / 1024);
   console.log(`\n${what} · version ${version}`);
+  console.log(`pictures kept as rows: ${pictures} · the deck itself is now ${kb} KB`);
   console.log(`open it at  /decks   or   /tools/concept-deck.html?deck=${id}`);
 } finally {
   await client.end();
