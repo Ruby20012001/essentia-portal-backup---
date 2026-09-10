@@ -3866,7 +3866,8 @@ function draftName(dated) {
 
 function chooseBackupFolder() {
   if (!window.showDirectoryPicker) {
-    toast('This browser cannot be given a folder. Use Chrome or Edge, or Back up writes to Downloads.');
+    toast('This browser will not hand out a folder, so it asks where to save each time. ' +
+      'Point it at your backup folder. Chrome and Edge can keep the folder and do it on their own.');
     return Promise.resolve(false);
   }
   return window.showDirectoryPicker({ id: 'essentia-deck', mode: 'readwrite', startIn: 'documents' })
@@ -3888,9 +3889,13 @@ function backupNow(quiet) {
     if (!ok || !backupDir) {
       if (quiet) return false;
       /* no folder — then the honest fallback, and say which one happened */
+      var noFolders = !window.showDirectoryPicker;
       download(draftName(true), draftBlob());
-      backupSay('Backed up to Downloads · ' + clockNow());
-      toast('No folder set, so the backup went to Downloads. Press Back up again to choose a folder.');
+      backupSay(noFolders ? 'Saved where you put it · ' + clockNow()
+                          : 'Backed up to Downloads · ' + clockNow());
+      if (!noFolders) {
+        toast('No folder set, so the backup went to Downloads. Press Back up again to choose a folder.');
+      }
       return false;
     }
     var blob = draftBlob();
