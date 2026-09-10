@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/session";
-import { getDeck, saveDeck, type DeckStage } from "@/lib/services/decks";
+import { getCurrentUser, getSession } from "@/lib/auth/session";
+import {
+  getDeck,
+  getPublicDeck,
+  saveDeck,
+  type DeckStage,
+} from "@/lib/services/decks";
 import { toErrorResponse } from "@/lib/api/errors";
 import { invalidId } from "@/lib/api/params";
 
 export const dynamic = "force-dynamic";
 
-/** One deck, its activity, and whether this person may change it. */
+/**
+ * One deck, its activity, and whether this person may change it.
+ *
+ * Open to a reader who is not signed in — the board's shape, asked for by
+ * name. Signing in adds one thing and only one: the right to change it.
+ */
 export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } },
@@ -14,8 +24,10 @@ export async function GET(
   const badId = invalidId(params.id);
   if (badId) return badId;
   try {
-    const user = await getCurrentUser();
-    const deck = await getDeck(user, params.id);
+    const session = await getSession().catch(() => null);
+    const deck = session
+      ? await getDeck(session.user, params.id)
+      : await getPublicDeck(params.id);
     return NextResponse.json({ deck });
   } catch (error) {
     return toErrorResponse(error);

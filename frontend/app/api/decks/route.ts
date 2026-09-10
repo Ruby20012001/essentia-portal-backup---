@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/session";
-import { canEditDecks, createDeck, listDecks } from "@/lib/services/decks";
+import { getCurrentUser, getSession } from "@/lib/auth/session";
+import {
+  canEditDecks,
+  createDeck,
+  listDecks,
+  listPublicDecks,
+} from "@/lib/services/decks";
 import { toErrorResponse } from "@/lib/api/errors";
 
 export const dynamic = "force-dynamic";
 
-/** Every deck anybody signed in may read, and whether this person may change one. */
+/** Every deck there is, and whether whoever asked may change one. */
 export async function GET() {
   try {
-    const user = await getCurrentUser();
+    const session = await getSession().catch(() => null);
+    if (!session) {
+      return NextResponse.json({ decks: await listPublicDecks(), canEdit: false });
+    }
     const [decks, canEdit] = await Promise.all([
-      listDecks(user),
-      canEditDecks(user),
+      listDecks(session.user),
+      canEditDecks(session.user),
     ]);
     return NextResponse.json({ decks, canEdit });
   } catch (error) {

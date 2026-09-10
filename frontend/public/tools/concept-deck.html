@@ -518,6 +518,8 @@ button,input,textarea,select{font:inherit;color:inherit}
 .f{display:flex;flex-direction:column;gap:6px;min-width:0}
 .f--wide{grid-column:1 / -1}
 .f label{font-size:11px;color:var(--secondary);letter-spacing:.02em}
+body.is-reading .panes{grid-template-columns:1fr}
+body.is-reading .pane-view{max-width:1100px;margin:0 auto}
 .head-backup{align-self:center;font-size:11px;color:var(--secondary);letter-spacing:.02em;max-width:210px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .f input[type=text],.f input[type=number],.f textarea,.f select{
@@ -4249,6 +4251,34 @@ var PORTAL = (function () {
 
 function portalSay(msg) { backupSay(msg); }
 
+/* Reading is open to anybody with the link; changing is the design team's.
+   So the buttons that would change the deck go, and the ones that hand you a
+   copy stay — print it, save the pictures, take the file. Nothing here is the
+   guarantee: every write asks the server, which asks the list. This is just
+   not offering a control that would fail when pressed. */
+function viewerOnly() {
+  ['bSave', 'bBackup'].forEach(function (id) {
+    var b = document.getElementById(id);
+    if (b) b.remove();
+  });
+  var label = document.querySelector('.head-who');
+  if (label) label.hidden = true;
+  var row = document.querySelector('.head-actions');
+  if (row && !document.getElementById('bSignIn')) {
+    var a = document.createElement('a');
+    a.id = 'bSignIn';
+    a.className = 'btn btn--solid';
+    a.href = '/deck-login';
+    a.textContent = 'Sign in to edit';
+    row.appendChild(a);
+  }
+  /* the editing column is not a locked room to be rattled — it is put away,
+     and the deck itself takes the page */
+  var pane = document.querySelector('.pane-edit') || document.querySelector('#pane').previousElementSibling;
+  if (pane) pane.hidden = true;
+  document.body.classList.add('is-reading');
+}
+
 function portalLoad() {
   if (!PORTAL || !PORTAL.id) return;
   portalSay('Opening…');
@@ -4269,13 +4299,8 @@ function portalLoad() {
       var last = (d.activity || [])[0];
       if (last) S.lastEdit = { by: last.by || 'somebody', at: last.at };
       boot();
-      portalSay(d.canEdit ? 'Open · version ' + d.version : 'Open · view only');
-      if (!d.canEdit) {
-        ['bSave', 'bBackup', 'bExport'].forEach(function (id) {
-          var b = document.getElementById(id);
-          if (b) { b.disabled = true; b.title = 'You can read this deck, not change it.'; }
-        });
-      }
+      portalSay(d.canEdit ? 'Open · version ' + d.version : 'Reading · version ' + d.version);
+      if (!d.canEdit) viewerOnly();
     })
     .catch(function (e) { portalSay(e.message || 'That deck could not be opened.'); });
 }

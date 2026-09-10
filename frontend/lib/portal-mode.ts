@@ -57,6 +57,8 @@ const TRACKER_MODE_PREFIXES = [
   // signing in at /deck-login sent the design team to the tracker instead,
   // which is the one place they are not allowed (10 Sep 2026).
   "/decks",
+  // the open one, read by anybody with the link — /board's shape
+  "/deck",
   "/deck-login",
   "/api/decks",
   // the deck tool itself, served from public/tools

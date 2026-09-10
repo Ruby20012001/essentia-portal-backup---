@@ -170,6 +170,44 @@ export async function getDeck(
   };
 }
 
+/**
+ * The same deck, read by somebody who is not signed in at all.
+ *
+ * Monica asked for the board's shape exactly (10 Sep 2026): open the link and
+ * read it, download it, change nothing. So this takes no user and grants no
+ * capability — canEdit is false because there is nobody to be an editor.
+ *
+ * It carries the activity trail too. Who worked on a deck is not a secret from
+ * the people the deck is being shown to; it is the answer to "who do I ask".
+ */
+export async function getPublicDeck(id: string): Promise<DeckDetail> {
+  const [row] = await query<DeckRow>(
+    `SELECT d.id, d.name, d.project_code, d.stage, d.version, d.state,
+            d.updated_at, u.full_name AS updated_by_name
+       FROM ee.concept_decks d
+       LEFT JOIN public.users u ON u.id = d.updated_by
+      WHERE d.id = $1 AND d.is_archived = FALSE`,
+    [id],
+  );
+  if (!row) throw new NotFoundError(`No deck ${id}`);
+  const activity = await listDeckActivity(id);
+  return { ...toSummary(row), state: row.state, slots: [], activity, canEdit: false };
+}
+
+/** Every deck, for the open list. Names and dates; no state, no pictures. */
+export async function listPublicDecks(): Promise<DeckSummary[]> {
+  const rows = await query<DeckRow>(
+    `SELECT d.id, d.name, d.project_code, d.stage, d.version,
+            jsonb_build_object('spaces', d.state->'spaces') AS state,
+            d.updated_at, u.full_name AS updated_by_name
+       FROM ee.concept_decks d
+       LEFT JOIN public.users u ON u.id = d.updated_by
+      WHERE d.is_archived = FALSE
+      ORDER BY d.updated_at DESC`,
+  );
+  return rows.map(toSummary);
+}
+
 /** Newest first. Append-only: there is no update or delete path for these. */
 export async function listDeckActivity(
   deckId: string,

@@ -17,6 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const [input, ownerEmail] = process.argv.slice(2);
 if (!input) {
@@ -90,9 +91,19 @@ console.log(`${name}${code ? ' · ' + code : ''} — ${spaces} spaces · ${rende
 if (!spaces) { console.error('That deck has no spaces in it. Nothing to import.'); process.exit(1); }
 
 /* ── into the portal ──────────────────────────────────────────────────── */
-const { default: pg } = await import(
-  path.join(process.cwd(), 'frontend', 'node_modules', 'pg', 'lib', 'index.js')
-).catch(() => import('pg'));
+/* pg lives in the workspaces, not here, and a Windows path is not a URL a
+   dynamic import will take — hence pathToFileURL rather than a bare join. */
+const pgFrom = async () => {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  for (const where of [
+    path.join(here, '..', 'db', 'node_modules', 'pg', 'lib', 'index.js'),
+    path.join(here, '..', 'frontend', 'node_modules', 'pg', 'lib', 'index.js'),
+  ]) {
+    if (fs.existsSync(where)) return (await import(pathToFileURL(where).href)).default;
+  }
+  return (await import('pg')).default;   // installed globally, or hoisted
+};
+const pg = await pgFrom();
 
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 await client.connect();
