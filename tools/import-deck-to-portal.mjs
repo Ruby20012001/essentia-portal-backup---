@@ -150,6 +150,23 @@ try {
       `from ${path.basename(input)}`,
     ]]);
 
+  /* --inline keeps every picture inside the deck itself.
+
+     The split below is the right shape and needs the route that serves a slot;
+     a deployment that predates it answers those with a 404, and a deck of
+     broken pictures is worse than a heavy one. So when the new build cannot be
+     made — Vercel's daily limit, on the day it mattered — this carries the
+     deck whole, and it works as long as the whole thing stays under the 4.5 MB
+     a serverless reply can hold. Drop the flag once the build lands. */
+  if (process.argv.includes('--inline')) {
+    const kbWhole = Math.round(JSON.stringify(state).length / 1024);
+    console.log(`
+${what} · version ${version}`);
+    console.log(`pictures kept inside the deck · ${kbWhole} KB in all`);
+    if (kbWhole > 4300) console.log('WARNING: over 4.5 MB — the portal will not be able to send it.');
+    console.log(`open it at  /decks   or   /tools/concept-deck.html?deck=${id}`);
+  } else {
+
   /* The pictures do not travel with the deck.
 
      A deck of twenty-six renders is five and a half megabytes; a serverless
@@ -194,6 +211,7 @@ try {
     'UPDATE ee.concept_decks SET state = $2::jsonb WHERE id = $1',
     [id, JSON.stringify(state)]);
 
+  }
   const kb = Math.round(JSON.stringify(state).length / 1024);
   console.log(`\n${what} · version ${version}`);
   console.log(`pictures kept as rows: ${pictures} · the deck itself is now ${kb} KB`);
