@@ -3022,6 +3022,112 @@ var TYPES = {
     'back of house', 'store', 'staff room', 'washroom']
 };
 
+/* WHAT A DECK SAYS DEPENDS ON WHAT IT IS OF.
+
+   The writing that opens a home deck — the window the morning arrives
+   through, setting a bag down at the end of a day — is wrong in front of a
+   client buying an office, and faintly absurd in front of one buying a shop.
+   Every kind of project has its own first question, and the deck should be
+   answering that one.
+
+   So each type carries its own cover line, headline and note. Choosing a type
+   writes them in. What somebody has written themselves is never overwritten:
+   a field changes only if it is empty or still holds another type's words,
+   and the tool says how many it left alone. */
+var TYPE_VOICE = {
+  'Residence': {
+    eyebrow: 'CONCEPT DECK \u00b7 PRIVATE RESIDENCE',
+    headline: 'A house you can read before you can walk it.',
+    lead: 'A drawing is a language. Nobody should have to learn it to see their own home.',
+    quote: 'Touch a number, and the room answers for itself.',
+    body:
+      'A plan records where the walls fall. It does not say which window the morning arrives ' +
+      'through, or what it will feel like to set a bag down at the end of a long day.\n\n' +
+      'So every space on this plan carries a number. Touch it and the room opens \u2014 how large it ' +
+      'is, where it sits, what it holds, and why it sits there rather than anywhere else.',
+    /* the longer cut, as the built IREO deck carries it */
+    was: [
+      'A plan records where the walls fall. It does not say which window the morning arrives ' +
+      'through, or what it will feel like to set a bag down at the end of a long day. Those are ' +
+      'the things a house is actually chosen for, and they are the things a drawing keeps to ' +
+      'itself.\n\n' +
+      'So every space on this plan carries a number. Touch it and the room opens \u2014 how large it ' +
+      'is, where it sits, what it holds, and why it sits there rather than anywhere else. The ' +
+      'reasoning is written beside the room it belongs to, not held back for a meeting.\n\n' +
+      'Nothing here needs anyone standing beside you to explain it. That is the whole intention.'
+    ]
+  },
+  'Corporate Office': {
+    eyebrow: 'CONCEPT DECK \u00b7 CORPORATE OFFICE',
+    headline: 'An office you can read before you work in it.',
+    lead: 'A floor plate is a drawing. It does not say what a working day inside it is like.',
+    quote: 'Touch a number, and the room answers for itself.',
+    body:
+      'A layout shows desks and doors. It does not say how far a workstation is from the nearest ' +
+      'meeting room, whether a call has to compete with the floor, or where people stand when ' +
+      'they want five minutes away from a screen.\n\n' +
+      'So every space on this plan carries a number. Touch it and the room opens \u2014 how large it ' +
+      'is, how many it seats, what it is for, and why it sits where it does rather than ' +
+      'anywhere else.'
+  },
+  'Club House': {
+    eyebrow: 'CONCEPT DECK \u00b7 CLUB HOUSE',
+    headline: 'A club you can read before you can walk it.',
+    lead: 'A plan records where the walls fall. It does not say what an evening here is like.',
+    quote: 'Touch a number, and the room answers for itself.',
+    body:
+      'A club house is used four ways in one day \u2014 a morning on the treadmill, an afternoon ' +
+      'nobody is there, a birthday at six, a wedding on Saturday. A drawing shows one of those ' +
+      'and keeps the other three to itself.\n\n' +
+      'So every space on this plan carries a number. Touch it and the room opens \u2014 how large it ' +
+      'is, what it holds, how many it takes, and why it sits beside what it sits beside.'
+  },
+  'Commercial Space': {
+    eyebrow: 'CONCEPT DECK \u00b7 COMMERCIAL SPACE',
+    headline: 'A shop you can read before you can stand in it.',
+    lead: 'A layout shows the counters. It does not show the walk a customer takes.',
+    quote: 'Touch a number, and the room answers for itself.',
+    body:
+      'What is seen in the first three steps, what is reached for without asking, where somebody ' +
+      'waits while somebody else decides \u2014 none of that is in a drawing, and all of it is what ' +
+      'a shop earns on.\n\n' +
+      'So every space on this plan carries a number. Touch it and the room opens \u2014 how large it ' +
+      'is, what it carries, and why it sits where it does rather than anywhere else.'
+  }
+};
+
+/* Is this field still a type's own words, or has somebody written over it? */
+function isTypeDefault(field, value) {
+  var v = String(value || '').trim();
+  if (!v) return true;
+  return Object.keys(TYPE_VOICE).some(function (t) {
+    if (String(TYPE_VOICE[t][field] || '').trim() === v) return true;
+    /* an earlier cut of the same house text still counts as ours */
+    return (TYPE_VOICE[t].was || []).some(function (old) {
+      return String(old || '').trim() === v;
+    });
+  });
+}
+
+function applyTypeVoice(type) {
+  var voice = TYPE_VOICE[type];
+  if (!voice) return 0;
+  var kept = 0;
+  [['eyebrow', S.project], ['headline', S.project]].forEach(function (pair) {
+    var field = pair[0], holder = pair[1];
+    if (isTypeDefault(field, holder[field])) holder[field] = voice[field];
+    else kept += 1;
+  });
+  ['lead', 'quote', 'body'].forEach(function (field) {
+    if (isTypeDefault(field, S.narrative[field])) S.narrative[field] = voice[field];
+    else kept += 1;
+  });
+  /* an execution deck says Execution on its cover; the type just rewrote the
+     line that carries it, so the stage has to be put back on top */
+  applyStage(S.project.stage === 'execution' ? 'execution' : 'concept');
+  return kept;
+}
+
 var CODE_RE = /^ED\/\d{2}-\d{2}\/\d{3}$/;
 
 /* ── state ─────────────────────────────────────────────────────────────── */
@@ -4250,7 +4356,16 @@ function renderTypes() {
     return '<button aria-selected="' + (t === S.type) + '" data-type="' + esc(t) + '">' + esc(t) + '</button>';
   }).join('');
   $('#segType').querySelectorAll('[data-type]').forEach(function (b) {
-    b.addEventListener('click', function () { S.type = b.getAttribute('data-type'); renderTypes(); renderSpaces(); paint(); });
+    b.addEventListener('click', function () {
+      var was = S.type;
+      S.type = b.getAttribute('data-type');
+      if (S.type === was) return;
+      var kept = applyTypeVoice(S.type);
+      renderTypes(); renderCover(); renderNarrative(); renderSpaces(); paint();
+      toast(kept
+        ? S.type + ' \u2014 the writing changed, and ' + kept + ' line(s) you had written were left alone.'
+        : S.type + ' \u2014 the cover and the note now read for ' + S.type.toLowerCase() + '.');
+    });
   });
 }
 
