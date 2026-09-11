@@ -4314,7 +4314,8 @@ function viewerOnly(deck) {
      can work out for themselves. It goes where they are already looking. */
   var line = document.getElementById('editedLine');
   if (line && deck) {
-    var who = deck.updatedBy || (deck.activity && deck.activity[0] && deck.activity[0].by);
+    var who = deck.updatedBy || (deck.activity && deck.activity[0] && deck.activity[0].by) ||
+      'the import script';
     if (who) {
       line.hidden = false;
       line.innerHTML = 'Last edited by <b>' + esc(who) + '</b> · ' + esc(whenWords(deck.updatedAt));
@@ -4376,10 +4377,10 @@ function portalLoad() {
       PORTAL.canEdit = d.canEdit;
       S = d.state && d.state.spaces ? d.state : S;
       S.activity = (d.activity || []).slice().reverse().map(function (a) {
-        return { by: a.by || 'somebody', at: a.at, what: a.what, did: a.did || [] };
+        return { by: a.by || 'the import script', at: a.at, what: a.what, did: a.did || [] };
       });
       var last = (d.activity || [])[0];
-      if (last) S.lastEdit = { by: last.by || 'somebody', at: last.at };
+      if (last) S.lastEdit = { by: last.by || 'the import script', at: last.at };
       boot();
       portalSay(d.canEdit ? 'Open · version ' + d.version : 'Reading · version ' + d.version);
       if (!d.canEdit) viewerOnly(d);
