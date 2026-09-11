@@ -4426,6 +4426,16 @@ function portalSave() {
       } else {
         PORTAL.version = res.data.version;
       }
+      /* Written on the server, so it belongs in the log on the page. Reloading
+         to see your own edit is the kind of small lie a person stops trusting. */
+      if (res.data.by) {
+        S.activity = S.activity || [];
+        S.activity.push({ by: res.data.by, at: res.data.updatedAt || new Date().toISOString(),
+          what: 'saved', did: did });
+        S.lastEdit = { by: res.data.by, at: res.data.updatedAt || new Date().toISOString() };
+        paintEdited();
+        renderActivity();
+      }
       portalSay('Saved · version ' + PORTAL.version);
       toast('Saved to the portal.');
     })

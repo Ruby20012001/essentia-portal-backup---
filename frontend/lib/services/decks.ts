@@ -274,7 +274,7 @@ export async function saveDeck(
     did?: string[];
     what?: string;
   },
-): Promise<{ version: number; updatedAt: string }> {
+): Promise<{ version: number; updatedAt: string; by: string }> {
   await requireEditor(user);
 
   const result = await withUserContext(user, async (q) => {
@@ -314,7 +314,13 @@ export async function saveDeck(
   });
 
   await noteActivity(user, id, input.what ?? "saved", input.did ?? []);
-  return { version: result.version, updatedAt: result.updated_at.toISOString() };
+  /* the name comes back with the save: the page has just written a line in the
+     trail and should be able to show it without being reloaded */
+  return {
+    version: result.version,
+    updatedAt: result.updated_at.toISOString(),
+    by: user.name,
+  };
 }
 
 /** The only way a row reaches the activity table. */
