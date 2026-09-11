@@ -4299,6 +4299,38 @@ var PORTAL = (function () {
 
 function portalSay(msg) { backupSay(msg); }
 
+/* The tool is its own page and does not get the portal's header, so the two
+   things that header carries have to be here: who you are, and the way out.
+   Somebody who cannot sign out on the screen they are working in signs out by
+   closing the laptop, which is not the same thing on a shared machine. */
+function portalWho() {
+  fetch('/api/me', { credentials: 'same-origin' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      if (!data || !data.user) return;
+      var row = document.querySelector('.head-actions');
+      if (!row || document.getElementById('bSignOut')) return;
+      var name = document.createElement('span');
+      name.className = 'head-backup';
+      name.id = 'whoAmI';
+      name.textContent = data.user.name;
+      var out = document.createElement('button');
+      out.id = 'bSignOut';
+      out.type = 'button';
+      out.className = 'btn';
+      out.textContent = 'Sign out';
+      out.addEventListener('click', function () {
+        out.disabled = true; out.textContent = 'Signing out…';
+        fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+          .then(function () { location.href = '/deck-login'; })
+          .catch(function () { out.disabled = false; out.textContent = 'Sign out'; });
+      });
+      row.appendChild(name);
+      row.appendChild(out);
+    })
+    .catch(function () { /* signed out, or the portal is not there at all */ });
+}
+
 /* Reading is open to anybody with the link; changing is the design team's.
    So the buttons that would change the deck go, and the ones that hand you a
    copy stay — print it, save the pictures, take the file. Nothing here is the
@@ -4451,6 +4483,7 @@ backupRestore();
     var label = el.closest('.head-who');
     if (label) label.hidden = true;
     portalLoad();
+    portalWho();
     return;
   }
   try { el.value = localStorage.getItem(WHO_KEY) || ''; } catch (e) { /* private window */ }
