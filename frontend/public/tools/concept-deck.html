@@ -518,6 +518,21 @@ button,input,textarea,select{font:inherit;color:inherit}
 .f{display:flex;flex-direction:column;gap:6px;min-width:0}
 .f--wide{grid-column:1 / -1}
 .f label{font-size:11px;color:var(--secondary);letter-spacing:.02em}
+/* a locked deck shows nothing that would change it */
+body.deck-locked [data-add],
+body.deck-locked [data-add-space],
+body.deck-locked [data-add-space-doc],
+body.deck-locked [data-add-plate],
+body.deck-locked [data-del-plate],
+body.deck-locked [data-del-space],
+body.deck-locked [data-thumb-up],
+body.deck-locked [data-mark],
+body.deck-locked [data-mark-hint],
+body.deck-locked .deck-edit,
+body.deck-locked .deck-thumb--add,
+body.deck-locked .deck-card-add,
+body.deck-locked .deck-plate-add,
+body.deck-locked .deck-dwg-add{display:none !important}
 body.is-reading .panes{grid-template-columns:1fr}
 body.is-reading .pane-view{max-width:1100px;margin:0 auto;position:static;max-height:none}
 body.is-reading .head-edited{margin:0 0 2px}
@@ -2329,6 +2344,11 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
     /* a document, full screen, to be read rather than admired */
     var ZOOM = 2.4;
     var marking = false;
+    /* A reader was still being offered every + in the deck — add a render,
+       add a drawing, mark a material. Nothing they pressed could reach the
+       server, but a control that cannot work should not be there at all: it
+       reads as permission, and the first thing anybody does with it is lose
+       ten minutes. Locked, the deck opens, zooms, prints and saves. */
     /* Pressing Enter puts the name on the picture and into the state this page
        is holding — which is the open page, not the file on disk. In the tool
        the editor picks it up and keeps it; in a deck sent on its own there is
@@ -2744,6 +2764,10 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
         if (firstDoc) openBig(firstDoc);
         return;
       }
+      /* one gate, before any of the controls that change something */
+      if (locked && e.target.closest('[data-add],[data-add-space],[data-add-space-doc],' +
+          '[data-add-plate],[data-del-plate],[data-mark],[data-spot-x],[data-save-self],' +
+          '[data-edit-toggle],[data-thumb-up],[data-del-space]')) { return; }
       var addSpDoc = e.target.closest('[data-add-space-doc]');
       if (addSpDoc) { addSpaceDoc(addSpDoc.getAttribute('data-add-space-doc'), addSpDoc); return; }
       var addSp = e.target.closest('[data-add-space]');
@@ -2913,7 +2937,16 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
     return { open: open, close: close };
   }
 
-  root.EssentiaDeck = { mount: mount, live: live, esc: esc, html: deckHtml,
+  /* Set by the portal when the account may read but not change. It is not the
+     guarantee — every write goes through the API, which asks the design team's
+     list on every call. This is so the page stops offering what it cannot do. */
+  var locked = false;
+  function lock() {
+    locked = true;
+    document.body.classList.add('deck-locked');
+  }
+
+  root.EssentiaDeck = { mount: mount, live: live, esc: esc, html: deckHtml, lock: lock,
     card: spaceCard, slug: slugify, save: saveDataUri,
     number: numberRenders, revName: revName,
     pdfIn: pdfIn, unpdf: unpdf };
@@ -4325,6 +4358,7 @@ function viewerOnly(deck) {
   /* the editing column is not a locked room to be rattled — it is put away,
      and the deck itself takes the page */
   document.body.classList.add('is-reading');
+  if (window.EssentiaDeck && window.EssentiaDeck.lock) window.EssentiaDeck.lock();
 }
 
 function portalLoad() {
