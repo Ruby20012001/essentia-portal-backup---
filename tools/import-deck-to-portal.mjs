@@ -116,11 +116,17 @@ try {
     owner = found.rows[0].id;
   }
 
+  /* A deck with no project code yet is still the same deck. Matching on the
+     name as well is what stops IREO arriving four times over — the run that
+     found nothing inserted, and the next one inserted again. */
   const existing = code
     ? await client.query(
         'SELECT id, version FROM ee.concept_decks WHERE project_code = $1 AND is_archived = FALSE',
         [code])
-    : { rows: [] };
+    : await client.query(
+        'SELECT id, version FROM ee.concept_decks WHERE lower(name) = lower($1)' +
+        ' AND is_archived = FALSE ORDER BY created_at LIMIT 1',
+        [name]);
 
   let id, version, what;
   if (existing.rows.length) {
@@ -211,11 +217,11 @@ ${what} · version ${version}`);
     'UPDATE ee.concept_decks SET state = $2::jsonb WHERE id = $1',
     [id, JSON.stringify(state)]);
 
+    const kb = Math.round(JSON.stringify(state).length / 1024);
+    console.log(`\n${what} · version ${version}`);
+    console.log(`pictures kept as rows: ${pictures} · the deck itself is now ${kb} KB`);
+    console.log(`open it at  /decks   or   /tools/concept-deck.html?deck=${id}`);
   }
-  const kb = Math.round(JSON.stringify(state).length / 1024);
-  console.log(`\n${what} · version ${version}`);
-  console.log(`pictures kept as rows: ${pictures} · the deck itself is now ${kb} KB`);
-  console.log(`open it at  /decks   or   /tools/concept-deck.html?deck=${id}`);
 } finally {
   await client.end();
 }
