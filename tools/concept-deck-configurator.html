@@ -536,6 +536,11 @@ body.deck-locked .deck-dwg-add{display:none !important}
 body.is-reading .panes{grid-template-columns:1fr}
 body.is-reading .pane-view{max-width:1100px;margin:0 auto;position:static;max-height:none}
 body.is-reading .head-edited{margin:0 0 2px}
+/* In the portal the name comes from the account that signed in. A box asking
+   for it — with everybody's name on a list underneath — invites the one thing
+   the login exists to prevent: signing a save as somebody else. The attribute
+   alone will not do it; .head-who sets display, and display beats [hidden]. */
+body.is-portal .head-who{display:none !important}
 /* everything that exists to change a deck, gone — the deck is the page */
 body.is-reading .pane-edit,
 body.is-reading .head-who,
@@ -4595,8 +4600,12 @@ backupRestore();
 (function () {
   var el = $('#who');
   if (PORTAL) {
+    document.body.classList.add('is-portal');
     var label = el.closest('.head-who');
     if (label) label.hidden = true;
+    /* and the list of names goes with it, so nothing can reach it */
+    var list = $('#whoList');
+    if (list && list.parentNode) list.parentNode.removeChild(list);
     portalLoad();
     portalWho();
     return;
