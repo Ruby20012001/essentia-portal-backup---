@@ -520,6 +520,11 @@ button,input,textarea,select{font:inherit;color:inherit}
 .f label{font-size:11px;color:var(--secondary);letter-spacing:.02em}
 body.is-reading .panes{grid-template-columns:1fr}
 body.is-reading .pane-view{max-width:1100px;margin:0 auto}
+body.is-reading .head-edited{margin:0 0 2px}
+/* the room, not the sheet: the deck stays white because it is a document */
+body.is-dark{background:#0d0d0d}
+body.is-dark .topbar,body.is-dark .head{background:#0d0d0d}
+body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
 .head-backup{align-self:center;font-size:11px;color:var(--secondary);letter-spacing:.02em;max-width:210px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .f input[type=text],.f input[type=number],.f textarea,.f select{
@@ -4256,11 +4261,22 @@ function portalSay(msg) { backupSay(msg); }
    copy stay — print it, save the pictures, take the file. Nothing here is the
    guarantee: every write asks the server, which asks the list. This is just
    not offering a control that would fail when pressed. */
-function viewerOnly() {
+function viewerOnly(deck) {
   ['bSave', 'bBackup'].forEach(function (id) {
     var b = document.getElementById(id);
     if (b) b.remove();
   });
+
+  /* Who had it last is the first thing a reader wants and the last thing they
+     can work out for themselves. It goes where they are already looking. */
+  var line = document.getElementById('editedLine');
+  if (line && deck) {
+    var who = deck.updatedBy || (deck.activity && deck.activity[0] && deck.activity[0].by);
+    if (who) {
+      line.hidden = false;
+      line.innerHTML = 'Last edited by <b>' + esc(who) + '</b> · ' + esc(whenWords(deck.updatedAt));
+    }
+  }
   var label = document.querySelector('.head-who');
   if (label) label.hidden = true;
   var row = document.querySelector('.head-actions');
@@ -4272,6 +4288,31 @@ function viewerOnly() {
     a.textContent = 'Sign in to edit';
     row.appendChild(a);
   }
+  /* A deck is a white document and stays one — it is printed, and a client
+     reads it as paper. What the lamp changes is the room around it: the page
+     behind the sheet, so a deck read at night is not a torch in the face. */
+  var row = document.querySelector('.head-actions');
+  if (row && !document.getElementById('bLamp')) {
+    var lamp = document.createElement('button');
+    lamp.id = 'bLamp';
+    lamp.className = 'btn';
+    lamp.type = 'button';
+    var dark = false;
+    try { dark = localStorage.getItem('essentia.deck.dark') === '1'; } catch (e) { /* private window */ }
+    var paint = function () {
+      document.body.classList.toggle('is-dark', dark);
+      lamp.textContent = dark ? 'Light' : 'Dark';
+      lamp.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    };
+    lamp.addEventListener('click', function () {
+      dark = !dark;
+      try { localStorage.setItem('essentia.deck.dark', dark ? '1' : '0'); } catch (e) { /* nothing to do */ }
+      paint();
+    });
+    row.insertBefore(lamp, row.firstChild);
+    paint();
+  }
+
   /* the editing column is not a locked room to be rattled — it is put away,
      and the deck itself takes the page */
   var pane = document.querySelector('.pane-edit') || document.querySelector('#pane').previousElementSibling;
@@ -4300,7 +4341,7 @@ function portalLoad() {
       if (last) S.lastEdit = { by: last.by || 'somebody', at: last.at };
       boot();
       portalSay(d.canEdit ? 'Open · version ' + d.version : 'Reading · version ' + d.version);
-      if (!d.canEdit) viewerOnly();
+      if (!d.canEdit) viewerOnly(d);
     })
     .catch(function (e) { portalSay(e.message || 'That deck could not be opened.'); });
 }
