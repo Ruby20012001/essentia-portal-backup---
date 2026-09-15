@@ -85,7 +85,7 @@ export default async function PublicDecksPage() {
             </Link>
           ) : (
             <Link
-              href="/deck-login"
+              href="/deck-login?next=/deck"
               className="border border-amber px-3 py-2 text-xs uppercase tracking-[0.14em] text-amber hover:bg-hover"
             >
               Sign in to edit
@@ -111,7 +111,7 @@ export default async function PublicDecksPage() {
                   <tr key={deck.id} className="border-t border-line hover:bg-hover">
                     <td className="px-4 py-3">
                       <Link
-                        href={`/tools/concept-deck.html?deck=${deck.id}`}
+                        href={`/deck/${deck.id}`}
                         className="text-primary underline-offset-4 hover:underline"
                       >
                         {deck.name}

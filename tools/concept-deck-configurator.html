@@ -4569,12 +4569,30 @@ setInterval(function () { if (backupDir && backupDue) backupNow(true); }, 15 * 6
 
    Everything else — the marks, the numbering, the export, the gates — is the
    same code doing the same thing. */
+/* ONE LINK FOR A DECK — /deck/<id>.
+
+   Monica, 15 Sep 2026: the reading link, the sign-in link and the editing link
+   should be one link. Anybody opens it and reads; the design team signs in
+   from it and edits in it; signing out lands back on it. The portal serves
+   this file at /deck/<id> by rewrite, so the id is read off the path as well
+   as off the older ?deck= form — and the older form is turned into the new
+   one in the address bar, so whatever gets copied from there is the one link. */
 var PORTAL = (function () {
-  var deck = /[?&]deck=([0-9a-fA-F-]{36})/.exec(location.search);
+  var deck = /\/deck\/([0-9a-fA-F-]{36})\/?$/.exec(location.pathname) ||
+    /[?&]deck=([0-9a-fA-F-]{36})/.exec(location.search);
   var fresh = /[?&]new=1/.test(location.search);
   if (!deck && !fresh) return null;
+  if (deck && !/^\/deck\//.test(location.pathname) && window.history && history.replaceState) {
+    try { history.replaceState(null, '', '/deck/' + deck[1] + location.hash); }
+    catch (e) { /* a copy opened from disk has no such address to move to */ }
+  }
   return { id: deck ? deck[1] : null, version: 0, who: '', busy: false };
 }());
+
+/* where this deck lives — the address every door on this page returns to */
+function deckLink() {
+  return PORTAL && PORTAL.id ? '/deck/' + PORTAL.id : '/deck';
+}
 
 function portalSay(msg) { backupSay(msg); }
 
@@ -4582,9 +4600,18 @@ function portalSay(msg) { backupSay(msg); }
    things that header carries have to be here: who you are, and the way out.
    Somebody who cannot sign out on the screen they are working in signs out by
    closing the laptop, which is not the same thing on a shared machine. */
-function portalWho() {
-  fetch('/api/me', { credentials: 'same-origin' })
+/* who is signed in, asked once — the deck and its buttons both depend on it */
+function portalMe() {
+  return fetch('/api/me', { credentials: 'same-origin' })
     .then(function (r) { return r.ok ? r.json() : null; })
+    .catch(function () { return null; });
+}
+
+/* The name and the way out are the editor's. Somebody reading has nothing to
+   sign out of here, and somebody signed in to the tracker but not on the
+   design team is reading too — they sign out where they signed in. */
+function portalWho(me) {
+  Promise.resolve(me)
     .then(function (data) {
       if (!data || !data.user) return;
       var row = document.querySelector('.head-actions');
@@ -4601,7 +4628,7 @@ function portalWho() {
       out.addEventListener('click', function () {
         out.disabled = true; out.textContent = 'Signing out…';
         fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
-          .then(function () { location.href = '/deck-login'; })
+          .then(function () { location.href = deckLink(); })
           .catch(function () { out.disabled = false; out.textContent = 'Sign out'; });
       });
       row.appendChild(name);
@@ -4615,7 +4642,7 @@ function portalWho() {
    copy stay — print it, save the pictures, take the file. Nothing here is the
    guarantee: every write asks the server, which asks the list. This is just
    not offering a control that would fail when pressed. */
-function viewerOnly(deck) {
+function viewerOnly(deck, me) {
   ['bSave', 'bBackup'].forEach(function (id) {
     var b = document.getElementById(id);
     if (b) b.remove();
@@ -4634,11 +4661,12 @@ function viewerOnly(deck) {
   }
   /* the class does the hiding; [hidden] loses to a display rule */
   var row = document.querySelector('.head-actions');
-  if (row && !document.getElementById('bSignIn')) {
+  if (row && !(me && me.user) && !document.getElementById('bSignIn')) {
     var a = document.createElement('a');
     a.id = 'bSignIn';
     a.className = 'btn btn--solid';
-    a.href = '/deck-login';
+    /* and back to this very deck afterwards, not to a list of decks */
+    a.href = '/deck-login?next=' + encodeURIComponent(deckLink());
     a.textContent = 'Sign in to edit';
     row.appendChild(a);
   }
@@ -4676,6 +4704,7 @@ function viewerOnly(deck) {
 function portalLoad() {
   if (!PORTAL || !PORTAL.id) return;
   portalSay('Opening…');
+  var me = portalMe();
   fetch('/api/decks/' + PORTAL.id, { credentials: 'same-origin' })
     .then(function (r) {
       if (r.status === 401 || r.status === 403) throw new Error('Sign in to the portal first.');
@@ -4694,7 +4723,10 @@ function portalLoad() {
       if (last) S.lastEdit = { by: last.by || 'the import script', at: last.at };
       boot();
       portalSay(d.canEdit ? 'Open · version ' + d.version : 'Reading · version ' + d.version);
-      if (!d.canEdit) viewerOnly(d);
+      return me.then(function (who) {
+        if (d.canEdit) portalWho(who);
+        else viewerOnly(d, who);
+      });
     })
     .catch(function (e) { portalSay(e.message || 'That deck could not be opened.'); });
 }
@@ -4766,7 +4798,8 @@ backupRestore();
     var list = $('#whoList');
     if (list && list.parentNode) list.parentNode.removeChild(list);
     portalLoad();
-    portalWho();
+    /* a new deck has nothing to load, so its editor is named here */
+    if (!PORTAL.id) portalWho(portalMe());
     return;
   }
   try { el.value = localStorage.getItem(WHO_KEY) || ''; } catch (e) { /* private window */ }

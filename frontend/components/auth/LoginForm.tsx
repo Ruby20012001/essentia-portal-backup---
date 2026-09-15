@@ -45,6 +45,12 @@ export function LoginForm({
             next && next.startsWith("/") && isRouteAllowed(next)
               ? next
               : homeHref();
+          // A deck is one static file served at its own link, not a page of
+          // this app, so the client router has nothing to navigate to there.
+          if (/^\/(deck\/[0-9a-fA-F-]{36}$|tools\/)/.test(target)) {
+            window.location.assign(target);
+            return;
+          }
           router.push(target);
           router.refresh();
         } finally {

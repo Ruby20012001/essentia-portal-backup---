@@ -74,7 +74,7 @@ export default async function DecksPage() {
                 <tr key={deck.id} className="border-t border-line hover:bg-hover">
                   <td className="px-4 py-3">
                     <Link
-                      href={`/tools/concept-deck.html?deck=${deck.id}`}
+                      href={`/deck/${deck.id}`}
                       className="text-primary underline-offset-4 hover:underline"
                     >
                       {deck.name}
