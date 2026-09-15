@@ -542,14 +542,14 @@ describe("the 24-hour acknowledgement (countdown rev A)", () => {
   });
 });
 
-describe("the chain as marked up — countdown rev A (db/045)", () => {
+describe("the chain as marked up — countdown rev A (db/045 + db/046)", () => {
   const REV_A: TrackerStage[] = [
     { id: "a1", position: 1, stage: "Archive pass", waitingOn: "PD team", doneBy: 14 },
     { id: "a2", position: 2, stage: "SLD · Design", waitingOn: "Design team", doneBy: 10 },
     { id: "a3", position: 3, stage: "SLD · Architecture", waitingOn: "Architecture team", doneBy: 10 },
-    { id: "a4", position: 4, stage: "Finishes", waitingOn: "Roopdeep + CRM", doneBy: 9 },
-    { id: "a5", position: 5, stage: "Final SLD", waitingOn: "Design team", doneBy: 9 },
-    { id: "a6", position: 6, stage: "FG code", waitingOn: "Shruti + CRM", doneBy: 3 },
+    { id: "a4", position: 4, stage: "Finishes", waitingOn: "Roopdeep + CRM", doneBy: 13 },
+    { id: "a5", position: 5, stage: "FG code", waitingOn: "Shruti + CRM", doneBy: 13 },
+    { id: "a6", position: 6, stage: "Final SLD", waitingOn: "Design team", doneBy: 9 },
     { id: "a7", position: 7, stage: "SLD approvals", waitingOn: "Jyoti + Yogi + Vishakha + TL", doneBy: 6 },
     { id: "a8", position: 8, stage: "Client sign-off", waitingOn: "Client", doneBy: 2 },
     { id: "a9", position: 9, stage: "PIO", waitingOn: "WIO raised by", doneBy: 0 },
@@ -562,14 +562,16 @@ describe("the chain as marked up — countdown rev A (db/045)", () => {
     expect(REV_A.map((s) => s.stage)).not.toContain("BOM");
   });
 
-  it("Finishes hands over to the Final SLD, due at D-9", () => {
-    expect(at("a4").upcomingStage).toBe("Final SLD  ·  Design team");
-    // Issued 2026-08-20 → PIO due 2026-09-04 → Final SLD clears by 2026-08-26.
-    expect(at("a5", { wioIssued: "2026-08-20" }).thisStageDue).toBe("2026-08-26");
+  it("Finishes and FG code are both due at D-13, four days before the Final SLD", () => {
+    // Issued 2026-08-20 → PIO due 2026-09-04 → D-13 is 2026-08-22.
+    expect(at("a4", { wioIssued: "2026-08-20" }).thisStageDue).toBe("2026-08-22");
+    expect(at("a5", { wioIssued: "2026-08-20" }).thisStageDue).toBe("2026-08-22");
   });
 
-  it("FG code keeps its place between the Final SLD and the approvals", () => {
-    expect(at("a5").upcomingStage).toBe("FG code  ·  Shruti + CRM");
+  it("FG code comes ahead of the Final SLD, due at D-9", () => {
+    expect(at("a4").upcomingStage).toBe("FG code  ·  Shruti + CRM");
+    expect(at("a5").upcomingStage).toBe("Final SLD  ·  Design team");
+    expect(at("a6", { wioIssued: "2026-08-20" }).thisStageDue).toBe("2026-08-26");
     expect(at("a6").upcomingStage).toBe("SLD approvals  ·  Jyoti + Yogi + Vishakha + TL");
   });
 

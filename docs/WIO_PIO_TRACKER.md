@@ -90,9 +90,9 @@ The chain follows *WIO to PIO — the countdown* (rev A) as Monica marked it up:
 | 1 | Archive pass | PD team | D-14 |
 | 2 | SLD · Design | Design team | D-10 |
 | 3 | SLD · Architecture | Architecture team | D-10 |
-| 4 | Finishes | Roopdeep + CRM | D-9 |
-| 5 | **Final SLD** | Design team | **D-9** |
-| 6 | FG code | Shruti + CRM | D-3 |
+| 4 | Finishes | Roopdeep + CRM | **D-13** |
+| 5 | FG code | Shruti + CRM | **D-13** |
+| 6 | **Final SLD** | Design team | **D-9** |
 | 7 | **SLD approvals** | Jyoti + Yogi + Vishakha + TL | **D-6** |
 | 8 | Client sign-off | Client | D-2 |
 | 9 | PIO | WIO raised by | D-0 |

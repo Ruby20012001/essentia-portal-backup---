@@ -73,13 +73,13 @@ if (!failed) {
       asRestrictedRole: true,
     },
     {
-      name: "tracker chain is countdown rev A (db/045): nine stages, in the marked-up order",
+      name: "tracker chain is countdown rev A (db/045 + db/046): nine stages, as the picture has them",
       sql: `SELECT string_agg(stage || ':' || done_by, ', ' ORDER BY position) AS v
             FROM ee.tracker_stages`,
       ok: (v) =>
         v ===
-        "Archive pass:14, SLD · Design:10, SLD · Architecture:10, Finishes:9, " +
-          "Final SLD:9, FG code:3, SLD approvals:6, Client sign-off:2, PIO:0",
+        "Archive pass:14, SLD · Design:10, SLD · Architecture:10, Finishes:13, " +
+          "FG code:13, Final SLD:9, SLD approvals:6, Client sign-off:2, PIO:0",
     },
     {
       name: "tracker: no WIO is left pointing at GFC or BOM, and the BOM row went to PIO",
@@ -91,14 +91,16 @@ if (!failed) {
       ok: (v) => v === "0/PIO",
     },
     {
-      name: "tracker: re-running db/045 changes nothing",
-      setupSql: readFileSync(new URL("./045_tracker_countdown_rev_a.sql", import.meta.url), "utf8"),
-      sql: `SELECT string_agg(stage || ':' || position, ',' ORDER BY position) AS v
+      // db/046 only — db/045's step 7 sets the rev-A positions and is not to be
+      // re-run once db/046 has moved FG code ahead of the Final SLD.
+      name: "tracker: re-running db/046 changes nothing",
+      setupSql: readFileSync(new URL("./046_tracker_finishes_fg_code_d13.sql", import.meta.url), "utf8"),
+      sql: `SELECT string_agg(stage || ':' || position || ':' || done_by, ',' ORDER BY position) AS v
             FROM ee.tracker_stages`,
       ok: (v) =>
         v ===
-        "Archive pass:1,SLD · Design:2,SLD · Architecture:3,Finishes:4,Final SLD:5," +
-          "FG code:6,SLD approvals:7,Client sign-off:8,PIO:9",
+        "Archive pass:1:14,SLD · Design:2:10,SLD · Architecture:3:10,Finishes:4:13," +
+          "FG code:5:13,Final SLD:6:9,SLD approvals:7:6,Client sign-off:8:2,PIO:9:0",
     },
     {
       name: "factory master: 9 stations = 7 active + 2 reserved",
