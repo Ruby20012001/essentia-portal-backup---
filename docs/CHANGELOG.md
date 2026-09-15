@@ -8,6 +8,28 @@
 
 ---
 
+## 2026-09-15 — S4b · ALARM 2 by email, to Hardesh sir
+
+The markup at D-10: *"Escalation to Hardesh sir as well."* Monica: the mail must
+go to Hardesh sir too — "do it right now".
+
+### db/049 · app/api/wio-tracker/alarms/run · frontend/vercel.json
+- **A daily run** (Vercel Cron, 10:00 IST) emails **hardesh@essentia.in** one
+  message naming every WIO newly escalated under ALARM 2 — project, team, who
+  raised it, the D-10 date, where it sits now, and a link to the board.
+- **Once per WIO.** A partial unique index allows one `sent` row per WIO per
+  alarm, so the CEO is never mailed twice about the same WIO. A refused attempt
+  is recorded `failed` with the mail service's reason and retried next day.
+- **The board says whether it reached him** — under the ALARM 2 banner on Today:
+  sent, not switched on, or refused and why (without the raw error text).
+- Recipient and on/off are config rows (`tracker.alarm2.recipient`,
+  `tracker.alarm2.email_enabled`).
+
+**Will not deliver yet.** essentia.in's DMARC policy blocks Brevo until IT adds
+its DNS records (commit 75f617a). Until then every attempt is recorded as failed,
+and the board says so. The run also needs **`CRON_SECRET`** set in Vercel; without
+it the endpoint refuses to start.
+
 ## 2026-09-15 — S4b · the last three, as the picture has them
 
 Checked against the marked-up countdown once more; Monica: "then make these changes".

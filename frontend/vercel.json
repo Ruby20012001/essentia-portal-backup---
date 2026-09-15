@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/wio-tracker/alarms/run",
+      "schedule": "30 4 * * *"
+    }
+  ]
+}

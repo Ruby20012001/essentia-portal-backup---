@@ -94,6 +94,18 @@ export function TodayView({
             </span>
             . Record the appointment on the WIOs tab once it is held.
           </p>
+          {/* Whether the escalation actually reached him, said plainly. A
+              banner implying he was told when the mail was refused would be
+              the one lie this board must not tell. */}
+          <p className="mt-1 font-body text-xs font-light text-muted">
+            {!board.alarmEmail
+              ? `Email to ${ALARM2_ESCALATES_TO}: the daily email check has not run yet.`
+              : board.alarmEmail.status === "sent"
+                ? `Emailed to ${ALARM2_ESCALATES_TO} — last sent ${board.alarmEmail.at}.`
+                : board.alarmEmail.status === "not_configured"
+                  ? `Email to ${ALARM2_ESCALATES_TO} is not switched on for this deployment.`
+                  : `Email to ${ALARM2_ESCALATES_TO} could not be delivered (${board.alarmEmail.at}) — the mail service refused it. essentia.in has not yet authorised it; this needs IT.`}
+          </p>
         </div>
       ) : null}
 

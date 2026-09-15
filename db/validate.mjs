@@ -119,6 +119,27 @@ if (!failed) {
       ok: (v) => v === "date",
     },
     {
+      name: "tracker (db/049): ALARM 2 email goes to Hardesh sir, and is switched on",
+      sql: `SELECT (SELECT value #>> '{}' FROM portal.app_config WHERE key = 'tracker.alarm2.recipient')
+                   || ' / ' ||
+                   (SELECT value #>> '{}' FROM portal.app_config WHERE key = 'tracker.alarm2.email_enabled')
+                   || ' / ' || to_regclass('ee.tracker_alarm_emails')::text AS v`,
+      ok: (v) => v === "hardesh@essentia.in / true / ee.tracker_alarm_emails",
+    },
+    {
+      name: "tracker (db/049): a WIO can be emailed as 'sent' only once per alarm",
+      setupSql: `
+        INSERT INTO ee.tracker_alarm_emails (wio_id, alarm, recipient, board_date, status)
+        SELECT id, 'ALARM 2', 'test@example.com', DATE '2026-09-15', 'sent'
+          FROM ee.tracker_wios ORDER BY wio_number LIMIT 1`,
+      sql: `INSERT INTO ee.tracker_alarm_emails (wio_id, alarm, recipient, board_date, status)
+            SELECT id, 'ALARM 2', 'test@example.com', DATE '2026-09-16', 'sent'
+              FROM ee.tracker_wios ORDER BY wio_number LIMIT 1
+            RETURNING 'second send accepted' AS v`,
+      ok: () => false,
+      expectError: true,
+    },
+    {
       name: "factory master: 9 stations = 7 active + 2 reserved",
       sql: `SELECT (COUNT(*) FILTER (WHERE status = 'active'))::TEXT || '/' ||
                    (COUNT(*) FILTER (WHERE status = 'reserved'))::TEXT AS v

@@ -81,7 +81,40 @@ export type TrackerBoard = {
   teams: TrackerTeam[];
   /** What this viewer may actually do — the UI renders from this, not a guess. */
   can: { edit: boolean; create: boolean; delete: boolean; logDelay: boolean; export: boolean };
+  /** The last ALARM 2 email attempt (db/049), or null if none has run yet. */
+  alarmEmail: AlarmEmailStatus | null;
 };
+
+/**
+ * What the board may say about the ALARM 2 email. Deliberately not the mail
+ * service's own error text — the board is readable by anyone with the link,
+ * and that detail belongs in ee.tracker_alarm_emails and the audit log.
+ */
+export type AlarmEmailStatus = {
+  status: "sent" | "failed" | "not_configured";
+  /** The day of the last attempt. */
+  at: string;
+  /** WIOs emailed successfully so far. */
+  sentCount: number;
+};
+
+export async function getAlarmEmailStatus(): Promise<AlarmEmailStatus | null> {
+  const [row] = await query<{
+    status: AlarmEmailStatus["status"] | null;
+    at: string | null;
+    sent_count: number;
+  }>(
+    `SELECT latest.status, latest.at,
+            (SELECT COUNT(*)::int FROM ee.tracker_alarm_emails WHERE status = 'sent') AS sent_count
+       FROM (SELECT NULL) AS one
+       LEFT JOIN LATERAL (
+         SELECT status, created_at::text AS at
+           FROM ee.tracker_alarm_emails ORDER BY created_at DESC LIMIT 1
+       ) AS latest ON TRUE`,
+  );
+  if (!row?.status || !row.at) return null;
+  return { status: row.status, at: row.at.slice(0, 10), sentCount: Number(row.sent_count) };
+}
 
 export async function getSettings(): Promise<TrackerSettings> {
   const [row] = await query<{

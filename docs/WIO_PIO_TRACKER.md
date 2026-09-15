@@ -122,8 +122,20 @@ it there"*, so ALARM 2 is a record on the board, derived from one stored date �
 
 Escalated shows as *ALARM 2 · escalated to Hardesh sir* under the status, as a
 named banner on Today, and as a tile on the 1-page summary. Orange, never red;
-status and priority are unchanged. **No email is sent** — switching that on is a
-separate decision.
+status and priority are unchanged.
+
+**By email (db/049).** A daily run — Vercel Cron → `GET /api/wio-tracker/alarms/run`
+with `Authorization: Bearer $CRON_SECRET` — sends **one** email to
+`tracker.alarm2.recipient` (hardesh@essentia.in) naming every WIO newly
+escalated, and records each attempt in `ee.tracker_alarm_emails`. At most one
+`sent` row per WIO per alarm (partial unique index), so a WIO is mailed once; a
+refused attempt is kept as `failed` and retried next day. The Today banner says
+whether the email went, was not switched on, or was refused. Stop the mail with
+`UPDATE portal.app_config SET value = 'false' WHERE key = 'tracker.alarm2.email_enabled'`.
+
+> **Not delivering as of 2026-09-15:** essentia.in's DMARC policy blocks Brevo
+> until IT adds its DNS records. `CRON_SECRET` must be set in Vercel for the run
+> to start at all.
 
 ---
 
