@@ -28,9 +28,8 @@
 --      approval keeps its own stage after it. The stage keeps its id, so the
 --      rows sitting at Sign-off stay exactly where they are.
 --
---   5. FG code moves after SLD approvals. It is due at D-3 and approvals at
---      D-6; left before them, "done by" would rise down the chain and the
---      board would name FG code as the next step for a row still in approvals.
+--   5. FG code keeps its place, between the Final SLD and the approvals, at
+--      D-3. The markup does not move it, so neither does this file.
 --
 --   6. The drawing team acknowledges a WIO within 24 hours ("Drawing team must
 --      acknowledge the WIO within 24 hours"). A date column, not a status: the
@@ -126,8 +125,8 @@ UPDATE ee.tracker_stages st
     ('SLD · Architecture',  3),
     ('Finishes',            4),
     ('Final SLD',           5),
-    ('SLD approvals',       6),
-    ('FG code',             7),
+    ('FG code',             6),
+    ('SLD approvals',       7),
     ('Client sign-off',     8),
     ('PIO',                 9)
   ) AS v(stage, pos)

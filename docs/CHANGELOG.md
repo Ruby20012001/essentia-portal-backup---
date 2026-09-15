@@ -22,7 +22,7 @@ red. What that changes on the board, confirmed by her before it was applied:
 - **Final SLD** added, due **D-9** ("9 we need final SLD").
 - **Sign-off → SLD approvals**, due **D-6**, held by Jyoti + Yogi + Vishakha + TL
   (Khushpreet off; Yogi verifies instead). Same stage row, so its 8 WIOs stay put.
-- **FG code** moves after the approvals, keeping "done by" falling down the chain.
+- **FG code** keeps its place — the markup does not move it.
 - **Acknowledged** — a date per WIO. The drawing team acknowledges within 24
   hours; the board derives Awaiting / Not acknowledged / Acknowledged late and
   shows it in orange, never red. Status and priority are unchanged.
@@ -31,7 +31,7 @@ Not done, deliberately: Finishes keeps D-9 (no new day was given); escalation
 to Hardesh sir and a scope-based timeline are new features awaiting decisions.
 
 Chain: 10 → **9 stages** — Archive pass 14 · SLD Design 10 · SLD Architecture 10
-· Finishes 9 · Final SLD 9 · SLD approvals 6 · FG code 3 · Client sign-off 2 · PIO 0.
+· Finishes 9 · Final SLD 9 · FG code 3 · SLD approvals 6 · Client sign-off 2 · PIO 0.
 
 ## 2026-08-31 — S4b · the day's standup, applied
 

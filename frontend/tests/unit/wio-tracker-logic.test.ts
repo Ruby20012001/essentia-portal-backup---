@@ -549,8 +549,8 @@ describe("the chain as marked up — countdown rev A (db/045)", () => {
     { id: "a3", position: 3, stage: "SLD · Architecture", waitingOn: "Architecture team", doneBy: 10 },
     { id: "a4", position: 4, stage: "Finishes", waitingOn: "Roopdeep + CRM", doneBy: 9 },
     { id: "a5", position: 5, stage: "Final SLD", waitingOn: "Design team", doneBy: 9 },
-    { id: "a6", position: 6, stage: "SLD approvals", waitingOn: "Jyoti + Yogi + Vishakha + TL", doneBy: 6 },
-    { id: "a7", position: 7, stage: "FG code", waitingOn: "Shruti + CRM", doneBy: 3 },
+    { id: "a6", position: 6, stage: "FG code", waitingOn: "Shruti + CRM", doneBy: 3 },
+    { id: "a7", position: 7, stage: "SLD approvals", waitingOn: "Jyoti + Yogi + Vishakha + TL", doneBy: 6 },
     { id: "a8", position: 8, stage: "Client sign-off", waitingOn: "Client", doneBy: 2 },
     { id: "a9", position: 9, stage: "PIO", waitingOn: "WIO raised by", doneBy: 0 },
   ];
@@ -562,22 +562,21 @@ describe("the chain as marked up — countdown rev A (db/045)", () => {
     expect(REV_A.map((s) => s.stage)).not.toContain("BOM");
   });
 
-  it("done-by never rises down the chain, so 'next' is never already overdue first", () => {
-    for (let i = 1; i < REV_A.length; i++) {
-      expect(REV_A[i]!.doneBy).toBeLessThanOrEqual(REV_A[i - 1]!.doneBy);
-    }
-  });
-
   it("Finishes hands over to the Final SLD, due at D-9", () => {
     expect(at("a4").upcomingStage).toBe("Final SLD  ·  Design team");
     // Issued 2026-08-20 → PIO due 2026-09-04 → Final SLD clears by 2026-08-26.
     expect(at("a5", { wioIssued: "2026-08-20" }).thisStageDue).toBe("2026-08-26");
   });
 
+  it("FG code keeps its place between the Final SLD and the approvals", () => {
+    expect(at("a5").upcomingStage).toBe("FG code  ·  Shruti + CRM");
+    expect(at("a6").upcomingStage).toBe("SLD approvals  ·  Jyoti + Yogi + Vishakha + TL");
+  });
+
   it("SLD approvals are held by the named approvers and close at D-6", () => {
-    const r = at("a6", { wioIssued: "2026-08-20" });
+    const r = at("a7", { wioIssued: "2026-08-20" });
     expect(r.accountability).toBe("Jyoti + Yogi + Vishakha + TL");
     expect(r.thisStageDue).toBe("2026-08-29");
-    expect(r.upcomingStage).toBe("FG code  ·  Shruti + CRM");
+    expect(r.upcomingStage).toBe("Client sign-off  ·  Client");
   });
 });

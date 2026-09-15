@@ -73,13 +73,13 @@ if (!failed) {
       asRestrictedRole: true,
     },
     {
-      name: "tracker chain is countdown rev A (db/045): nine stages, done-by never rising",
+      name: "tracker chain is countdown rev A (db/045): nine stages, in the marked-up order",
       sql: `SELECT string_agg(stage || ':' || done_by, ', ' ORDER BY position) AS v
             FROM ee.tracker_stages`,
       ok: (v) =>
         v ===
         "Archive pass:14, SLD · Design:10, SLD · Architecture:10, Finishes:9, " +
-          "Final SLD:9, SLD approvals:6, FG code:3, Client sign-off:2, PIO:0",
+          "Final SLD:9, FG code:3, SLD approvals:6, Client sign-off:2, PIO:0",
     },
     {
       name: "tracker: no WIO is left pointing at GFC or BOM, and the BOM row went to PIO",
@@ -98,7 +98,7 @@ if (!failed) {
       ok: (v) =>
         v ===
         "Archive pass:1,SLD · Design:2,SLD · Architecture:3,Finishes:4,Final SLD:5," +
-          "SLD approvals:6,FG code:7,Client sign-off:8,PIO:9",
+          "FG code:6,SLD approvals:7,Client sign-off:8,PIO:9",
     },
     {
       name: "factory master: 9 stations = 7 active + 2 reserved",
