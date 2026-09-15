@@ -18,9 +18,12 @@ import {
  *
  * These tests are the contract with the team's original workbook: every rule
  * below was a formula in the spreadsheet before it was code, and the numbers
- * on the board are only trustworthy while they still agree. The seeded chain
- * (db/031) is reproduced here so a change to a `done_by` day fails loudly
- * rather than quietly re-colouring the board.
+ * on the board are only trustworthy while they still agree. The chain as first
+ * seeded (db/031) is the fixture most tests run on — the derivation does not
+ * care which chain it is given, and those day numbers make the arithmetic easy
+ * to follow. The live chain since db/045 (countdown rev A: no GFC, no BOM, a
+ * Final SLD at D-9) has its own block at the end, and db/validate.mjs pins the
+ * migrated rows themselves.
  */
 
 const STAGES: TrackerStage[] = [
@@ -59,6 +62,7 @@ function wio(over: Partial<TrackerWioInput> = {}): TrackerWioInput {
     notes: null,
     pioReleased: null,
     pioNo: null,
+    acknowledged: null,
     ...over,
   };
 }
@@ -478,5 +482,102 @@ describe("the chain is configuration, not constants", () => {
     const r = computeWio(wio({ wioIssued: "2026-08-20" }), STAGES, later, 0);
     expect(r.status).toBe("OVERDUE");
     expect(r.dayLabel).toBe("OVERDUE +6");
+  });
+});
+
+describe("the 24-hour acknowledgement (countdown rev A)", () => {
+  // Stamped today is 2026-08-25. s1 is the first stage (Archive pass).
+
+  it("is due the day after the WIO is issued", () => {
+    expect(compute({ wioIssued: "2026-08-20" }).ackDue).toBe("2026-08-21");
+    expect(compute({ wioIssued: null }).ackDue).toBeNull();
+  });
+
+  it("reads Awaiting while the 24 hours are still running", () => {
+    expect(compute({ wioIssued: "2026-08-24", stageId: "s1" }).ackState).toBe("Awaiting");
+  });
+
+  it("reads Not acknowledged once the day has passed at the first stage", () => {
+    expect(compute({ wioIssued: "2026-08-23", stageId: "s1" }).ackState).toBe("Not acknowledged");
+  });
+
+  it("tells an on-time acknowledgement from a late one", () => {
+    expect(
+      compute({ wioIssued: "2026-08-23", stageId: "s1", acknowledged: "2026-08-24" }).ackState,
+    ).toBe("Acknowledged");
+    expect(
+      compute({ wioIssued: "2026-08-23", stageId: "s1", acknowledged: "2026-08-23" }).ackState,
+    ).toBe("Acknowledged");
+    expect(
+      compute({ wioIssued: "2026-08-23", stageId: "s1", acknowledged: "2026-08-25" }).ackState,
+    ).toBe("Acknowledged late");
+  });
+
+  it("does not flag a row that has moved past the first stage, and invents no date", () => {
+    const r = compute({ wioIssued: "2026-08-10", stageId: "s2" });
+    expect(r.ackState).toBe("Not recorded");
+    expect(r.acknowledged).toBeNull();
+  });
+
+  it("does not apply without a WIO date or once released", () => {
+    expect(compute({ wioIssued: null, stageId: "s1" }).ackState).toBe("n/a");
+    expect(compute({ wioIssued: "2026-08-10", stageId: "s1", pioReleased: "2026-08-24" }).ackState).toBe("n/a");
+  });
+
+  it("never changes status, colour or priority — it explains, it does not escalate", () => {
+    const silent = compute({ wioIssued: "2026-08-23", stageId: "s1", since: "2026-08-23" });
+    const acked = compute({ wioIssued: "2026-08-23", stageId: "s1", since: "2026-08-23", acknowledged: "2026-08-24" });
+    expect(silent.ackState).toBe("Not acknowledged");
+    expect([silent.status, silent.tone, silent.priority]).toEqual([acked.status, acked.tone, acked.priority]);
+  });
+
+  it("is counted on Today over running rows only", () => {
+    const rows = [
+      wio({ id: "a", wio: "A", wioIssued: "2026-08-23", stageId: "s1" }),
+      wio({ id: "b", wio: "B", wioIssued: "2026-08-24", stageId: "s1" }),
+      wio({ id: "c", wio: "C", wioIssued: "2026-08-20", stageId: "s1", pioReleased: "2026-08-25" }),
+    ];
+    const stats = todayStats(computeBoard(rows, STAGES, SETTINGS, new Map()), SETTINGS);
+    expect(stats.notAcknowledged).toBe(1);
+  });
+});
+
+describe("the chain as marked up — countdown rev A (db/045)", () => {
+  const REV_A: TrackerStage[] = [
+    { id: "a1", position: 1, stage: "Archive pass", waitingOn: "PD team", doneBy: 14 },
+    { id: "a2", position: 2, stage: "SLD · Design", waitingOn: "Design team", doneBy: 10 },
+    { id: "a3", position: 3, stage: "SLD · Architecture", waitingOn: "Architecture team", doneBy: 10 },
+    { id: "a4", position: 4, stage: "Finishes", waitingOn: "Roopdeep + CRM", doneBy: 9 },
+    { id: "a5", position: 5, stage: "Final SLD", waitingOn: "Design team", doneBy: 9 },
+    { id: "a6", position: 6, stage: "SLD approvals", waitingOn: "Jyoti + Yogi + Vishakha + TL", doneBy: 6 },
+    { id: "a7", position: 7, stage: "FG code", waitingOn: "Shruti + CRM", doneBy: 3 },
+    { id: "a8", position: 8, stage: "Client sign-off", waitingOn: "Client", doneBy: 2 },
+    { id: "a9", position: 9, stage: "PIO", waitingOn: "WIO raised by", doneBy: 0 },
+  ];
+  const at = (stageId: string, over: Partial<TrackerWioInput> = {}) =>
+    computeWio(wio({ stageId, ...over }), REV_A, SETTINGS, 0);
+
+  it("carries no GFC and no BOM", () => {
+    expect(REV_A.map((s) => s.stage)).not.toContain("GFC");
+    expect(REV_A.map((s) => s.stage)).not.toContain("BOM");
+  });
+
+  it("done-by never rises down the chain, so 'next' is never already overdue first", () => {
+    for (let i = 1; i < REV_A.length; i++) {
+      expect(REV_A[i]!.doneBy).toBeLessThanOrEqual(REV_A[i - 1]!.doneBy);
+    }
+  });
+
+  it("Finishes hands over to the Final SLD, due at D-9", () => {
+    expect(at("a4").upcomingStage).toBe("Final SLD  ·  Design team");
+    // Issued 2026-08-20 → PIO due 2026-09-04 → Final SLD clears by 2026-08-26.
+    expect(at("a5", { wioIssued: "2026-08-20" }).thisStageDue).toBe("2026-08-26");
+  });
+
+  it("SLD approvals are held by the named approvers and close at D-6", () => {
+    const r = at("a6", { wioIssued: "2026-08-20" });
+    expect(r.accountability).toBe("Jyoti + Yogi + Vishakha + TL");
+    expect(r.thisStageDue).toBe("2026-08-29");
+    expect(r.upcomingStage).toBe("FG code  ·  Shruti + CRM");
   });
 });

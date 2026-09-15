@@ -149,10 +149,12 @@ async function listWioInputs(): Promise<TrackerWioInput[]> {
     notes: string | null;
     pio_released: string | null;
     pio_no: string | null;
+    acknowledged: string | null;
   }>(
     `SELECT id, wio_number, team_code, project, scope, raised_by,
             wio_issued::text AS wio_issued, stage_id, since::text AS since,
-            notes, pio_released::text AS pio_released, pio_no
+            notes, pio_released::text AS pio_released, pio_no,
+            acknowledged::text AS acknowledged
        FROM ee.tracker_wios`,
   );
   return rows.map((r) => ({
@@ -168,6 +170,7 @@ async function listWioInputs(): Promise<TrackerWioInput[]> {
     notes: r.notes,
     pioReleased: toDayString(r.pio_released),
     pioNo: r.pio_no,
+    acknowledged: toDayString(r.acknowledged),
   }));
 }
 
@@ -483,6 +486,7 @@ export type UpdateWioPatch = Partial<{
   notes: string | null;
   pioReleased: string | null;
   pioNo: string | null;
+  acknowledged: string | null;
 }>;
 
 /**
@@ -511,13 +515,35 @@ export async function updateTrackerWio(
       stage_id: string;
       since: string | null;
       pio_released: string | null;
+      wio_issued: string | null;
+      acknowledged: string | null;
     }>(
       `SELECT id, wio_number, stage_id, since::text AS since,
-              pio_released::text AS pio_released
+              pio_released::text AS pio_released,
+              wio_issued::text AS wio_issued, acknowledged::text AS acknowledged
          FROM ee.tracker_wios WHERE id = $1`,
       [id],
     );
     if (!before) throw new NotFoundError("That WIO is not on the board.");
+
+    // The 24 hours start when the WIO is issued (countdown rev A), so an
+    // acknowledgement cannot come first. Checked against the row as it will
+    // be after this patch, whichever of the two dates the patch moves.
+    const issuedAfter =
+      patch.wioIssued !== undefined ? patch.wioIssued : toDayString(before.wio_issued);
+    const acknowledgedAfter =
+      patch.acknowledged !== undefined ? patch.acknowledged : toDayString(before.acknowledged);
+    if (patch.acknowledged && !issuedAfter) {
+      throw new BlockingRuleError(
+        "Add the WIO issue date first — the 24 hours to acknowledge a WIO start when it is issued.",
+      );
+    }
+    if (acknowledgedAfter && issuedAfter && acknowledgedAfter < issuedAfter) {
+      throw new BlockingRuleError(
+        `Acknowledged on ${acknowledgedAfter} is before the WIO was issued on ${issuedAfter}. ` +
+          "A WIO can only be acknowledged once it has been issued.",
+      );
+    }
 
     if (patch.stageId !== undefined) {
       const [stage] = await q<{ id: string }>(
@@ -569,6 +595,7 @@ export async function updateTrackerWio(
     if (patch.notes !== undefined) set("notes", patch.notes);
     if (patch.pioReleased !== undefined) set("pio_released", patch.pioReleased, "::date");
     if (patch.pioNo !== undefined) set("pio_no", patch.pioNo);
+    if (patch.acknowledged !== undefined) set("acknowledged", patch.acknowledged, "::date");
 
     if (sets.length === 0) {
       throw new BlockingRuleError("Nothing to change — the patch was empty.");
@@ -590,6 +617,7 @@ export async function updateTrackerWio(
         stageId: before.stage_id,
         since: toDayString(before.since),
         pioReleased: toDayString(before.pio_released),
+        acknowledged: toDayString(before.acknowledged),
       },
     };
   });

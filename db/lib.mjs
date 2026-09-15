@@ -56,6 +56,7 @@ export const DEFAULT_FILES = [
   "042_concept_decks.sql",
   "043_design_team_accounts.sql",
   "044_concept_decks_grants.sql",
+  "045_tracker_countdown_rev_a.sql",
   "900_dev_fixtures.sql",
 ];
 

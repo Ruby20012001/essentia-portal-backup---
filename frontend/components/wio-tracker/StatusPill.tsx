@@ -1,4 +1,4 @@
-import type { TrackerStatus, TrackerTone } from "@/lib/services/wio-tracker-logic";
+import type { AckState, TrackerStatus, TrackerTone } from "@/lib/services/wio-tracker-logic";
 
 /**
  * The house colour rule, in one place.
@@ -63,6 +63,53 @@ export function DayBadge({
       className={`inline-block whitespace-nowrap rounded border px-2 py-0.5 font-body text-[11px] font-bold ${TONE_CLASS[tone]}`}
     >
       {label}
+    </span>
+  );
+}
+
+/**
+ * The drawing team's 24-hour acknowledgement, under the status pill.
+ *
+ * Orange at most. A missed acknowledgement is a warning about WHY a row is
+ * late, never a second red — red stays LATE HERE and OVERDUE only. Rows with
+ * nothing to say (acknowledged on time, not applicable, or moved past the first
+ * stage) render nothing, so the marker only appears where it asks for action.
+ */
+export function AckNote({
+  state,
+  due,
+  onAck,
+}: {
+  state: AckState;
+  due: string | null;
+  /** Present only for someone who may edit the board. */
+  onAck?: () => void;
+}) {
+  if (state !== "Awaiting" && state !== "Not acknowledged" && state !== "Acknowledged late") {
+    return null;
+  }
+  const label =
+    state === "Awaiting"
+      ? `Acknowledge by ${due}`
+      : state === "Not acknowledged"
+        ? "Not acknowledged in 24h"
+        : "Acknowledged late";
+  return (
+    <span
+      className={`mt-1 flex flex-wrap items-center gap-1.5 whitespace-nowrap font-body text-[11px] ${
+        state === "Awaiting" ? "font-light text-muted" : "font-bold text-warning"
+      }`}
+    >
+      {label}
+      {onAck && state !== "Acknowledged late" ? (
+        <button
+          type="button"
+          onClick={onAck}
+          className="rounded border border-line-strong bg-canvas px-1.5 py-0.5 font-bold text-secondary transition-colors hover:bg-hover"
+        >
+          Acknowledge
+        </button>
+      ) : null}
     </span>
   );
 }

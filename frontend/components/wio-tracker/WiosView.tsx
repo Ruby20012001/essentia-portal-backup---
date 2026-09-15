@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DayBadge, StatusPill } from "@/components/wio-tracker/StatusPill";
+import { AckNote, DayBadge, StatusPill } from "@/components/wio-tracker/StatusPill";
 import type { TrackerBoard } from "@/lib/services/wio-tracker";
 import { forTeam, type ComputedWio } from "@/lib/services/wio-tracker-logic";
 
@@ -20,6 +20,16 @@ import { forTeam, type ComputedWio } from "@/lib/services/wio-tracker-logic";
 
 type Filter = "running" | "attention" | "untracked" | "released" | "all";
 
+/** Late, at risk, or not picked up inside the 24 hours (countdown rev A). */
+function needsAttention(w: ComputedWio): boolean {
+  return (
+    w.status === "OVERDUE" ||
+    w.status === "LATE HERE" ||
+    w.status === "At risk" ||
+    w.ackState === "Not acknowledged"
+  );
+}
+
 /**
  * Counts are taken over the TEAM-FILTERED rows, not the whole board — a chip
  * reading "Needs attention 6" while the table below shows 2 is the kind of
@@ -30,7 +40,7 @@ const FILTERS: { key: Filter; label: string; describe: (rows: ComputedWio[]) => 
   {
     key: "attention",
     label: "Needs attention",
-    describe: (rows) => rows.filter((w) => w.status === "OVERDUE" || w.status === "LATE HERE" || w.status === "At risk").length,
+    describe: (rows) => rows.filter(needsAttention).length,
   },
   { key: "untracked", label: "No WIO date", describe: (rows) => rows.filter((w) => !w.pioReleased && !w.wioIssued).length },
   { key: "released", label: "Released", describe: (rows) => rows.filter((w) => w.pioReleased).length },
@@ -66,8 +76,7 @@ export function WiosView({
         if (filter === "running") return !w.pioReleased;
         if (filter === "released") return Boolean(w.pioReleased);
         if (filter === "untracked") return !w.pioReleased && !w.wioIssued;
-        if (filter === "attention")
-          return w.status === "OVERDUE" || w.status === "LATE HERE" || w.status === "At risk";
+        if (filter === "attention") return needsAttention(w);
         return true;
       })
       .filter((w) =>
@@ -254,6 +263,15 @@ function FragmentRow({
         </td>
         <td className="px-3 py-2.5">
           <StatusPill status={w.status} tone={w.tone} />
+          <AckNote
+            state={w.ackState}
+            due={w.ackDue}
+            onAck={
+              editable && !busy
+                ? () => onPatch(w.id, { acknowledged: board.settings.today })
+                : undefined
+            }
+          />
           {w.openDelays > 0 ? (
             <span className="mt-1 block whitespace-nowrap font-body text-[11px] font-light text-muted">
               {w.openDelays} open delay{w.openDelays === 1 ? "" : "s"}
@@ -403,6 +421,18 @@ function RowDetail({
           disabled={disabled}
           hint={w.wioIssued ? `PIO due ${w.pioDue}` : "Until this is set the clock is not running"}
           onCommit={(v) => onPatch(w.id, { wioIssued: blank(v) })}
+        />
+        <Field
+          label="Acknowledged"
+          type="date"
+          value={w.acknowledged ?? ""}
+          disabled={disabled}
+          hint={
+            w.ackDue
+              ? `By the drawing team, within 24 hours — due ${w.ackDue}`
+              : "Counts once the WIO issue date is set"
+          }
+          onCommit={(v) => onPatch(w.id, { acknowledged: blank(v) })}
         />
         <Field
           label="At this stage since"

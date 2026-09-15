@@ -8,6 +8,31 @@
 
 ---
 
+## 2026-09-15 — S4b · the countdown, rev A, as Monica marked it up
+
+Monica printed *WIO to PIO — the countdown* (rev A, 17 Aug) and marked it up in
+red. What that changes on the board, confirmed by her before it was applied:
+
+### db/045
+- **GFC leaves the chain** (D-5 to D-3 crossed out — those days go to SLD
+  preparation). No WIO was sitting there.
+- **BOM leaves the chain** — BOM is made after the PIO. Its one running row,
+  `ED/25-26/172`, moves to PIO, the step its own note names next; `since` is
+  kept and the row says why it moved.
+- **Final SLD** added, due **D-9** ("9 we need final SLD").
+- **Sign-off → SLD approvals**, due **D-6**, held by Jyoti + Yogi + Vishakha + TL
+  (Khushpreet off; Yogi verifies instead). Same stage row, so its 8 WIOs stay put.
+- **FG code** moves after the approvals, keeping "done by" falling down the chain.
+- **Acknowledged** — a date per WIO. The drawing team acknowledges within 24
+  hours; the board derives Awaiting / Not acknowledged / Acknowledged late and
+  shows it in orange, never red. Status and priority are unchanged.
+
+Not done, deliberately: Finishes keeps D-9 (no new day was given); escalation
+to Hardesh sir and a scope-based timeline are new features awaiting decisions.
+
+Chain: 10 → **9 stages** — Archive pass 14 · SLD Design 10 · SLD Architecture 10
+· Finishes 9 · Final SLD 9 · SLD approvals 6 · FG code 3 · Client sign-off 2 · PIO 0.
+
 ## 2026-08-31 — S4b · the day's standup, applied
 
 Ruby's 2026-08-31 standup, with every judgement call confirmed by her before

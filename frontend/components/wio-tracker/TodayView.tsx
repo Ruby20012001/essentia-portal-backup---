@@ -1,7 +1,7 @@
 "use client";
 
 import { MetricCard } from "@/components/dashboard/MetricCard";
-import { DayBadge, StatusPill } from "@/components/wio-tracker/StatusPill";
+import { AckNote, DayBadge, StatusPill } from "@/components/wio-tracker/StatusPill";
 import type { TrackerBoard } from "@/lib/services/wio-tracker";
 import { forTeam, holdingByStage, todayStats } from "@/lib/services/wio-tracker-logic";
 
@@ -66,6 +66,21 @@ export function TodayView({
             Their 15-day clock has never started, so they cannot be late — they
             are simply untracked. Add the WIO date on the WIOs tab to put them
             on the clock.
+          </p>
+        </div>
+      ) : null}
+
+      {/* Countdown rev A: the drawing team acknowledges a WIO within 24 hours.
+          Named, because a WIO nobody has picked up is silent by definition. */}
+      {stats.notAcknowledged > 0 ? (
+        <div className="mb-8 rounded-lg border-l-4 border-warning bg-warning/5 px-5 py-3">
+          <p className="font-body text-sm font-light text-ink">
+            <span className="font-bold text-warning">
+              {stats.notAcknowledged} {stats.notAcknowledged === 1 ? "WIO has" : "WIOs have"} not
+              been acknowledged within 24 hours.
+            </span>{" "}
+            The drawing team acknowledges a WIO the day after it is issued. Record
+            it on the WIOs tab — the row shows an Acknowledge button.
           </p>
         </div>
       ) : null}
@@ -209,6 +224,7 @@ export function TodayView({
                   </td>
                   <td className="px-3 py-2.5">
                     <StatusPill status={w.status} tone={w.tone} />
+                    <AckNote state={w.ackState} due={w.ackDue} />
                     {w.openDelays > 0 ? (
                       <span className="mt-1 block whitespace-nowrap font-body text-[11px] font-light text-muted">
                         {w.openDelays} open delay{w.openDelays === 1 ? "" : "s"}

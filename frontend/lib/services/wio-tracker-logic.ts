@@ -70,7 +70,36 @@ export type TrackerWioInput = {
   notes: string | null;
   pioReleased: string | null;
   pioNo: string | null;
+  /** The day the drawing team acknowledged the WIO. Due within 24 hours. */
+  acknowledged: string | null;
 };
+
+/**
+ * The drawing team's 24-hour acknowledgement (countdown rev A, Monica's markup
+ * of 2026-09-15: "Drawing team must acknowledge the WIO within 24 hours").
+ *
+ *   n/a                released, or no WIO date — there are no 24 hours to count
+ *   Acknowledged       dated inside the 24 hours
+ *   Acknowledged late  dated, but after the day it was due
+ *   Awaiting           at the first stage, still inside the 24 hours
+ *   Not acknowledged   at the first stage, and the 24 hours are gone
+ *   Not recorded       past the first stage with no date — the work visibly
+ *                      started, so it is not flagged, but no date is invented
+ *
+ * It never changes `status` or `priority`. With the chain as set, a row that
+ * misses it is already LATE HERE at Archive pass (D-14 of a 15-day window), so
+ * the red is there for the right reason; this says WHY, in orange at most.
+ */
+export type AckState =
+  | "n/a"
+  | "Acknowledged"
+  | "Acknowledged late"
+  | "Awaiting"
+  | "Not acknowledged"
+  | "Not recorded";
+
+/** 24 hours, in the whole calendar days the board counts in. */
+export const ACK_WITHIN_DAYS = 1;
 
 export type TrackerStatus =
   | "Released"
@@ -103,6 +132,9 @@ export type ComputedWio = TrackerWioInput & {
   stageDoneBy: number;
   /** The date THIS stage should have cleared by. */
   thisStageDue: string | null;
+  /** wioIssued + 24 hours. Null when the clock never started. */
+  ackDue: string | null;
+  ackState: AckState;
   dayLabel: string;
   accountability: string;
   upcomingStage: string;
@@ -207,6 +239,22 @@ export function computeWio(
   const stageDoneBy = stage.doneBy;
   const thisStageDue = pioDue ? addDays(pioDue, -stageDoneBy) : null;
 
+  // The 24-hour acknowledgement (see AckState). Only the first stage can be
+  // "Not acknowledged": a row that has moved on was visibly picked up.
+  const ackDue = wio.wioIssued ? addDays(wio.wioIssued, ACK_WITHIN_DAYS) : null;
+  const ackState: AckState =
+    released || !ackDue
+      ? "n/a"
+      : wio.acknowledged
+        ? daysBetween(ackDue, wio.acknowledged) > 0
+          ? "Acknowledged late"
+          : "Acknowledged"
+        : index > 0
+          ? "Not recorded"
+          : daysBetween(ackDue, today) > 0
+            ? "Not acknowledged"
+            : "Awaiting";
+
   const dayLabel = released
     ? "PIO released"
     : !wio.wioIssued
@@ -265,6 +313,8 @@ export function computeWio(
     daysHere,
     stageDoneBy,
     thisStageDue,
+    ackDue,
+    ackState,
     dayLabel,
     accountability,
     upcomingStage,
@@ -334,6 +384,8 @@ export type TodayStats = {
   late: number;
   overdue: number;
   noWioDate: number;
+  /** Still at the first stage, 24 hours gone, no acknowledgement recorded. */
+  notAcknowledged: number;
 };
 
 export function todayStats(board: ComputedWio[], settings: TrackerSettings): TodayStats {
@@ -348,6 +400,7 @@ export function todayStats(board: ComputedWio[], settings: TrackerSettings): Tod
     late: running.filter((w) => w.status === "LATE HERE").length,
     overdue: running.filter((w) => w.status === "OVERDUE").length,
     noWioDate: running.filter((w) => !w.wioIssued).length,
+    notAcknowledged: running.filter((w) => w.ackState === "Not acknowledged").length,
   };
 }
 

@@ -26,6 +26,8 @@ const patchSchema = z
     notes: z.string().max(2000).nullable().optional(),
     pioReleased: dateField.optional(),
     pioNo: z.string().max(40).nullable().optional(),
+    // The drawing team's 24-hour acknowledgement (countdown rev A).
+    acknowledged: dateField.optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "Provide at least one field",

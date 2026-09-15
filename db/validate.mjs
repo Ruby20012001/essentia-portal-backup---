@@ -9,6 +9,7 @@
  * Usage:  npm run validate            (from db/)
  *         node validate.mjs 001_essentia_schema.sql   (specific files)
  */
+import { readFileSync } from "node:fs";
 import { createDb, loadSqlFiles, resolveFiles } from "./lib.mjs";
 
 const requested = process.argv.slice(2);
@@ -70,6 +71,34 @@ if (!failed) {
       sql: "SELECT COUNT(*)::TEXT AS v FROM ee.projects",
       ok: (v) => v === "0",
       asRestrictedRole: true,
+    },
+    {
+      name: "tracker chain is countdown rev A (db/045): nine stages, done-by never rising",
+      sql: `SELECT string_agg(stage || ':' || done_by, ', ' ORDER BY position) AS v
+            FROM ee.tracker_stages`,
+      ok: (v) =>
+        v ===
+        "Archive pass:14, SLD · Design:10, SLD · Architecture:10, Finishes:9, " +
+          "Final SLD:9, SLD approvals:6, FG code:3, Client sign-off:2, PIO:0",
+    },
+    {
+      name: "tracker: no WIO is left pointing at GFC or BOM, and the BOM row went to PIO",
+      sql: `SELECT (SELECT COUNT(*) FROM ee.tracker_stages WHERE stage IN ('GFC','BOM'))::TEXT
+                   || '/' ||
+                   COALESCE((SELECT s.stage FROM ee.tracker_wios w
+                               JOIN ee.tracker_stages s ON s.id = w.stage_id
+                              WHERE w.wio_number = 'ED/25-26/172'), 'absent') AS v`,
+      ok: (v) => v === "0/PIO",
+    },
+    {
+      name: "tracker: re-running db/045 changes nothing",
+      setupSql: readFileSync(new URL("./045_tracker_countdown_rev_a.sql", import.meta.url), "utf8"),
+      sql: `SELECT string_agg(stage || ':' || position, ',' ORDER BY position) AS v
+            FROM ee.tracker_stages`,
+      ok: (v) =>
+        v ===
+        "Archive pass:1,SLD · Design:2,SLD · Architecture:3,Finishes:4,Final SLD:5," +
+          "SLD approvals:6,FG code:7,Client sign-off:8,PIO:9",
     },
     {
       name: "factory master: 9 stations = 7 active + 2 reserved",

@@ -138,7 +138,9 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
         // step the workbook relied on people remembering.
         movingTo
           ? `${row!.wio} moved to ${movingTo} — "at this stage since" re-stamped to ${board.settings.today}.`
-          : undefined,
+          : typeof patch.acknowledged === "string" && row
+            ? `${row.wio} acknowledged on ${patch.acknowledged}.`
+            : undefined,
       );
     },
     [board.wios, board.stages, board.settings.today, call],

@@ -22,7 +22,7 @@ by hand — the **stage**, and the date it moved there (**since**).
 > |---|---|---|
 > | Row | one WIO per department | one ED/YY-YY/NNN work item |
 > | Number | `WIO/26-27/018/ARCH` | `ED/26-27/129` |
-> | Model | BOQ + 3D + SLD checklist → convert | 10-stage chain, moved by hand |
+> | Model | BOQ + 3D + SLD checklist → convert | 9-stage chain, moved by hand |
 > | Tables | `ee.wio`, `ee.pio` | `ee.tracker_*` |
 >
 > They share the §30 window and nothing else. Neither owns the other's rows.
@@ -36,7 +36,7 @@ no database, no clock, no environment. Read this file first; it is the tool.
 
 Nothing derived is ever stored. A stored status is a status that goes stale the
 moment nobody updates it, and a board that quietly claims to be on time is
-worse than no board. Pinned by 56 unit tests in
+worse than no board. Pinned by 74 unit tests in
 `frontend/tests/unit/wio-tracker-logic.test.ts`.
 
 | Field | Rule |
@@ -80,6 +80,29 @@ In the workbook this was two manual steps and the second got forgotten, which
 made "days here" quietly wrong. Here, **changing the stage re-stamps `since`
 server-side in the same write**, and the banner says so. An explicit `since` in
 the same patch still wins, so a correction is possible — it just is not required.
+
+### The countdown, rev A (db/045 · Monica, 2026-09-15)
+
+The chain follows *WIO to PIO — the countdown* (rev A) as Monica marked it up:
+
+| # | Stage | Waiting on | Done by |
+|---|---|---|---|
+| 1 | Archive pass | PD team | D-14 |
+| 2 | SLD · Design | Design team | D-10 |
+| 3 | SLD · Architecture | Architecture team | D-10 |
+| 4 | Finishes | Roopdeep + CRM | D-9 |
+| 5 | **Final SLD** | Design team | **D-9** |
+| 6 | **SLD approvals** | Jyoti + Yogi + Vishakha + TL | **D-6** |
+| 7 | FG code | Shruti + CRM | D-3 |
+| 8 | Client sign-off | Client | D-2 |
+| 9 | PIO | WIO raised by | D-0 |
+
+GFC is gone (its days went to SLD preparation) and so is BOM (made after the
+PIO). **Acknowledged** is a date per WIO: the drawing team acknowledges within
+24 hours of issue. The board derives *Awaiting*, *Not acknowledged* (at the
+first stage, day passed) and *Acknowledged late*, shown in orange under the
+status — it never changes status, colour or priority. A row past the first
+stage with no date reads *Not recorded* and is not flagged; no date is invented.
 
 ---
 
@@ -156,6 +179,7 @@ department fenced out of the tracker could still write onto it.
 ```
 db/030_wio_pio_tracker.sql        DDL · permissions · config      (idempotent)
 db/031_wio_pio_tracker_seed.sql   the real board: 37 WIOs, 24 delays, 10 stages
+db/045_tracker_countdown_rev_a.sql  the chain as marked up: 9 stages · acknowledged date
 db/900_dev_fixtures.sql           + 2 dev personas in DRAFTING
 
 frontend/lib/services/
@@ -165,7 +189,7 @@ frontend/lib/services/
 frontend/app/api/wio-tracker/     GET board · wios · delays · settings · stages
 frontend/app/(portal)/wio-tracker/page.tsx
 frontend/components/wio-tracker/  WioTrackerBoard · Today · Wios · Delays · Setup · StatusPill
-frontend/tests/unit/wio-tracker-logic.test.ts    56 tests
+frontend/tests/unit/wio-tracker-logic.test.ts    74 tests
 ```
 
 Tables: `ee.tracker_settings` · `tracker_stages` · `tracker_wios` ·
