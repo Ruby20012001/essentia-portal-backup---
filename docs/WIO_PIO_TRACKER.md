@@ -36,7 +36,7 @@ no database, no clock, no environment. Read this file first; it is the tool.
 
 Nothing derived is ever stored. A stored status is a status that goes stale the
 moment nobody updates it, and a board that quietly claims to be on time is
-worse than no board. Pinned by 74 unit tests in
+worse than no board. Pinned by 84 unit tests in
 `frontend/tests/unit/wio-tracker-logic.test.ts`.
 
 | Field | Rule |
@@ -103,6 +103,27 @@ PIO). **Acknowledged** is a date per WIO: the drawing team acknowledges within
 first stage, day passed) and *Acknowledged late*, shown in orange under the
 status — it never changes status, colour or priority. A row past the first
 stage with no date reads *Not recorded* and is not flagged; no date is invented.
+
+### ALARM 2 — escalated to Hardesh sir (db/047)
+
+The markup at D-10: *"Selection appointment — hard deadline"*, *"ALARM 2 —
+appointment not held"*, and in red *"Escalation to Hardesh sir as well."* The
+sheet defines an alarm as *"a record that the window is now at risk and who put
+it there"*, so ALARM 2 is a record on the board, derived from one stored date —
+`selection_held`:
+
+| State | When |
+|---|---|
+| Due | D-10 (`pioDue − 10`) has not ended |
+| **Escalated** | D-10 has ended, no appointment recorded, WIO not yet past Finishes |
+| Held / Held late | recorded on or before D-10 / after it |
+| Not recorded | past Finishes with no date — not flagged, no date invented |
+| n/a | released, or no WIO date |
+
+Escalated shows as *ALARM 2 · escalated to Hardesh sir* under the status, as a
+named banner on Today, and as a tile on the 1-page summary. Orange, never red;
+status and priority are unchanged. **No email is sent** — switching that on is a
+separate decision.
 
 ---
 
@@ -180,6 +201,8 @@ department fenced out of the tracker could still write onto it.
 db/030_wio_pio_tracker.sql        DDL · permissions · config      (idempotent)
 db/031_wio_pio_tracker_seed.sql   the real board: 37 WIOs, 24 delays, 10 stages
 db/045_tracker_countdown_rev_a.sql  the chain as marked up: 9 stages · acknowledged date
+db/046_tracker_finishes_fg_code_d13.sql  Finishes and FG code at D-13
+db/047_tracker_alarm2_selection.sql  selection appointment held · ALARM 2
 db/900_dev_fixtures.sql           + 2 dev personas in DRAFTING
 
 frontend/lib/services/
@@ -189,7 +212,7 @@ frontend/lib/services/
 frontend/app/api/wio-tracker/     GET board · wios · delays · settings · stages
 frontend/app/(portal)/wio-tracker/page.tsx
 frontend/components/wio-tracker/  WioTrackerBoard · Today · Wios · Delays · Setup · StatusPill
-frontend/tests/unit/wio-tracker-logic.test.ts    74 tests
+frontend/tests/unit/wio-tracker-logic.test.ts    84 tests
 ```
 
 Tables: `ee.tracker_settings` · `tracker_stages` · `tracker_wios` ·

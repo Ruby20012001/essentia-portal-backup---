@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AckNote, DayBadge, StatusPill } from "@/components/wio-tracker/StatusPill";
+import { AckNote, DayBadge, SelectionNote, StatusPill } from "@/components/wio-tracker/StatusPill";
 import type { TrackerBoard } from "@/lib/services/wio-tracker";
 import { forTeam, type ComputedWio } from "@/lib/services/wio-tracker-logic";
 
@@ -20,13 +20,17 @@ import { forTeam, type ComputedWio } from "@/lib/services/wio-tracker-logic";
 
 type Filter = "running" | "attention" | "untracked" | "released" | "all";
 
-/** Late, at risk, or not picked up inside the 24 hours (countdown rev A). */
+/**
+ * Late, at risk, not picked up inside the 24 hours, or escalated under ALARM 2
+ * (countdown rev A).
+ */
 function needsAttention(w: ComputedWio): boolean {
   return (
     w.status === "OVERDUE" ||
     w.status === "LATE HERE" ||
     w.status === "At risk" ||
-    w.ackState === "Not acknowledged"
+    w.ackState === "Not acknowledged" ||
+    w.selectionState === "Escalated"
   );
 }
 
@@ -272,6 +276,15 @@ function FragmentRow({
                 : undefined
             }
           />
+          <SelectionNote
+            state={w.selectionState}
+            due={w.selectionDue}
+            onHeld={
+              editable && !busy
+                ? () => onPatch(w.id, { selectionHeld: board.settings.today })
+                : undefined
+            }
+          />
           {w.openDelays > 0 ? (
             <span className="mt-1 block whitespace-nowrap font-body text-[11px] font-light text-muted">
               {w.openDelays} open delay{w.openDelays === 1 ? "" : "s"}
@@ -433,6 +446,18 @@ function RowDetail({
               : "Counts once the WIO issue date is set"
           }
           onCommit={(v) => onPatch(w.id, { acknowledged: blank(v) })}
+        />
+        <Field
+          label="Selection appointment held"
+          type="date"
+          value={w.selectionHeld ?? ""}
+          disabled={disabled}
+          hint={
+            w.selectionDue
+              ? `Hard deadline D-10 — ${w.selectionDue}. Not held by then: ALARM 2, escalated to Hardesh sir`
+              : "Counts once the WIO issue date is set"
+          }
+          onCommit={(v) => onPatch(w.id, { selectionHeld: blank(v) })}
         />
         <Field
           label="At this stage since"

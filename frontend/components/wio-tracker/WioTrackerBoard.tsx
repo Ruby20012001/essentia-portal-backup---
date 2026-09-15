@@ -140,7 +140,9 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
           ? `${row!.wio} moved to ${movingTo} — "at this stage since" re-stamped to ${board.settings.today}.`
           : typeof patch.acknowledged === "string" && row
             ? `${row.wio} acknowledged on ${patch.acknowledged}.`
-            : undefined,
+            : typeof patch.selectionHeld === "string" && row
+              ? `${row.wio} — selection appointment recorded as held on ${patch.selectionHeld}.`
+              : undefined,
       );
     },
     [board.wios, board.stages, board.settings.today, call],

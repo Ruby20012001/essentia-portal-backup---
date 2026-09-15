@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  ALARM2_ESCALATES_TO,
+  SELECTION_DAY,
   forTeam,
   addDays,
   computeBoard,
@@ -63,6 +65,7 @@ function wio(over: Partial<TrackerWioInput> = {}): TrackerWioInput {
     pioReleased: null,
     pioNo: null,
     acknowledged: null,
+    selectionHeld: null,
     ...over,
   };
 }
@@ -580,5 +583,70 @@ describe("the chain as marked up — countdown rev A (db/045 + db/046)", () => {
     expect(r.accountability).toBe("Jyoti + Yogi + Vishakha + TL");
     expect(r.thisStageDue).toBe("2026-08-29");
     expect(r.upcomingStage).toBe("Client sign-off  ·  Client");
+  });
+});
+
+describe("ALARM 2 — selection appointment by D-10, escalated to Hardesh sir", () => {
+  // Stamped today is 2026-08-25. In the fixture chain s4 is Finishes, s5 is past it.
+
+  it("is due at D-10: the PIO date less ten days", () => {
+    // Issued 2026-08-20 → PIO due 2026-09-04 → D-10 is 2026-08-25.
+    expect(compute({ wioIssued: "2026-08-20" }).selectionDue).toBe("2026-08-25");
+    expect(compute({ wioIssued: null }).selectionDue).toBeNull();
+  });
+
+  it("reads Due through the end of D-10 itself", () => {
+    expect(compute({ wioIssued: "2026-08-20", stageId: "s1" }).selectionState).toBe("Due");
+  });
+
+  it("escalates once D-10 has ended with no appointment recorded", () => {
+    // Issued 2026-08-19 → D-10 was 2026-08-24.
+    expect(compute({ wioIssued: "2026-08-19", stageId: "s1" }).selectionState).toBe("Escalated");
+    expect(compute({ wioIssued: "2026-08-19", stageId: "s4" }).selectionState).toBe("Escalated");
+  });
+
+  it("says who it was escalated to, exactly as the markup names him", () => {
+    expect(ALARM2_ESCALATES_TO).toBe("Hardesh sir");
+    expect(SELECTION_DAY).toBe(10);
+  });
+
+  it("tells an appointment held in time from one held late", () => {
+    expect(compute({ wioIssued: "2026-08-19", selectionHeld: "2026-08-24" }).selectionState).toBe("Held");
+    expect(compute({ wioIssued: "2026-08-19", selectionHeld: "2026-08-25" }).selectionState).toBe("Held late");
+  });
+
+  it("does not raise the alarm on a WIO already past Finishes, and invents no date", () => {
+    const r = compute({ wioIssued: "2026-08-01", stageId: "s5" });
+    expect(r.selectionState).toBe("Not recorded");
+    expect(r.selectionHeld).toBeNull();
+  });
+
+  it("does not apply without a WIO date or once released", () => {
+    expect(compute({ wioIssued: null, stageId: "s1" }).selectionState).toBe("n/a");
+    expect(compute({ wioIssued: "2026-08-01", stageId: "s1", pioReleased: "2026-08-20" }).selectionState).toBe("n/a");
+  });
+
+  it("applies at every stage if the chain has no Finishes stage, rather than at none", () => {
+    const noFinishes = STAGES.filter((s) => s.stage !== "Finishes");
+    const r = computeWio(wio({ wioIssued: "2026-08-01", stageId: "s10" }), noFinishes, SETTINGS, 0);
+    expect(r.selectionState).toBe("Escalated");
+  });
+
+  it("never changes status, colour or priority — it records, it does not re-rank", () => {
+    const silent = compute({ wioIssued: "2026-08-19", stageId: "s1", since: "2026-08-19" });
+    const held = compute({ wioIssued: "2026-08-19", stageId: "s1", since: "2026-08-19", selectionHeld: "2026-08-22" });
+    expect(silent.selectionState).toBe("Escalated");
+    expect([silent.status, silent.tone, silent.priority]).toEqual([held.status, held.tone, held.priority]);
+  });
+
+  it("is counted on Today over running rows only", () => {
+    const rows = [
+      wio({ id: "a", wio: "A", wioIssued: "2026-08-19", stageId: "s1" }),
+      wio({ id: "b", wio: "B", wioIssued: "2026-08-19", stageId: "s1", selectionHeld: "2026-08-23" }),
+      wio({ id: "c", wio: "C", wioIssued: "2026-08-01", stageId: "s1", pioReleased: "2026-08-25" }),
+      wio({ id: "d", wio: "D", wioIssued: "2026-08-01", stageId: "s8" }),
+    ];
+    const stats = todayStats(computeBoard(rows, STAGES, SETTINGS, new Map()), SETTINGS);
+    expect(stats.escalated).toBe(1);
   });
 });

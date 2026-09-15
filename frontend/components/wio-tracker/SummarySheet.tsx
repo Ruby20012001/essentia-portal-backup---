@@ -1,5 +1,10 @@
 import type { TrackerBoard } from "@/lib/services/wio-tracker";
-import { forTeam, holdingByStage, todayStats } from "@/lib/services/wio-tracker-logic";
+import {
+  ALARM2_ESCALATES_TO,
+  forTeam,
+  holdingByStage,
+  todayStats,
+} from "@/lib/services/wio-tracker-logic";
 
 /**
  * The board on one page, for someone who will not open the board.
@@ -63,6 +68,8 @@ export function SummarySheet({
     { label: "Sitting 5+ days", value: stats.stuckFivePlus },
     { label: "No WIO date", value: stats.noWioDate, note: "clock never started" },
     { label: "Open delays", value: openDelays.length },
+    // ALARM 2 belongs on the sheet the CEO reads: it is escalated to him.
+    { label: `Escalated to ${ALARM2_ESCALATES_TO}`, value: stats.escalated, note: "ALARM 2 · no selection by D-10" },
   ];
 
   return (

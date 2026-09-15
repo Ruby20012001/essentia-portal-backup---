@@ -1,9 +1,14 @@
 "use client";
 
 import { MetricCard } from "@/components/dashboard/MetricCard";
-import { AckNote, DayBadge, StatusPill } from "@/components/wio-tracker/StatusPill";
+import { AckNote, DayBadge, SelectionNote, StatusPill } from "@/components/wio-tracker/StatusPill";
 import type { TrackerBoard } from "@/lib/services/wio-tracker";
-import { forTeam, holdingByStage, todayStats } from "@/lib/services/wio-tracker-logic";
+import {
+  ALARM2_ESCALATES_TO,
+  forTeam,
+  holdingByStage,
+  todayStats,
+} from "@/lib/services/wio-tracker-logic";
 
 /**
  * Screen 1 — Today. Read-only by design: this is the screen the team stands
@@ -66,6 +71,28 @@ export function TodayView({
             Their 15-day clock has never started, so they cannot be late — they
             are simply untracked. Add the WIO date on the WIOs tab to put them
             on the clock.
+          </p>
+        </div>
+      ) : null}
+
+      {/* ALARM 2 (countdown rev A, D-10): "Escalation to Hardesh sir as well."
+          An alarm is a record of who it went to and which WIOs — so it names
+          both, above everything else, rather than leaving it to a tile. */}
+      {stats.escalated > 0 ? (
+        <div className="mb-8 rounded-lg border-l-4 border-warning bg-warning/5 px-5 py-3">
+          <p className="font-body text-sm font-light text-ink">
+            <span className="font-bold text-warning">
+              ALARM 2 — {stats.escalated} {stats.escalated === 1 ? "WIO" : "WIOs"} escalated
+              to {ALARM2_ESCALATES_TO}.
+            </span>{" "}
+            The selection appointment was not held by D-10, its hard deadline:{" "}
+            <span className="font-bold">
+              {running
+                .filter((w) => w.selectionState === "Escalated")
+                .map((w) => w.wio)
+                .join(", ")}
+            </span>
+            . Record the appointment on the WIOs tab once it is held.
           </p>
         </div>
       ) : null}
@@ -225,6 +252,7 @@ export function TodayView({
                   <td className="px-3 py-2.5">
                     <StatusPill status={w.status} tone={w.tone} />
                     <AckNote state={w.ackState} due={w.ackDue} />
+                    <SelectionNote state={w.selectionState} due={w.selectionDue} />
                     {w.openDelays > 0 ? (
                       <span className="mt-1 block whitespace-nowrap font-body text-[11px] font-light text-muted">
                         {w.openDelays} open delay{w.openDelays === 1 ? "" : "s"}

@@ -72,6 +72,8 @@ export type TrackerWioInput = {
   pioNo: string | null;
   /** The day the drawing team acknowledged the WIO. Due within 24 hours. */
   acknowledged: string | null;
+  /** The day the client selection appointment was held. Hard deadline D-10. */
+  selectionHeld: string | null;
 };
 
 /**
@@ -100,6 +102,40 @@ export type AckState =
 
 /** 24 hours, in the whole calendar days the board counts in. */
 export const ACK_WITHIN_DAYS = 1;
+
+/**
+ * ALARM 2 (countdown rev A, D-10). Printed: "Selection appointment — hard
+ * deadline" and "ALARM 2 — appointment not held"; in red: "Escalation to
+ * Hardesh sir as well." The sheet defines an alarm as "a record that the window
+ * is now at risk and who put it there" — so this is a record on the board, not
+ * a message.
+ *
+ *   n/a           released, or no WIO date — there is no D-10 to count to
+ *   Due           D-10 has not ended yet; the appointment is still to come
+ *   Held          recorded on or before D-10
+ *   Held late     recorded, but after D-10
+ *   Escalated     D-10 has ended with no appointment recorded — ALARM 2
+ *   Not recorded  the WIO has moved past Finishes with no date. Selections
+ *                 feed the finish schedule, so the appointment visibly
+ *                 happened; it is not flagged, and no date is invented
+ *
+ * Like the acknowledgement, it never changes status, colour or priority, and
+ * it is orange at most — red stays LATE HERE and OVERDUE.
+ */
+export type SelectionState = "n/a" | "Due" | "Held" | "Held late" | "Escalated" | "Not recorded";
+
+/** D-10: the selection appointment's hard deadline, in days before the PIO date. */
+export const SELECTION_DAY = 10;
+
+/** Who ALARM 2 escalates to, as the markup names him. */
+export const ALARM2_ESCALATES_TO = "Hardesh sir";
+
+/**
+ * The stage the appointment feeds. Past it, the appointment has evidently been
+ * held. If the chain is ever retuned without a stage of this name, the alarm
+ * applies at every stage rather than silently at none.
+ */
+const SELECTION_FEEDS_STAGE = "Finishes";
 
 export type TrackerStatus =
   | "Released"
@@ -135,6 +171,9 @@ export type ComputedWio = TrackerWioInput & {
   /** wioIssued + 24 hours. Null when the clock never started. */
   ackDue: string | null;
   ackState: AckState;
+  /** D-10 — the selection appointment's hard deadline. Null when no WIO date. */
+  selectionDue: string | null;
+  selectionState: SelectionState;
   dayLabel: string;
   accountability: string;
   upcomingStage: string;
@@ -255,6 +294,25 @@ export function computeWio(
             ? "Not acknowledged"
             : "Awaiting";
 
+  // ALARM 2 (see SelectionState). "Held" is measured against D-10; the alarm
+  // only fires while the WIO has not yet moved past the stage the appointment
+  // feeds — past it, the appointment evidently happened.
+  const selectionDue = pioDue ? addDays(pioDue, -SELECTION_DAY) : null;
+  const feedsIndex = ordered.findIndex((s) => s.stage === SELECTION_FEEDS_STAGE);
+  const pastSelection = feedsIndex !== -1 && index > feedsIndex;
+  const selectionState: SelectionState =
+    released || !selectionDue
+      ? "n/a"
+      : wio.selectionHeld
+        ? daysBetween(selectionDue, wio.selectionHeld) > 0
+          ? "Held late"
+          : "Held"
+        : pastSelection
+          ? "Not recorded"
+          : daysBetween(selectionDue, today) > 0
+            ? "Escalated"
+            : "Due";
+
   const dayLabel = released
     ? "PIO released"
     : !wio.wioIssued
@@ -315,6 +373,8 @@ export function computeWio(
     thisStageDue,
     ackDue,
     ackState,
+    selectionDue,
+    selectionState,
     dayLabel,
     accountability,
     upcomingStage,
@@ -386,6 +446,8 @@ export type TodayStats = {
   noWioDate: number;
   /** Still at the first stage, 24 hours gone, no acknowledgement recorded. */
   notAcknowledged: number;
+  /** ALARM 2: running WIOs escalated to Hardesh sir — no selection by D-10. */
+  escalated: number;
 };
 
 export function todayStats(board: ComputedWio[], settings: TrackerSettings): TodayStats {
@@ -401,6 +463,7 @@ export function todayStats(board: ComputedWio[], settings: TrackerSettings): Tod
     overdue: running.filter((w) => w.status === "OVERDUE").length,
     noWioDate: running.filter((w) => !w.wioIssued).length,
     notAcknowledged: running.filter((w) => w.ackState === "Not acknowledged").length,
+    escalated: running.filter((w) => w.selectionState === "Escalated").length,
   };
 }
 

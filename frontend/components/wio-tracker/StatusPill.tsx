@@ -1,4 +1,10 @@
-import type { AckState, TrackerStatus, TrackerTone } from "@/lib/services/wio-tracker-logic";
+import {
+  ALARM2_ESCALATES_TO,
+  type AckState,
+  type SelectionState,
+  type TrackerStatus,
+  type TrackerTone,
+} from "@/lib/services/wio-tracker-logic";
 
 /**
  * The house colour rule, in one place.
@@ -108,6 +114,53 @@ export function AckNote({
           className="rounded border border-line-strong bg-canvas px-1.5 py-0.5 font-bold text-secondary transition-colors hover:bg-hover"
         >
           Acknowledge
+        </button>
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * ALARM 2 under the status pill — the selection appointment (D-10).
+ *
+ * Escalated reads as a record, by name: who it went to. Orange, not red, for
+ * the same reason as AckNote. Nothing renders for rows with nothing to act on.
+ */
+export function SelectionNote({
+  state,
+  due,
+  onHeld,
+}: {
+  state: SelectionState;
+  due: string | null;
+  /** Present only for someone who may edit the board. */
+  onHeld?: () => void;
+}) {
+  if (state !== "Due" && state !== "Escalated" && state !== "Held late") return null;
+  const escalated = state === "Escalated";
+  return (
+    <span
+      className={`mt-1 flex flex-wrap items-center gap-1.5 font-body text-[11px] ${
+        state === "Due" ? "font-light text-muted" : "font-bold text-warning"
+      }`}
+    >
+      <span className="whitespace-nowrap">
+        {escalated
+          ? `ALARM 2 · escalated to ${ALARM2_ESCALATES_TO}`
+          : state === "Held late"
+            ? "Selection appointment held late"
+            : `Selection appointment by ${due}`}
+      </span>
+      {escalated ? (
+        <span className="whitespace-nowrap font-light">not held by D-10 ({due})</span>
+      ) : null}
+      {onHeld && state !== "Held late" ? (
+        <button
+          type="button"
+          onClick={onHeld}
+          className="whitespace-nowrap rounded border border-line-strong bg-canvas px-1.5 py-0.5 font-bold text-secondary transition-colors hover:bg-hover"
+        >
+          Appointment held
         </button>
       ) : null}
     </span>

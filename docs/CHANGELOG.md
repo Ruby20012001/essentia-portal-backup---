@@ -8,6 +8,23 @@
 
 ---
 
+## 2026-09-15 — S4b · ALARM 2, escalated to Hardesh sir
+
+The markup at D-10: *"ALARM 2 — appointment not held"*, and in red, *"Escalation
+to Hardesh sir as well."* Asked for by Monica the same day.
+
+### db/047
+- **Selection appointment held** — a date per WIO, the one fact the alarm needs.
+- **ALARM 2** is derived like every other state: a running WIO with no
+  appointment recorded by the end of D-10 reads *ALARM 2 · escalated to Hardesh
+  sir* — on the WIOs table, on Today (with the WIO numbers), and as a tile on the
+  1-page summary that goes to the CEO. An **Appointment held** button records it.
+- A WIO already past Finishes is not flagged (the appointment evidently
+  happened) and no date is invented for it. Orange, never red; status and
+  priority unchanged.
+- **No email is sent.** The alarm is a record on the board, as the sheet defines
+  an alarm; an automatic message to the CEO waits for its own decision.
+
 ## 2026-09-15 — S4b · the countdown, rev A, as Monica marked it up
 
 Monica printed *WIO to PIO — the countdown* (rev A, 17 Aug) and marked it up in

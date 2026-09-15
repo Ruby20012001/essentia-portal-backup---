@@ -150,11 +150,13 @@ async function listWioInputs(): Promise<TrackerWioInput[]> {
     pio_released: string | null;
     pio_no: string | null;
     acknowledged: string | null;
+    selection_held: string | null;
   }>(
     `SELECT id, wio_number, team_code, project, scope, raised_by,
             wio_issued::text AS wio_issued, stage_id, since::text AS since,
             notes, pio_released::text AS pio_released, pio_no,
-            acknowledged::text AS acknowledged
+            acknowledged::text AS acknowledged,
+            selection_held::text AS selection_held
        FROM ee.tracker_wios`,
   );
   return rows.map((r) => ({
@@ -171,6 +173,7 @@ async function listWioInputs(): Promise<TrackerWioInput[]> {
     pioReleased: toDayString(r.pio_released),
     pioNo: r.pio_no,
     acknowledged: toDayString(r.acknowledged),
+    selectionHeld: toDayString(r.selection_held),
   }));
 }
 
@@ -487,6 +490,7 @@ export type UpdateWioPatch = Partial<{
   pioReleased: string | null;
   pioNo: string | null;
   acknowledged: string | null;
+  selectionHeld: string | null;
 }>;
 
 /**
@@ -517,10 +521,12 @@ export async function updateTrackerWio(
       pio_released: string | null;
       wio_issued: string | null;
       acknowledged: string | null;
+      selection_held: string | null;
     }>(
       `SELECT id, wio_number, stage_id, since::text AS since,
               pio_released::text AS pio_released,
-              wio_issued::text AS wio_issued, acknowledged::text AS acknowledged
+              wio_issued::text AS wio_issued, acknowledged::text AS acknowledged,
+              selection_held::text AS selection_held
          FROM ee.tracker_wios WHERE id = $1`,
       [id],
     );
@@ -542,6 +548,23 @@ export async function updateTrackerWio(
       throw new BlockingRuleError(
         `Acknowledged on ${acknowledgedAfter} is before the WIO was issued on ${issuedAfter}. ` +
           "A WIO can only be acknowledged once it has been issued.",
+      );
+    }
+
+    // ALARM 2's fact follows the same rule: the D-10 deadline is counted from
+    // the WIO date, so an appointment cannot be recorded against no WIO date
+    // or before the WIO was issued.
+    const selectionAfter =
+      patch.selectionHeld !== undefined ? patch.selectionHeld : toDayString(before.selection_held);
+    if (patch.selectionHeld && !issuedAfter) {
+      throw new BlockingRuleError(
+        "Add the WIO issue date first — the selection appointment's D-10 deadline is counted from it.",
+      );
+    }
+    if (selectionAfter && issuedAfter && selectionAfter < issuedAfter) {
+      throw new BlockingRuleError(
+        `Selection appointment on ${selectionAfter} is before the WIO was issued on ${issuedAfter}. ` +
+          "Check the date — the appointment is held after the WIO is issued.",
       );
     }
 
@@ -596,6 +619,7 @@ export async function updateTrackerWio(
     if (patch.pioReleased !== undefined) set("pio_released", patch.pioReleased, "::date");
     if (patch.pioNo !== undefined) set("pio_no", patch.pioNo);
     if (patch.acknowledged !== undefined) set("acknowledged", patch.acknowledged, "::date");
+    if (patch.selectionHeld !== undefined) set("selection_held", patch.selectionHeld, "::date");
 
     if (sets.length === 0) {
       throw new BlockingRuleError("Nothing to change — the patch was empty.");
@@ -618,6 +642,7 @@ export async function updateTrackerWio(
         since: toDayString(before.since),
         pioReleased: toDayString(before.pio_released),
         acknowledged: toDayString(before.acknowledged),
+        selectionHeld: toDayString(before.selection_held),
       },
     };
   });

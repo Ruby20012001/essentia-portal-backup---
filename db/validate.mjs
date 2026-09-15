@@ -103,6 +103,13 @@ if (!failed) {
           "FG code:5:13,Final SLD:6:9,SLD approvals:7:6,Client sign-off:8:2,PIO:9:0",
     },
     {
+      name: "tracker: ALARM 2 has its fact to read (db/047 selection_held, a date)",
+      sql: `SELECT data_type AS v FROM information_schema.columns
+            WHERE table_schema = 'ee' AND table_name = 'tracker_wios'
+              AND column_name = 'selection_held'`,
+      ok: (v) => v === "date",
+    },
+    {
       name: "factory master: 9 stations = 7 active + 2 reserved",
       sql: `SELECT (COUNT(*) FILTER (WHERE status = 'active'))::TEXT || '/' ||
                    (COUNT(*) FILTER (WHERE status = 'reserved'))::TEXT AS v

@@ -28,6 +28,8 @@ const patchSchema = z
     pioNo: z.string().max(40).nullable().optional(),
     // The drawing team's 24-hour acknowledgement (countdown rev A).
     acknowledged: dateField.optional(),
+    // The day the selection appointment was held — ALARM 2's fact (D-10).
+    selectionHeld: dateField.optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "Provide at least one field",
