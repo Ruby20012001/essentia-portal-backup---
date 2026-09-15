@@ -8,6 +8,20 @@
 
 ---
 
+## 2026-09-15 — S4b · the last three, as the picture has them
+
+Checked against the marked-up countdown once more; Monica: "then make these changes".
+
+### db/048
+- **Client sign-off → D-6** — D-6 lists "client approval" among the mandatory
+  approvals. Supersedes the earlier instruction to leave it at D-2.
+- **SLD approvals: "Jyoti + Yogi + Vishakha (if req.) + TL"**, as written.
+- **Timeline per WIO** — D-9: "Standard timeline for an SLD & complete project
+  (depending on the scope of work)". A WIO can carry its own number of days
+  (WIOs tab → Edit → Timeline); blank keeps the standard 15, and the PIO date,
+  days left and every stage deadline follow it. No per-scope numbers were set:
+  the sheet does not give them.
+
 ## 2026-09-15 — S4b · ALARM 2, escalated to Hardesh sir
 
 The markup at D-10: *"ALARM 2 — appointment not held"*, and in red, *"Escalation

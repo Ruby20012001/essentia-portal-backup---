@@ -66,6 +66,7 @@ function wio(over: Partial<TrackerWioInput> = {}): TrackerWioInput {
     pioNo: null,
     acknowledged: null,
     selectionHeld: null,
+    windowDays: null,
     ...over,
   };
 }
@@ -553,8 +554,8 @@ describe("the chain as marked up — countdown rev A (db/045 + db/046)", () => {
     { id: "a4", position: 4, stage: "Finishes", waitingOn: "Roopdeep + CRM", doneBy: 13 },
     { id: "a5", position: 5, stage: "FG code", waitingOn: "Shruti + CRM", doneBy: 13 },
     { id: "a6", position: 6, stage: "Final SLD", waitingOn: "Design team", doneBy: 9 },
-    { id: "a7", position: 7, stage: "SLD approvals", waitingOn: "Jyoti + Yogi + Vishakha + TL", doneBy: 6 },
-    { id: "a8", position: 8, stage: "Client sign-off", waitingOn: "Client", doneBy: 2 },
+    { id: "a7", position: 7, stage: "SLD approvals", waitingOn: "Jyoti + Yogi + Vishakha (if req.) + TL", doneBy: 6 },
+    { id: "a8", position: 8, stage: "Client sign-off", waitingOn: "Client", doneBy: 6 },
     { id: "a9", position: 9, stage: "PIO", waitingOn: "WIO raised by", doneBy: 0 },
   ];
   const at = (stageId: string, over: Partial<TrackerWioInput> = {}) =>
@@ -575,14 +576,45 @@ describe("the chain as marked up — countdown rev A (db/045 + db/046)", () => {
     expect(at("a4").upcomingStage).toBe("FG code  ·  Shruti + CRM");
     expect(at("a5").upcomingStage).toBe("Final SLD  ·  Design team");
     expect(at("a6", { wioIssued: "2026-08-20" }).thisStageDue).toBe("2026-08-26");
-    expect(at("a6").upcomingStage).toBe("SLD approvals  ·  Jyoti + Yogi + Vishakha + TL");
+    expect(at("a6").upcomingStage).toBe("SLD approvals  ·  Jyoti + Yogi + Vishakha (if req.) + TL");
   });
 
-  it("SLD approvals are held by the named approvers and close at D-6", () => {
+  it("SLD approvals are held by the named approvers, Vishakha if required, and close at D-6", () => {
     const r = at("a7", { wioIssued: "2026-08-20" });
-    expect(r.accountability).toBe("Jyoti + Yogi + Vishakha + TL");
+    expect(r.accountability).toBe("Jyoti + Yogi + Vishakha (if req.) + TL");
     expect(r.thisStageDue).toBe("2026-08-29");
     expect(r.upcomingStage).toBe("Client sign-off  ·  Client");
+  });
+
+  it("client approval closes with the SLD approvals, at D-6 (db/048)", () => {
+    expect(at("a8", { wioIssued: "2026-08-20" }).thisStageDue).toBe("2026-08-29");
+  });
+});
+
+describe("a timeline per WIO, by scope of work (db/048)", () => {
+  it("a WIO with no timeline of its own keeps the board's standard window", () => {
+    expect(compute({ wioIssued: "2026-08-20", windowDays: null }).pioDue).toBe("2026-09-04");
+  });
+
+  it("a WIO's own timeline moves its PIO date, days left and stage deadline", () => {
+    // 25 days: issued 2026-08-20 → PIO due 2026-09-14; today 2026-08-25 → 20 left.
+    const r = compute({ wioIssued: "2026-08-20", windowDays: 25, stageId: "s5" });
+    expect(r.pioDue).toBe("2026-09-14");
+    expect(r.daysLeft).toBe(20);
+    expect(r.dayLabel).toBe("D-20");
+    // GFC doneBy 4 in the fixture chain → 2026-09-10.
+    expect(r.thisStageDue).toBe("2026-09-10");
+  });
+
+  it("a longer timeline can take a row off OVERDUE — the scope earned the days", () => {
+    expect(compute({ wioIssued: "2026-08-05" }).status).toBe("OVERDUE");
+    expect(compute({ wioIssued: "2026-08-05", windowDays: 30 }).status).not.toBe("OVERDUE");
+  });
+
+  it("moves ALARM 2 and the acknowledgement with it — D-10 is counted from its own PIO date", () => {
+    const r = compute({ wioIssued: "2026-08-20", windowDays: 25 });
+    expect(r.selectionDue).toBe("2026-09-04");
+    expect(r.ackDue).toBe("2026-08-21");
   });
 });
 

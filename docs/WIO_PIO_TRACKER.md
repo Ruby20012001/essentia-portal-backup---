@@ -36,7 +36,7 @@ no database, no clock, no environment. Read this file first; it is the tool.
 
 Nothing derived is ever stored. A stored status is a status that goes stale the
 moment nobody updates it, and a board that quietly claims to be on time is
-worse than no board. Pinned by 84 unit tests in
+worse than no board. Pinned by 89 unit tests in
 `frontend/tests/unit/wio-tracker-logic.test.ts`.
 
 | Field | Rule |
@@ -93,8 +93,8 @@ The chain follows *WIO to PIO — the countdown* (rev A) as Monica marked it up:
 | 4 | Finishes | Roopdeep + CRM | **D-13** |
 | 5 | FG code | Shruti + CRM | **D-13** |
 | 6 | **Final SLD** | Design team | **D-9** |
-| 7 | **SLD approvals** | Jyoti + Yogi + Vishakha + TL | **D-6** |
-| 8 | Client sign-off | Client | D-2 |
+| 7 | **SLD approvals** | Jyoti + Yogi + Vishakha (if req.) + TL | **D-6** |
+| 8 | Client sign-off | Client | **D-6** |
 | 9 | PIO | WIO raised by | D-0 |
 
 GFC is gone (its days went to SLD preparation) and so is BOM (made after the
@@ -203,6 +203,7 @@ db/031_wio_pio_tracker_seed.sql   the real board: 37 WIOs, 24 delays, 10 stages
 db/045_tracker_countdown_rev_a.sql  the chain as marked up: 9 stages · acknowledged date
 db/046_tracker_finishes_fg_code_d13.sql  Finishes and FG code at D-13
 db/047_tracker_alarm2_selection.sql  selection appointment held · ALARM 2
+db/048_tracker_client_d6_vishakha_scope_timeline.sql  client D-6 · Vishakha (if req.) · timeline per WIO
 db/900_dev_fixtures.sql           + 2 dev personas in DRAFTING
 
 frontend/lib/services/
@@ -212,7 +213,7 @@ frontend/lib/services/
 frontend/app/api/wio-tracker/     GET board · wios · delays · settings · stages
 frontend/app/(portal)/wio-tracker/page.tsx
 frontend/components/wio-tracker/  WioTrackerBoard · Today · Wios · Delays · Setup · StatusPill
-frontend/tests/unit/wio-tracker-logic.test.ts    84 tests
+frontend/tests/unit/wio-tracker-logic.test.ts    89 tests
 ```
 
 Tables: `ee.tracker_settings` · `tracker_stages` · `tracker_wios` ·

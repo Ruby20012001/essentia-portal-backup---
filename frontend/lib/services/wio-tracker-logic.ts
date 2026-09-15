@@ -74,6 +74,11 @@ export type TrackerWioInput = {
   acknowledged: string | null;
   /** The day the client selection appointment was held. Hard deadline D-10. */
   selectionHeld: string | null;
+  /**
+   * This WIO's own timeline, by scope of work (countdown rev A, D-9: "Standard
+   * timeline … depending on the scope of work"). Null = the board's window.
+   */
+  windowDays: number | null;
 };
 
 /**
@@ -266,7 +271,9 @@ export function computeWio(
   const today = settings.today;
   const released = wio.pioReleased !== null;
 
-  const pioDue = wio.wioIssued ? addDays(wio.wioIssued, settings.windowDays) : null;
+  // A WIO's own timeline (by scope of work) wins over the board's standard window.
+  const windowDays = wio.windowDays ?? settings.windowDays;
+  const pioDue = wio.wioIssued ? addDays(wio.wioIssued, windowDays) : null;
 
   // daysLeft is meaningless once released — null reads as "n/a" downstream and
   // cannot be mistaken for "0 days left".

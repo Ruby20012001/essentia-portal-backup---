@@ -30,6 +30,8 @@ const patchSchema = z
     acknowledged: dateField.optional(),
     // The day the selection appointment was held — ALARM 2's fact (D-10).
     selectionHeld: dateField.optional(),
+    // This WIO's own timeline by scope of work; null = the board's standard window.
+    windowDays: z.number().int().min(1).max(365).nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "Provide at least one field",

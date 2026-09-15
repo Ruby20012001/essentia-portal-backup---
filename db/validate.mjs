@@ -79,7 +79,16 @@ if (!failed) {
       ok: (v) =>
         v ===
         "Archive pass:14, SLD · Design:10, SLD · Architecture:10, Finishes:13, " +
-          "FG code:13, Final SLD:9, SLD approvals:6, Client sign-off:2, PIO:0",
+          "FG code:13, Final SLD:9, SLD approvals:6, Client sign-off:6, PIO:0",
+    },
+    {
+      name: "tracker (db/048): Vishakha is 'if req.', and a WIO can carry its own timeline",
+      sql: `SELECT (SELECT waiting_on FROM ee.tracker_stages WHERE stage = 'SLD approvals')
+                   || ' / ' ||
+                   (SELECT data_type FROM information_schema.columns
+                     WHERE table_schema = 'ee' AND table_name = 'tracker_wios'
+                       AND column_name = 'window_days') AS v`,
+      ok: (v) => v === "Jyoti + Yogi + Vishakha (if req.) + TL / integer",
     },
     {
       name: "tracker: no WIO is left pointing at GFC or BOM, and the BOM row went to PIO",
@@ -100,7 +109,7 @@ if (!failed) {
       ok: (v) =>
         v ===
         "Archive pass:1:14,SLD · Design:2:10,SLD · Architecture:3:10,Finishes:4:13," +
-          "FG code:5:13,Final SLD:6:9,SLD approvals:7:6,Client sign-off:8:2,PIO:9:0",
+          "FG code:5:13,Final SLD:6:9,SLD approvals:7:6,Client sign-off:8:6,PIO:9:0",
     },
     {
       name: "tracker: ALARM 2 has its fact to read (db/047 selection_held, a date)",

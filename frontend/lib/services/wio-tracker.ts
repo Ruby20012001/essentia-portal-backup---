@@ -151,12 +151,14 @@ async function listWioInputs(): Promise<TrackerWioInput[]> {
     pio_no: string | null;
     acknowledged: string | null;
     selection_held: string | null;
+    window_days: number | null;
   }>(
     `SELECT id, wio_number, team_code, project, scope, raised_by,
             wio_issued::text AS wio_issued, stage_id, since::text AS since,
             notes, pio_released::text AS pio_released, pio_no,
             acknowledged::text AS acknowledged,
-            selection_held::text AS selection_held
+            selection_held::text AS selection_held,
+            window_days
        FROM ee.tracker_wios`,
   );
   return rows.map((r) => ({
@@ -174,6 +176,7 @@ async function listWioInputs(): Promise<TrackerWioInput[]> {
     pioNo: r.pio_no,
     acknowledged: toDayString(r.acknowledged),
     selectionHeld: toDayString(r.selection_held),
+    windowDays: r.window_days === null ? null : Number(r.window_days),
   }));
 }
 
@@ -491,6 +494,7 @@ export type UpdateWioPatch = Partial<{
   pioNo: string | null;
   acknowledged: string | null;
   selectionHeld: string | null;
+  windowDays: number | null;
 }>;
 
 /**
@@ -568,6 +572,22 @@ export async function updateTrackerWio(
       );
     }
 
+    // A WIO's own timeline (countdown rev A, D-9: by scope of work) must leave
+    // room for the earliest stage deadline — the same rule updateStage applies
+    // to the board's window. Shorter, and the WIO is late the day it is issued.
+    if (patch.windowDays !== undefined && patch.windowDays !== null) {
+      const [earliest] = await q<{ done_by: number | null }>(
+        `SELECT MAX(done_by) AS done_by FROM ee.tracker_stages`,
+      );
+      const longest = Number(earliest?.done_by ?? 0);
+      if (patch.windowDays <= longest) {
+        throw new BlockingRuleError(
+          `A ${patch.windowDays}-day timeline is shorter than the chain allows — the first stage ` +
+            `must clear ${longest} days before the PIO date. Give this WIO at least ${longest + 1} days.`,
+        );
+      }
+    }
+
     if (patch.stageId !== undefined) {
       const [stage] = await q<{ id: string }>(
         `SELECT id FROM ee.tracker_stages WHERE id = $1`,
@@ -620,6 +640,7 @@ export async function updateTrackerWio(
     if (patch.pioNo !== undefined) set("pio_no", patch.pioNo);
     if (patch.acknowledged !== undefined) set("acknowledged", patch.acknowledged, "::date");
     if (patch.selectionHeld !== undefined) set("selection_held", patch.selectionHeld, "::date");
+    if (patch.windowDays !== undefined) set("window_days", patch.windowDays);
 
     if (sets.length === 0) {
       throw new BlockingRuleError("Nothing to change — the patch was empty.");

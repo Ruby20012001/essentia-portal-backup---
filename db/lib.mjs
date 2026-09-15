@@ -59,6 +59,7 @@ export const DEFAULT_FILES = [
   "045_tracker_countdown_rev_a.sql",
   "046_tracker_finishes_fg_code_d13.sql",
   "047_tracker_alarm2_selection.sql",
+  "048_tracker_client_d6_vishakha_scope_timeline.sql",
   "900_dev_fixtures.sql",
 ];
 

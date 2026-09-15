@@ -460,6 +460,16 @@ function RowDetail({
           onCommit={(v) => onPatch(w.id, { selectionHeld: blank(v) })}
         />
         <Field
+          label="Timeline (days)"
+          value={w.windowDays === null ? "" : String(w.windowDays)}
+          disabled={disabled}
+          hint={`By scope of work. Blank = the standard ${board.settings.windowDays} days`}
+          onCommit={(v) => {
+            const trimmed = v.trim();
+            onPatch(w.id, { windowDays: trimmed === "" ? null : Number(trimmed) });
+          }}
+        />
+        <Field
           label="At this stage since"
           type="date"
           value={w.since ?? ""}
