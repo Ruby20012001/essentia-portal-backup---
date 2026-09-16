@@ -93,6 +93,8 @@ body{
 }
 .mono{font-family:"IBM Plex Mono", ui-monospace, monospace; font-variant-numeric:tabular-nums}
 .wrap{max-width:1380px; margin:0 auto; padding-left:16px; padding-right:16px; padding-block:0 60px}
+/* the top bar is sticky, so a jump target has to stop short of it */
+#work, #drawings, #adjust, #rooms{scroll-margin-top:76px}
 
 /* ---------- top bar ---------- */
 .topbar{
@@ -3721,6 +3723,19 @@ function runPrompt(text){
 }
 
 (function wireHero(){
+  /* Every in-page link is scrolled by hand. A published page runs inside a
+     sandboxed frame, where following a #hash counts as a navigation and is
+     refused — the nav and the hero button did nothing at all there. */
+  document.addEventListener('click', function(e){
+    var a = e.target.closest ? e.target.closest('a[href^="#"]') : null;
+    if(!a) return;
+    var id = a.getAttribute('href').slice(1);
+    var el = id && document.getElementById(id);
+    if(!el) return;
+    e.preventDefault();
+    el.scrollIntoView({behavior:REDUCED ? 'auto' : 'smooth', block:'start'});
+  });
+
   var b = document.getElementById('try-demo');
   if(b) b.addEventListener('click', function(){
     document.getElementById('work').scrollIntoView(
