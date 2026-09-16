@@ -5130,28 +5130,113 @@ function portalLoad() {
 }
 
 /* the save the portal uses in place of a file */
+
+/* One request, and an answer that can always be read. A refusal from Vercel
+   itself — a body too large, a timeout — arrives as a page rather than JSON,
+   and reading that as JSON turned the real reason into "Unexpected token". */
+function portalSend(url, method, body) {
+  return fetch(url, {
+    method: method,
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: body
+  }).then(function (r) {
+    return r.text().then(function (t) {
+      var data = null;
+      try { data = JSON.parse(t); } catch (e) { /* not JSON: said below */ }
+      if (!data || typeof data !== 'object') {
+        data = { error: r.status === 413
+          ? 'That is too large to send in one go.'
+          : 'The portal did not answer properly (' + r.status + ').' };
+      }
+      return { ok: r.ok, status: r.status, data: data };
+    });
+  });
+}
+
+/* ── pictures go up on their own ───────────────────────────────────────
+   A picture added here is data inside the deck. Saved like that, every render
+   makes the deck heavier, and past four and a half megabytes a deck neither
+   saves nor opens, for anybody. So before a save each new picture is sent by
+   itself and the deck keeps only the address that comes back — however many
+   renders go in, the deck stays light. The address is the picture's own
+   fingerprint, so the same picture in two places goes up once. */
+function newPictures(st) {
+  var found = [];
+  function see(holder, key) {
+    var v = holder && holder[key];
+    if (typeof v !== 'string' || v.indexOf('data:image/') !== 0) return;
+    for (var i = 0; i < found.length; i++) {
+      if (found[i].src.length === v.length && found[i].src === v) {
+        found[i].at.push([holder, key]);
+        return;
+      }
+    }
+    found.push({ src: v, at: [[holder, key]] });
+  }
+  (st.plates || []).forEach(function (p) { see(p, 'src'); });
+  (st.documents || []).forEach(function (d) { see(d, 'src'); });
+  (st.spaces || []).forEach(function (s) {
+    (s.images || []).forEach(function (im) { see(im, 'src'); });
+    (s.docs || []).forEach(function (d) { see(d, 'src'); });
+  });
+  (st.materials || []).forEach(function (m) { see(m, 'sample'); });
+  return found;
+}
+
+function sendPictures() {
+  var list = newPictures(S);
+  return list.reduce(function (chain, pic, n) {
+    return chain.then(function () {
+      portalSay('Sending pictures · ' + (n + 1) + ' of ' + list.length);
+      return portalSend('/api/decks/' + PORTAL.id + '/images', 'POST', JSON.stringify({ src: pic.src }))
+        .then(function (res) {
+          if (!res.ok || !res.data.url) {
+            throw new Error((res.data.error || 'A picture could not be sent.') + ' The deck was not saved.');
+          }
+          /* only where it is still that picture — it may have been swapped meanwhile */
+          pic.at.forEach(function (a) { if (a[0][a[1]] === pic.src) a[0][a[1]] = res.data.url; });
+        });
+    });
+  }, Promise.resolve());
+}
+
 function portalSave() {
   if (!PORTAL || PORTAL.busy) return;
   var now = shapeOf(S);
   var did = whatChanged(seenShape, now);
-  seenShape = now;
   PORTAL.busy = true;
   portalSay('Saving…');
-  var body = {
-    state: S, version: PORTAL.version, did: did, what: 'saved',
-    name: S.project.name || 'Untitled deck',
-    projectCode: S.project.code || null,
-    stage: S.project.stage === 'execution' ? 'execution' : 'concept'
-  };
-  var url = PORTAL.id ? '/api/decks/' + PORTAL.id : '/api/decks';
-  fetch(url, {
-    method: PORTAL.id ? 'PUT' : 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(PORTAL.id ? body : { name: body.name, projectCode: body.projectCode, state: S })
-  })
-    .then(function (r) {
-      return r.json().then(function (data) { return { ok: r.ok, status: r.status, data: data }; });
+  var steps = Promise.resolve();
+  if (!PORTAL.id) {
+    /* a new deck needs an address before its pictures can be sent to it: it is
+       made first with the pictures left out, and saved whole straight after */
+    steps = steps.then(function () {
+      var bare = JSON.stringify({
+        name: S.project.name || 'Untitled deck',
+        projectCode: S.project.code || null,
+        state: S
+      }, function (k, v) {
+        return typeof v === 'string' && v.indexOf('data:image/') === 0 ? '' : v;
+      });
+      return portalSend('/api/decks', 'POST', bare).then(function (res) {
+        if (!res.ok || !res.data.deck) throw new Error(res.data.error || 'The deck could not be made.');
+        PORTAL.id = res.data.deck.id;
+        PORTAL.version = res.data.deck.version;
+        try { history.replaceState(null, '', deckLink()); } catch (e) { /* the address bar is a courtesy */ }
+      });
+    });
+  }
+  steps
+    .then(sendPictures)
+    .then(function () {
+      portalSay('Saving…');
+      return portalSend('/api/decks/' + PORTAL.id, 'PUT', JSON.stringify({
+        state: S, version: PORTAL.version, did: did, what: 'saved',
+        name: S.project.name || 'Untitled deck',
+        projectCode: S.project.code || null,
+        stage: S.project.stage === 'execution' ? 'execution' : 'concept'
+      }));
     })
     .then(function (res) {
       if (res.status === 409) {
@@ -5160,13 +5245,10 @@ function portalSave() {
         return;
       }
       if (!res.ok) { throw new Error(res.data.error || 'The save was refused.'); }
-      if (!PORTAL.id && res.data.deck) {
-        PORTAL.id = res.data.deck.id;
-        PORTAL.version = res.data.deck.version;
-        history.replaceState(null, '', location.pathname + '?deck=' + PORTAL.id);
-      } else {
-        PORTAL.version = res.data.version;
-      }
+      PORTAL.version = res.data.version;
+      /* taken only once it is saved: a save that failed still has all of its
+         changes to report next time */
+      seenShape = now;
       /* Written on the server, so it belongs in the log on the page. Reloading
          to see your own edit is the kind of small lie a person stops trusting. */
       if (res.data.by) {

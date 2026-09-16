@@ -5,6 +5,11 @@ import {
   NotFoundError,
 } from "@/lib/services/blocking";
 import { PermissionError } from "@/lib/services/permissions";
+import {
+  deckStateJson,
+  pictureAddress,
+  readPicture,
+} from "@/lib/services/deck-pictures";
 import type { SessionUser } from "@/lib/auth/session";
 
 /**
@@ -244,13 +249,14 @@ export async function createDeck(
   if (!name) {
     throw new BlockingRuleError("A deck needs a name before it can be saved.");
   }
+  const stateJson = deckStateJson(input.state);
   const [row] = await withUserContext(user, (q) =>
     q<DeckRow>(
       `INSERT INTO ee.concept_decks (name, project_code, state, created_by, updated_by)
        VALUES ($1, $2, $3::jsonb, $4, $4)
        RETURNING id, name, project_code, stage, version, state, updated_at,
                  NULL::varchar AS updated_by_name`,
-      [name, input.projectCode ?? null, JSON.stringify(input.state ?? {}), user.id],
+      [name, input.projectCode ?? null, stateJson, user.id],
     ),
   );
   await noteActivity(user, row.id, "created the deck", []);
@@ -276,6 +282,9 @@ export async function saveDeck(
   },
 ): Promise<{ version: number; updatedAt: string; by: string }> {
   await requireEditor(user);
+  /* refused before anything is written: a deck too heavy to open is worse
+     than the save that would have made it */
+  const stateJson = deckStateJson(input.state);
 
   const result = await withUserContext(user, async (q) => {
     const [current] = await q<{ version: number }>(
@@ -303,7 +312,7 @@ export async function saveDeck(
         RETURNING version, updated_at`,
       [
         id,
-        JSON.stringify(input.state ?? {}),
+        stateJson,
         input.name ?? null,
         input.projectCode ?? null,
         input.stage ?? null,
@@ -354,6 +363,30 @@ export async function archiveDeck(
 }
 
 /* ── the pictures ──────────────────────────────────────────────────────── */
+
+/**
+ * A new picture for a deck, kept under its own fingerprint. The tool sends
+ * each one before it saves and the deck keeps the address that comes back,
+ * so a deck stays light however many renders go into it (deck-pictures.ts).
+ */
+export async function addDeckPicture(
+  user: SessionUser,
+  deckId: string,
+  src: unknown,
+): Promise<{ slot: string; url: string }> {
+  await requireEditor(user);
+  const picture = readPicture(src);
+  const [deck] = await query<{ id: string }>(
+    "SELECT id FROM ee.concept_decks WHERE id = $1 AND is_archived = FALSE",
+    [deckId],
+  );
+  if (!deck) throw new NotFoundError(`No deck ${deckId}`);
+  await putDeckImage(user, deckId, picture.slot, {
+    bytes: picture.bytes,
+    mime: picture.mime,
+  });
+  return { slot: picture.slot, url: pictureAddress(deckId, picture.slot) };
+}
 
 export async function putDeckImage(
   user: SessionUser,
