@@ -63,6 +63,10 @@ const TRACKER_MODE_PREFIXES = [
   "/api/decks",
   // the deck tool itself, served from public/tools
   "/tools",
+  // Plot to Plan, at the link the design team is given. The file under
+  // /tools is already served; this is the address it is sent as, and a
+  // rewrite still goes through this list.
+  "/planner",
   // The open, read-only board (app/board). Served in tracker mode too —
   // it is the one page most of essentia will ever open.
   "/board",

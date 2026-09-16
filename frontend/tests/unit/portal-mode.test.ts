@@ -52,6 +52,15 @@ describe("tracker mode — one screen", () => {
     }
   });
 
+  it("serves the two static tools and the links they are sent as", () => {
+    // /deck is a client's own plan and figures; /planner holds nothing at all.
+    // Both are open, and both are reached through this list — a rewrite does
+    // not skip it, so the address has to be here as well as the file.
+    for (const p of ["/tools/area-planner.html", "/planner", "/deck", "/decks"]) {
+      expect(isRouteAllowed(p, TRACKER), p).toBe(true);
+    }
+  });
+
   it("closes every other screen", () => {
     for (const p of [
       "/dashboard",
