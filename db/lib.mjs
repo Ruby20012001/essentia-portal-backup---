@@ -60,6 +60,7 @@ export const DEFAULT_FILES = [
   "046_tracker_finishes_fg_code_d13.sql",
   "047_tracker_alarm2_selection.sql",
   "048_tracker_client_d6_vishakha_scope_timeline.sql",
+  "049_hr_interviews.sql",
   "900_dev_fixtures.sql",
 ];
 

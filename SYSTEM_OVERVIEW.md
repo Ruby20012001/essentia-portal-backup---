@@ -106,7 +106,7 @@ essentia-portal/
 └── docs/
     ├── architecture/          system, db, api, rbac, workflows, events,
     │                          readiness, tech-debt, roadmap, diagrams, +RC-1
-    ├── foundation · auth · keka · notifications · wio-pio (deep dives)
+    ├── foundation · auth · keka · notifications · wio-pio · hiring (deep dives)
     ├── ASSUMPTIONS_DECISIONS.md (A-01…A-23) · BRIEF_DISCREPANCIES.md
     └── Portal_Complete_Brief.html (the 39-section source brief)
 ```

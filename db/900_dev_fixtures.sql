@@ -433,3 +433,138 @@ SET password_hash = 'a2f7c19640a4db2124f52271b1b379f8:4280680cec56f9f76cd3f1e0f3
     auth_provider = 'local'
 WHERE email IN ('dev.tracker@essentia.in', 'dev.tracker.member@essentia.in')
   AND password_hash IS NULL;
+
+-- ---------------------------------------------------------------------
+-- HIRING (db/049) — somebody who can actually work the module.
+--
+-- Same trap as the tracker and db/029's Country Head: every fixture account
+-- so far is L0/L1 or sits in CRM_EE, SITE or DRAFTING, and hiring is fenced
+-- to HR by department. Without an HR account the screen renders "Restricted"
+-- for everyone present and reads as broken rather than closed.
+--
+--   dev.hr@essentia.in        L2, HR — runs hiring
+--   dev.hod@essentia.in       L2, DRAFTING — sits on a panel and nothing else,
+--                             which is the case the RLS panel policy exists for
+-- ---------------------------------------------------------------------
+INSERT INTO public.users (id, email, full_name, display_name, access_level, department_id, job_title)
+VALUES
+  ('00000000-0000-4000-8000-00000000000d', 'dev.hr@essentia.in',
+   'Dev HR Lead', 'Dev HR', 'L2',
+   (SELECT id FROM public.departments WHERE code = 'HR'),
+   'HR lead (dev fixture)'),
+  ('00000000-0000-4000-8000-00000000000e', 'dev.hod@essentia.in',
+   'Dev Drafting HOD', 'Dev HOD', 'L2',
+   (SELECT id FROM public.departments WHERE code = 'DRAFTING'),
+   'Drafting HOD — panel member only (dev fixture)')
+ON CONFLICT (email) DO NOTHING;
+
+UPDATE public.users
+SET password_hash = 'a2f7c19640a4db2124f52271b1b379f8:4280680cec56f9f76cd3f1e0f372a3f6345619ccc5a1a5ad750cbcab490e1cb6597f42fc860dc04961d37b15aa84af49fb7dc2780120bc5c34669e143927dd8a',
+    auth_provider = 'local'
+WHERE email IN ('dev.hr@essentia.in', 'dev.hod@essentia.in')
+  AND password_hash IS NULL;
+
+-- One open seat, two people against it, and a round tomorrow — enough for the
+-- board, the schedule and the scorecard to all have something to draw.
+INSERT INTO hr.open_roles (id, title, department_id, headcount, location, employment, status, hiring_lead, opened_by, notes)
+VALUES
+  ('00000000-0000-4000-8000-00000000c001', 'Junior Draughtsman',
+   (SELECT id FROM public.departments WHERE code = 'DRAFTING'),
+   2, 'Gurugram', 'full_time', 'open',
+   '00000000-0000-4000-8000-00000000000e',
+   '00000000-0000-4000-8000-00000000000d',
+   'Two seats — the drawing ladder is the bottleneck on every live project.'),
+  ('00000000-0000-4000-8000-00000000c002', 'Client Advisor — Experience Centre',
+   (SELECT id FROM public.departments WHERE code = 'HR'),
+   1, 'Sultanpur, Delhi', 'full_time', 'on_hold',
+   NULL, '00000000-0000-4000-8000-00000000000d',
+   'Held until the Delhi centre''s Q3 numbers are in.')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hr.question_sets (id, name, stage_code, role_id, created_by)
+VALUES ('00000000-0000-4000-8000-00000000c101',
+        'Drafting — department round', 'department',
+        '00000000-0000-4000-8000-00000000c001',
+        '00000000-0000-4000-8000-00000000000d')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hr.questions (id, set_id, seq, prompt, guidance)
+VALUES
+  ('00000000-0000-4000-8000-00000000c111', '00000000-0000-4000-8000-00000000c101', 1,
+   'Walk us through a drawing set you produced end to end. What changed between the first issue and the last?',
+   'Listen for revisions driven by site reality, not by a reviewer''s taste.'),
+  ('00000000-0000-4000-8000-00000000c112', '00000000-0000-4000-8000-00000000c101', 2,
+   'A site supervisor calls to say your detail cannot be built as drawn. What happens next?',
+   'The answer we want ends with the drawing changing, not with the call being won.'),
+  ('00000000-0000-4000-8000-00000000c113', '00000000-0000-4000-8000-00000000c101', 3,
+   'Which software do you actually draw in, and what do you do when the file will not open on the other side?',
+   'Honesty about the toolchain matters more than the list of tools.')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hr.candidates (id, role_id, full_name, email, phone, source, expected_ctc, notice_days, stage, status, added_by)
+VALUES
+  ('00000000-0000-4000-8000-00000000c201', '00000000-0000-4000-8000-00000000c001',
+   'Aarti Sethi', 'aarti.sethi@example.com', '+91 98110 00001', 'referral',
+   540000, 30, 'department', 'active', '00000000-0000-4000-8000-00000000000d'),
+  ('00000000-0000-4000-8000-00000000c202', '00000000-0000-4000-8000-00000000c001',
+   'Rohit Menon', 'rohit.menon@example.com', '+91 98110 00002', 'naukri',
+   600000, 60, 'hr_screen', 'active', '00000000-0000-4000-8000-00000000000d'),
+  ('00000000-0000-4000-8000-00000000c203', '00000000-0000-4000-8000-00000000c001',
+   'Sana Qureshi', 'sana.qureshi@example.com', '+91 98110 00003', 'walk-in',
+   480000, 15, 'hr_screen', 'rejected', '00000000-0000-4000-8000-00000000000d')
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE hr.candidates
+   SET outcome_note = 'Strong on detailing, no site exposure at all — worth a call again in a year.'
+ WHERE id = '00000000-0000-4000-8000-00000000c203' AND outcome_note IS NULL;
+
+-- Tomorrow, so the "what is coming up" list is never empty on a dev machine.
+--
+-- AT TIME ZONE is not decoration. A bare `DATE + TIME '11:30'` is a timestamp
+-- with no zone, and the server reads it in whatever zone it happens to run in
+-- — so a round set for half past eleven in Gurugram renders as some other hour
+-- entirely and the fixture teaches the wrong thing about the column.
+INSERT INTO hr.interviews (id, candidate_id, stage_code, question_set_id, scheduled_at, duration_mins, mode, location, status, scheduled_by)
+VALUES
+  ('00000000-0000-4000-8000-00000000c301', '00000000-0000-4000-8000-00000000c201',
+   'department', '00000000-0000-4000-8000-00000000c101',
+   ((CURRENT_DATE + 1) + TIME '11:30') AT TIME ZONE 'Asia/Kolkata',
+   45, 'in_person', 'NH8 — meeting room 2',
+   'scheduled', '00000000-0000-4000-8000-00000000000d'),
+  ('00000000-0000-4000-8000-00000000c302', '00000000-0000-4000-8000-00000000c202',
+   'hr_screen', NULL,
+   ((CURRENT_DATE - 2) + TIME '16:00') AT TIME ZONE 'Asia/Kolkata',
+   30, 'phone', NULL,
+   'done', '00000000-0000-4000-8000-00000000000d')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hr.interview_panel (interview_id, user_id, is_lead)
+VALUES
+  ('00000000-0000-4000-8000-00000000c301', '00000000-0000-4000-8000-00000000000e', TRUE),
+  ('00000000-0000-4000-8000-00000000c301', '00000000-0000-4000-8000-00000000000d', FALSE),
+  ('00000000-0000-4000-8000-00000000c302', '00000000-0000-4000-8000-00000000000d', TRUE)
+ON CONFLICT (interview_id, user_id) DO NOTHING;
+
+-- One round already has its feedback in, so the candidate page has something
+-- to show beside an empty "nobody has written yet".
+INSERT INTO hr.scorecards (id, interview_id, user_id, recommendation, strengths, concerns, submitted_at)
+VALUES ('00000000-0000-4000-8000-00000000c401',
+        '00000000-0000-4000-8000-00000000c302',
+        '00000000-0000-4000-8000-00000000000d',
+        'yes',
+        'Clear about why he is leaving and what he wants next. Asked about the drawing ladder unprompted.',
+        'Sixty days'' notice against two seats we needed filled last month.',
+        NOW() - INTERVAL '2 days')
+ON CONFLICT (interview_id, user_id) DO NOTHING;
+
+INSERT INTO hr.candidate_activity (candidate_id, user_id, what, detail)
+SELECT v.cid::uuid, '00000000-0000-4000-8000-00000000000d', v.what, v.detail
+FROM (VALUES
+  ('00000000-0000-4000-8000-00000000c201', 'added the candidate', 'Referred by the drafting team'),
+  ('00000000-0000-4000-8000-00000000c201', 'moved to Department round', NULL),
+  ('00000000-0000-4000-8000-00000000c202', 'added the candidate', NULL),
+  ('00000000-0000-4000-8000-00000000c203', 'rejected after HR conversation',
+   'Strong on detailing, no site exposure at all')
+) AS v(cid, what, detail)
+WHERE NOT EXISTS (SELECT 1 FROM hr.candidate_activity);
+

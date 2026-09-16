@@ -1732,14 +1732,106 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      name: "hiring: the stages are rows, ordered, with one final stage",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM hr.interview_stages) >= 2
+              AND (SELECT COUNT(*) FROM hr.interview_stages WHERE is_final) = 1
+              AND (SELECT COUNT(DISTINCT seq) FROM hr.interview_stages)
+                  = (SELECT COUNT(*) FROM hr.interview_stages)
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // The whole point of the module: HR can work it from L2, and the floor
+      // cannot reach it at all. A department row beats the level's global row.
+      name: "hiring: HR runs it at L2; L2/L3 elsewhere are shut out",
+      sql: `SELECT (
+              (SELECT allowed FROM public.permissions p
+                 JOIN public.departments d ON d.id = p.department_id
+                WHERE d.code='HR' AND p.access_level='L2'
+                  AND p.resource_type='hiring' AND p.action_code='hr_access')
+              AND NOT (SELECT allowed FROM public.permissions
+                         WHERE access_level='L2' AND department_id IS NULL
+                           AND resource_type='hiring' AND action_code='hr_access')
+              AND NOT (SELECT allowed FROM public.permissions
+                         WHERE access_level='L3' AND department_id IS NULL
+                           AND resource_type='hiring' AND action_code='hr_access')
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // A submitted scorecard has to say yes or no. Ratings with no
+      // recommendation are feedback that decides nothing.
+      name: "hiring: a scorecard cannot be submitted without a recommendation",
+      sql: `INSERT INTO hr.scorecards (interview_id, user_id, strengths, submitted_at)
+            VALUES ('00000000-0000-4000-8000-00000000c301',
+                    '00000000-0000-4000-8000-00000000000e',
+                    'Good on paper', NOW())
+            RETURNING id AS v`,
+      expectError: true,
+      ok: () => true,
+    },
+    {
+      name: "hiring: one interviewer writes one scorecard per round",
+      sql: `INSERT INTO hr.scorecards (interview_id, user_id, recommendation)
+            VALUES ('00000000-0000-4000-8000-00000000c302',
+                    '00000000-0000-4000-8000-00000000000d', 'no')
+            RETURNING id AS v`,
+      expectError: true,
+      ok: () => true,
+    },
+    {
+      // The case the panel policy exists for: a drafting HOD is not HR, sees
+      // no board, and still reaches the one round they are sitting in.
+      name: "hiring: RLS opens a panel member's own round and nothing else",
+      setupSql: `
+        SELECT set_config('app.user_id', '00000000-0000-4000-8000-00000000000e', FALSE),
+               set_config('app.user_access_level', 'L2', FALSE)`,
+      asRestrictedRole: true,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM hr.interviews) = 1
+              AND (SELECT COUNT(*) FROM hr.interviews
+                    WHERE id='00000000-0000-4000-8000-00000000c301') = 1
+              AND (SELECT COUNT(*) FROM hr.candidates) = 1
+              AND (SELECT COUNT(*) FROM hr.candidate_activity) = 0
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "hiring: RLS opens the whole board to HR, by department",
+      setupSql: `
+        SELECT set_config('app.user_id', '00000000-0000-4000-8000-00000000000d', FALSE),
+               set_config('app.user_access_level', 'L2', FALSE)`,
+      asRestrictedRole: true,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM hr.candidates) = 3
+              AND (SELECT COUNT(*) FROM hr.interviews) = 2
+              AND (SELECT COUNT(*) FROM hr.candidate_activity) = 4
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "hiring: RLS shows a stranger nothing at all",
+      setupSql: `
+        SELECT set_config('app.user_id', '00000000-0000-4000-8000-000000000004', FALSE),
+               set_config('app.user_access_level', 'L3', FALSE)`,
+      asRestrictedRole: true,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM hr.candidates) = 0
+              AND (SELECT COUNT(*) FROM hr.interviews) = 0
+              AND (SELECT COUNT(*) FROM hr.scorecards) = 0
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
   // check forces the policy path with row_security and a non-owner role.
   await db.exec(`
     CREATE ROLE app_user NOLOGIN;
-    GRANT USAGE ON SCHEMA ee, eh, factory, proc, portal, audit TO app_user;
-    GRANT SELECT ON ALL TABLES IN SCHEMA ee, eh, public TO app_user;
+    GRANT USAGE ON SCHEMA ee, eh, factory, proc, portal, audit, hr TO app_user;
+    GRANT SELECT ON ALL TABLES IN SCHEMA ee, eh, public, hr TO app_user;
   `);
 
   for (const check of checks) {
@@ -1773,7 +1865,7 @@ if (!failed) {
 
   const tables = await db.query(`
     SELECT COUNT(*)::INT AS n FROM information_schema.tables
-    WHERE table_schema IN ('public','ee','eh','factory','proc','portal','audit')
+    WHERE table_schema IN ('public','ee','eh','factory','proc','portal','audit','hr')
       AND table_type = 'BASE TABLE'
   `);
   console.log(`INFO    base tables created: ${tables.rows[0].n}`);

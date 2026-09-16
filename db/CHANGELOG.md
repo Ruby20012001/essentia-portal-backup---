@@ -1,5 +1,42 @@
 # Database Schema Changelog
 
+## 049 — 2026-09-16 (Hiring and interviews — S11)
+
+- **New schema `hr`**, nine tables. Candidate data is not employee data and
+  must not be reachable from a join written for employee data, so it sits
+  beside ee/eh/factory/proc rather than inside `portal`, and can be dropped
+  whole.
+- `hr.interview_stages` — the pipeline as **rows**, ordered by `seq`. Six
+  seeded (applied → HR conversation → department → HOD → founder → offer).
+  Nothing in the application hard-codes the order.
+- `hr.open_roles` · `hr.candidates` — the seat and the people against it.
+  `stage` (where they are) is kept apart from `status` (whether they are still
+  moving), so the board can say "rejected after the HOD round" rather than
+  losing that to one column.
+- `hr.interviews` · `hr.interview_panel` — a round, and everybody sitting in
+  it. The panel is a list because "who still owes feedback" is only answerable
+  if it is.
+- `hr.question_sets` · `hr.questions` — the same questions asked of everybody
+  against a seat. A set belongs to a stage, a role, both, or neither; the
+  lookup prefers the most specific.
+- `hr.scorecards` · `hr.scorecard_answers` — one interviewer, one scorecard per
+  round (`UNIQUE (interview_id, user_id)`), and a CHECK that a submitted one
+  carries a recommendation. Feedback with a rating and no call decides nothing.
+- `hr.candidate_activity` — append-only. `essentia_app` gets `SELECT, INSERT`
+  and nothing else; a trail that can be edited is not a trail.
+- **RLS on the five tables that carry a person.** Open to L0/L1 and to the HR
+  department, and separately to a panel member for the one round they are in —
+  which is the case the module exists to serve, since the HOD in the room is
+  not HR. Proven in `validate.mjs` from three directions (HR sees the board, a
+  panel member sees one round, a stranger sees nothing).
+- **`hiring` resource + permissions.** HR runs it from L2 via a department row
+  beating the level's global row. There is no global L2/L3 grant, and the
+  migration raises an exception at load time if one ever appears.
+- Dev fixtures in `900`: an HR account and a panel-only HOD account — without
+  them every fixture user sees "Restricted" and the module reads as broken
+  rather than fenced. Same trap `029` hit with the Country Head.
+- See [`docs/hiring.md`](../docs/hiring.md).
+
 ## 012 — 2026-07-08 (Scheduler dead-letter alert policy)
 
 - `portal.event_routes`: `scheduler.job_dead` → `system_alert`, recipient

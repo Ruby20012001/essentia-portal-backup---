@@ -112,13 +112,16 @@ stop and report before adding write backend.
 - **Project Hub**, **WIO/GFC approval on the engine**, brand reconciliation
 - **Phase-1 Core — COMPLETE:** Design Room (S5), CRM TL greeting (S2), VisionCAM (S3),
   WIO/PIO Hub (S4), **Experience Centre (S6) + the discount gate**
+- **Hiring (S11)** — open seats, candidates, rounds, question bank, scorecards
+  (db/049, [`hiring.md`](hiring.md)). The Keka half of S11 is still untouched.
 - **Velocity Gates passed: #2, #3, #4, #5, #6, #7** — 6 of 8
 
 **In progress.** Nothing mid-flight. Paused awaiting screen selection.
 
 **Not started**
 - Phase 2 integrations: S7 BD/HubSpot, S8 COO, S9 Procurement/TranZact,
-  S10 Factory HOD, S11 HR/Keka, S13 API Health, S14 Vendor
+  S10 Factory HOD, S11 **Keka sync** (the hiring half is built), S13 API Health,
+  S14 Vendor
 - VisionCAM **mobile capture** (React Native, offline-first) — the web log/gate exists
 - **Velocity Gates open: #1** VisionCAM billing on every site ·
   **#8** Communication Spine welcome letter
@@ -183,6 +186,7 @@ Newest first. Full detail in [`docs/CHANGELOG.md`](CHANGELOG.md); full history i
 
 | Date | Milestone | Commits |
 |---|---|---|
+| 2026-09-16 | **S11 Hiring** (db/049) — seats, candidates, rounds, question bank, scorecards. The panel is its own permission, so an HOD reaches their round without reaching the board | this commit |
 | 2026-07-28 | Work restored to a clean branch; all 98 commits + 33 branches pushed to GitHub (Layer 3 was empty) | `1491b83` |
 | 2026-07-30 | **S6 Experience Centre** + discount control gate (db/029); L2 could not approve its own gate | this commit |
 | 2026-07-23 | **Phase-1 Core:** VisionCAM S3, CRM TL greeting S2, Design Room S5 | `c573b48` · `9734283` · `2619d7a` |

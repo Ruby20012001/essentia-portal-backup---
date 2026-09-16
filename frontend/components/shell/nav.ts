@@ -67,7 +67,9 @@ export const NAV: NavGroup[] = [
   {
     label: "People",
     items: [
-      { label: "HR & Keka", href: "/hr", screen: "S11" },
+      // One entry, not two: hiring IS the HR screen now, and the Keka sync it
+      // was a placeholder for is a source of people rather than a screen.
+      { label: "Hiring", href: "/hr", screen: "S11" },
       { label: "Exit Protocol", href: "/exit-protocol", screen: "S12" },
     ],
   },

@@ -8,6 +8,47 @@
 
 ---
 
+## 2026-09-16 — S11 · hiring, in the portal
+
+The HR screen has been a placeholder since the information architecture was
+drawn. It is now the hiring module: open seats, the people against them, the
+rounds in the diary, the questions each round asks, and what each interviewer
+thought.
+
+The module exists for one failure in particular. Hiring lived in a WhatsApp
+group and an inbox, so a candidate got asked the same question by four people
+and the one thing nobody asked turned out to be the thing that mattered.
+
+**What it refuses, and why.** Moving somebody on while an interviewer still
+owes a write-up — because that decides without the person who was in the room,
+and the refusal counts them. A rejection with no reason — because that is the
+row that gets the same person called again next year. A second scorecard from
+the same interviewer, or an edit to one already submitted — because what a
+scorecard is worth is that it was written before its author heard what anybody
+else thought. A round with nobody sitting in it.
+
+**The panel is its own permission.** The board is HR's and the founders'. But a
+department HOD sitting in an interview is not HR, and must still reach that one
+round and the person they are about to meet — so `/hr/rounds/{id}` is gated on
+the panel list and nothing else, and `/hr` shows such a person their own rounds
+rather than the word "Restricted". Row visibility is enforced twice: the
+service refuses, and Postgres refuses independently through RLS.
+
+RLS decides rows, not columns, and a candidate row carries what they are asking
+for. A panel member legitimately reaches that row, so the money is fenced in
+the service instead — written down in both places because only one of them is
+enforced by the database.
+
+**Stages are rows.** Inserting a round between two others is an `INSERT`, not a
+deploy.
+
+- `db/049_hr_interviews.sql` (schema `hr`, nine tables, RLS, grants,
+  permissions) · dev fixtures in `db/900`
+- `frontend/lib/services/hiring.ts` · nine API routes under `/api/hiring`
+- Four screens under `/hr`; the nav entry is now "Hiring"
+- 7 checks in `db/validate.mjs`, 24 in `frontend/tests/unit/hiring.test.ts`
+- [`docs/hiring.md`](hiring.md)
+
 ## 2026-09-15 — S4b · the last three, as the picture has them
 
 Checked against the marked-up countdown once more; Monica: "then make these changes".
