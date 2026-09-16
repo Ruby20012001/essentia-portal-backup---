@@ -274,6 +274,13 @@
 a.deck-btn{display:inline-flex;align-items:center;text-decoration:none}
 .deck-est-rate{font-size:15px;color:var(--ink);margin:0 0 22px;max-width:62ch}
 .deck-est-wrap{overflow-x:auto}
+/* the materials: a sample to look at, beside the words a site orders by */
+.deck-mat-table td{vertical-align:middle}
+.deck-mat-swatch{display:block;width:64px;height:64px;object-fit:cover;background:var(--wash);
+  border:1px solid var(--rule);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.deck-mat-where{display:block;margin-top:3px;font-size:11px;color:var(--soft);line-height:1.45;max-width:34ch}
+.deck-mat-none{color:var(--faint)}
+@media print{.deck-mat-swatch{width:48px;height:48px}.deck-mat-table tr{break-inside:avoid}}
 .deck-est-table{width:100%;border-collapse:collapse;font-size:13px}
 .deck-est-table th{text-align:left;font-weight:400;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
   color:var(--faint);padding:0 14px 9px 0;border-bottom:1px solid var(--rule)}
@@ -576,6 +583,12 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
 .row-title{flex:1;font-size:13px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row-tools{display:flex;gap:6px;align-items:center}
 .row-in{padding:14px 12px}
+.row--off{opacity:.5}
+.mat-grid{display:grid;grid-template-columns:96px 1fr;gap:14px 16px;align-items:start}
+.mat-side{display:flex;flex-direction:column;gap:6px}
+.mat-thumb{width:96px;height:96px;background:var(--surface)}
+.mat-where{font-size:12px;color:var(--secondary);line-height:1.5}
+@media (max-width:620px){.mat-grid{grid-template-columns:1fr}}
 .pill{font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:3px 7px;border:1px solid var(--line-strong);color:var(--muted)}
 .pill--ok{color:#8FCB92;border-color:#254A27}
 .pill--bad{color:#F09B95;border-color:#5A2020}
@@ -696,7 +709,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
           <h1>Concept Deck <span class="head-build" id="headBuild">build unstamped</span></h1>
           <p class="head-sub">Attach the plan, mark the spaces, add the visuals — then preview and send.</p>
           <nav class="head-jump" aria-label="Jump to a section">
-            <a href="#card-docs">Documents</a><a href="#card-cover">Cover</a><a href="#card-plates">Plates</a><a href="#card-spaces">Spaces</a><a href="#card-narrative">Narrative</a><a href="#card-gates">Gates</a><a href="#card-activity">Activity</a>
+            <a href="#card-docs">Documents</a><a href="#card-cover">Cover</a><a href="#card-plates">Plates</a><a href="#card-spaces">Spaces</a><a href="#card-materials">Materials</a><a href="#card-narrative">Narrative</a><a href="#card-gates">Gates</a><a href="#card-activity">Activity</a>
           </nav>
         </div>
         <div class="head-edited" id="editedLine" hidden></div>
@@ -782,6 +795,20 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
           </div>
         </section>
 
+
+        <section class="card" id="card-materials">
+          <h2>Materials</h2>
+          <div class="card-in">
+            <p class="f-hint" style="margin:0 0 12px">
+              The materials list in the deck is read off the marks on the renders. A mark written
+              <i>what it is · what it is called</i>, with a code, a size or a maker, becomes a row.
+              Fill in what the mark did not say, add a photograph of the actual sample, or add a
+              material nobody marked.
+            </p>
+            <div id="matList"></div>
+            <button class="btn btn--ghost btn--sm" id="bAddMat">+ Add material</button>
+          </div>
+        </section>
 
         <section class="card" id="card-narrative">
           <h2>Narrative</h2>
@@ -1685,6 +1712,256 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
     '</section>';
   }
 
+  /* THE MATERIALS.
+
+     What a site needs to order a finish: what it is called, its code, what
+     kind of material it is, its size and its maker — and a sample, because a
+     stone is not chosen from its name.
+
+     The list is not typed a second time. It is read off the marks already on
+     the renders, which are written 'what it is · what it is called':
+     'Wall tile · Canyon Beige 600x1200, Kajaria' is a wall tile, called Canyon
+     Beige, 600x1200, made by Kajaria. A mark that only describes — 'False
+     ceiling · plaster, painted' — names nothing anybody could order, and stays
+     off the list. What a person has corrected, filled in or added is kept in
+     state.materials against the row, and wins.
+
+     Where nobody has added a photograph of the sample, the swatch is cut from
+     the render at the spot the mark sits on: the material as the client saw
+     it. The note under the table says so, because a render is not a sample. */
+  var MAKERS = ['Coast to Coast', 'Asian Paints', 'Action Tesa', 'Royal Touche', 'Saint-Gobain',
+    'Kajaria', 'Greenlam', 'Egger', 'Somany', 'Nitco', 'Johnson', 'Merino', 'Century', 'Jaquar',
+    'Kohler', 'Hettich', 'Hafele', 'Grohe', 'Duravit', 'Simpolo', 'Stylam', 'Hindware', 'Cera',
+    'Orientbell', 'Durian'];
+  var MAT_FIELDS = ['name', 'code', 'material', 'size', 'brand'];
+
+  function reEsc(t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  function parseMaterial(name, material) {
+    var t = String(name || '').trim();
+    var at = t.indexOf('·');
+    var kind = (at < 0 ? t : t.slice(0, at)).trim();
+    var rest = [at < 0 ? '' : t.slice(at + 1).trim(), String(material || '').trim()]
+      .filter(Boolean).join(', ');
+    if (!kind && !rest) return null;
+    var brand = '', size = '', code = '';
+    for (var i = 0; i < MAKERS.length && !brand; i++) {
+      var re = new RegExp('(^|[\\s,])' + reEsc(MAKERS[i]) + '(?=$|[\\s,])', 'i');
+      if (re.test(rest)) { brand = MAKERS[i]; rest = rest.replace(re, ' '); }
+    }
+    var sm = rest.match(/\b\d{2,4}\s?[x×]\s?\d{2,4}(?:\s?[x×]\s?\d{1,4})?\b/i);
+    if (sm) { size = sm[0].replace(/\s/g, '').replace(/×/g, 'x'); rest = rest.replace(sm[0], ' '); }
+    var cm = rest.match(/\b(?:[A-Z]{1,5}-\d{2,6}[A-Z0-9]*|[A-Z]{2,5}\s?\d{2,6}[A-Z0-9]*|\d{3,6}\s?[A-Z]{1,4}\d{0,2})\b/);
+    if (cm) { code = cm[0].trim(); rest = rest.replace(cm[0], ' '); }
+    var called = rest.split(',').map(function (x) { return x.replace(/\s{2,}/g, ' ').trim(); })
+      .filter(Boolean)[0] || '';
+    return { kind: kind, name: called, code: code, size: size, brand: brand };
+  }
+
+  /* opts.all keeps the rows taken off the list, and the empty ones still being
+     typed — the editor needs to show them; the deck does not */
+  function materialRows(state, opts) {
+    var rows = {}, order = [];
+    live(state).forEach(function (sp) {
+      (sp.images || []).forEach(function (im, k) {
+        ((im && im.spots) || []).forEach(function (q) {
+          var m = parseMaterial(q.name, q.material);
+          /* something that can be ordered: a maker, a code, a size, or a name of its own */
+          if (!m || !(m.brand || m.code || m.size || /^[A-Z]/.test(m.name))) return;
+          var key = [m.name, m.code, m.size, m.brand].join('|').toLowerCase();
+          var r = rows[key];
+          if (!r) {
+            r = rows[key] = { key: key, name: m.name, code: m.code, size: m.size, brand: m.brand,
+              kinds: [], where: [], spots: [], perPic: {} };
+            order.push(key);
+          }
+          /* every place it was marked is somewhere a swatch could be cut from —
+             six at most, and no more than three from one picture */
+          var pic = sp.id + '/' + k;
+          if (r.spots.length < 6 && (r.perPic[pic] || 0) < 3) {
+            r.spots.push([sp.id, k, q.x, q.y].join('|'));
+            r.perPic[pic] = (r.perPic[pic] || 0) + 1;
+          }
+          if (m.kind && r.kinds.indexOf(m.kind) < 0) r.kinds.push(m.kind);
+          if (r.where.indexOf(sp.name) < 0) r.where.push(sp.name);
+        });
+      });
+    });
+    var kept = {};
+    (state.materials || []).forEach(function (o) { if (o && o.key) kept[o.key] = o; });
+    var out = order.map(function (k) {
+      var r = rows[k], o = kept[k] || {};
+      /* the plainest of the names it was marked by: 'Italian marble', not
+         'Italian marble counter' */
+      r.material = r.kinds.slice().sort(function (a, b) { return a.length - b.length; })[0] || '';
+      delete r.kinds;
+      r.swatch = r.spots.join(';');
+      delete r.spots; delete r.perPic;
+      MAT_FIELDS.forEach(function (f) { if (typeof o[f] === 'string') r[f] = o[f]; });
+      r.sample = o.sample || '';
+      r.hide = !!o.hide;
+      return r;
+    }).sort(function (a, b) {
+      return b.where.length - a.where.length || a.name.localeCompare(b.name);
+    });
+    /* a material nobody marked, added by hand — after the rest, in the order it came */
+    (state.materials || []).forEach(function (o) {
+      if (!o || !o.own || !o.key) return;
+      var r = { key: o.key, own: true, sample: o.sample || '', hide: !!o.hide, swatch: '',
+        where: String(o.where || '').split(',').map(function (x) { return x.trim(); })
+          .filter(Boolean) };
+      MAT_FIELDS.forEach(function (f) { r[f] = String(o[f] || ''); });
+      out.push(r);
+    });
+    return (opts && opts.all) ? out : out.filter(function (r) {
+      return !r.hide && (r.name || r.code || r.material);
+    });
+  }
+
+  function materialsHtml(state) {
+    var rows = materialRows(state);
+    if (!rows.length) return '';
+    var no = stageOf(state) === 'execution' ? '07' : '06';
+    var dash = '<span class="deck-mat-none">—</span>';
+    var cell = function (v) { return '<td>' + (v ? esc(v) : dash) + '</td>'; };
+    var cut = rows.some(function (r) { return !r.sample && r.swatch; });
+    return '<section class="deck-sec deck-est" id="materials">' +
+      '<span class="deck-eyebrow">' + no + ' The materials</span>' +
+      '<h2>What each finish is, and who makes it.</h2>' +
+      '<p class="deck-est-rate">Every named material marked on the renders, listed once, ' +
+        'with the rooms it goes into.</p>' +
+      '<div class="deck-est-wrap"><table class="deck-est-table deck-mat-table"><thead><tr>' +
+        '<th>Material name</th><th>Material code</th><th>Material</th><th>Sample</th>' +
+        '<th>Size</th><th>Brand</th>' +
+      '</tr></thead><tbody>' +
+      rows.map(function (r) {
+        var sample = r.sample
+          ? '<img class="deck-mat-swatch" src="' + esc(r.sample) + '" alt="' + esc(r.name) + ' sample">'
+          : r.swatch ? '<img class="deck-mat-swatch" alt="' + esc(r.name) + '" data-swatch="' +
+                esc(r.swatch) + '">'
+          : '<span class="deck-mat-swatch"></span>';
+        return '<tr>' +
+          '<td>' + (r.name ? esc(r.name) : dash) +
+            (r.where.length ? '<span class="deck-mat-where">' + esc(r.where.join(', ')) + '</span>' : '') +
+          '</td>' +
+          cell(r.code) + cell(r.material) +
+          '<td>' + sample + '</td>' +
+          cell(r.size) + cell(r.brand) +
+        '</tr>';
+      }).join('') +
+      '</tbody></table></div>' +
+      '<p class="deck-spec-note">' +
+        (cut ? 'A swatch with no sample photo is cut from the render: it shows design intent, ' +
+               'not the exact shade. ' : '') +
+        'Codes and sizes to be confirmed against the approved samples before anything is ordered.</p>' +
+    '</section>';
+  }
+
+  /* The swatch is cut once the deck is on the page, because the picture has to
+     have arrived before it can be cut — and it goes into an <img>, not a
+     canvas, so it prints and saves with the page.
+
+     It comes from the first place the material was marked, at the largest of
+     three sizes that is still only the material. A mark sits on the material,
+     but the square around it can take in the window behind a counter or the
+     handle on a door — so where every size there is cluttered, the next place
+     it was marked is tried, and failing all of them the cleanest square of the
+     lot is used. Not the colour most marks agree on: a marble floor marked
+     once in the foyer and four times at the edge of a living room render,
+     beside a sofa, agrees on the sofa.
+
+     The editor redraws on every keystroke: each result is kept, and a swatch
+     already being cut is waited on rather than cut again. */
+  var SWATCH_SIZES = [[0.12, 0], [0.08, 5], [0.05, 11]];
+  var SWATCH_CLEAN = 30;
+  var swatchKept = {}, swatchWaiting = {};
+
+  function swatchSquare(pic, x, y, frac, px) {
+    var w = pic.naturalWidth, h = pic.naturalHeight;
+    var side = Math.max(16, Math.round(Math.min(w, h) * frac));
+    var sx = Math.max(0, Math.min(w - side, Math.round(x * w - side / 2)));
+    var sy = Math.max(0, Math.min(h - side, Math.round(y * h - side / 2)));
+    var c = document.createElement('canvas');
+    c.width = px; c.height = px;
+    c.getContext('2d').drawImage(pic, sx, sy, side, side, 0, 0, px, px);
+    return c;
+  }
+
+  /* how much is going on in a square: the spread of each colour, added up */
+  function swatchBusy(c) {
+    var d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    var n = d.length / 4, busy = 0;
+    for (var ch = 0; ch < 3; ch++) {
+      var sum = 0, sq = 0;
+      for (var i = ch; i < d.length; i += 4) { sum += d[i]; sq += d[i] * d[i]; }
+      var mean = sum / n;
+      busy += Math.sqrt(Math.max(0, sq / n - mean * mean));
+    }
+    return busy;
+  }
+
+  function paintSwatches(root, state) {
+    var byId = {};
+    (state.spaces || []).forEach(function (s) { byId[String(s.id)] = s; });
+    /* one load per picture, however many materials are cut from it */
+    var pics = {};
+    function picFor(src) {
+      var k = src.length + src.slice(-40);
+      if (!pics[k]) {
+        pics[k] = new Promise(function (ok) {
+          var pic = new Image();
+          pic.onload = function () { ok(pic); };
+          pic.onerror = function () { ok(null); };
+          pic.src = src;
+        });
+      }
+      return pics[k];
+    }
+    Array.prototype.forEach.call(root.querySelectorAll('img[data-swatch]'), function (hole) {
+      if (hole.getAttribute('src')) return;
+      var spots = hole.getAttribute('data-swatch').split(';').map(function (one) {
+        var bits = one.split('|');
+        var y = +bits.pop(), x = +bits.pop(), ix = +bits.pop(), id = bits.join('|');
+        var im = byId[id] && (byId[id].images || [])[ix];
+        return {
+          src: (im && im.src) || '',
+          x: x >= 0 && x <= 1 ? x : 0.5,
+          y: y >= 0 && y <= 1 ? y : 0.5
+        };
+      }).filter(function (p) { return p.src; });
+      if (!spots.length) return;
+      var key = spots.map(function (p) {
+        return p.x + ',' + p.y + ',' + p.src.length + p.src.slice(-16);
+      }).join(';');
+      if (key in swatchKept) { if (swatchKept[key]) hole.src = swatchKept[key]; return; }
+      if (swatchWaiting[key]) { swatchWaiting[key].push(hole); return; }
+      swatchWaiting[key] = [hole];
+      Promise.all(spots.map(function (p) { return picFor(p.src); })).then(function (loaded) {
+        var out = '';
+        try {
+          var chosen = null, cleanest = null;
+          spots.forEach(function (p, k) {
+            if (chosen || !loaded[k]) return;
+            var here = null;
+            SWATCH_SIZES.forEach(function (size) {
+              var score = swatchBusy(swatchSquare(loaded[k], p.x, p.y, size[0], 24)) + size[1];
+              if (!here || score < here.score) here = { score: score, pic: loaded[k], p: p, frac: size[0] };
+            });
+            if (here.score <= SWATCH_CLEAN) chosen = here;
+            if (!cleanest || here.score < cleanest.score) cleanest = here;
+          });
+          var use = chosen || cleanest;
+          if (use) {
+            out = swatchSquare(use.pic, use.p.x, use.p.y, use.frac, 128).toDataURL('image/jpeg', 0.86);
+          }
+        } catch (e) { /* a picture the browser will not let be read: the cell stays plain */ }
+        swatchKept[key] = out;
+        (swatchWaiting[key] || []).forEach(function (el) { if (out) el.src = out; });
+        delete swatchWaiting[key];
+      });
+    });
+  }
+
   function noteHtml(state) {
     var n = state.narrative || {};
     if (!n.lead && !n.body && !n.quote) return '';
@@ -2130,6 +2407,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
     return '<article class="deck">' + printHeadHtml(state) + coverHtml(state) + planHtml(state) +
       ((opts && opts.noIndex) ? '' : indexHtml(state)) +
       noteHtml(state) + estimateHtml(state) + documentsHtml(state) + finishesHtml(state) +
+      materialsHtml(state) +
       printHtml(state) + footHtml(state) + '</article>' +
       '<div class="deck-lb" data-lb><div class="deck-lb-bar"><span data-lb-cap></span>' +
         '<button data-lb-close>Close</button></div><img data-lb-img alt=""></div>' +
@@ -2280,6 +2558,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       el.innerHTML = deckHtml(state);
     }
     el.classList.add('js-on');
+    paintSwatches(el, state);
 
     /* The editor re-mounts this pane on every redraw. Listeners added straight
        to the element would pile up, and one press would open two file pickers,
@@ -3110,6 +3389,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
   }
 
   root.EssentiaDeck = { mount: mount, live: live, esc: esc, html: deckHtml, lock: lock,
+    materials: materialRows, swatches: paintSwatches,
     ownText: ownText,
     card: spaceCard, slug: slugify, save: saveDataUri,
     number: numberRenders, revName: revName,
@@ -4041,6 +4321,118 @@ Object.keys(DOCSETS).forEach(function (key) {
   d.addEventListener('drop', function (e) { e.preventDefault(); d.classList.remove('over'); addDocs(key, e.dataTransfer.files); });
 });
 
+/* ── materials ────────────────────────────────────────────────────────────
+   The deck's materials list reads itself off the marks. This is where a
+   person finishes it: the code or size a mark did not carry, a photograph of
+   the actual sample in place of the cut from the render, a material nobody
+   marked — and a row taken off the list. Taken off, not deleted: the mark
+   that made it is still on the picture, and a tick puts the row back.     */
+function matKept(key) {
+  S.materials = S.materials || [];
+  for (var i = 0; i < S.materials.length; i++) {
+    if (S.materials[i] && S.materials[i].key === key) return S.materials[i];
+  }
+  var o = { key: key };
+  S.materials.push(o);
+  return o;
+}
+
+function renderMaterials() {
+  var host = $('#matList');
+  if (!host) return;
+  var D = window.EssentiaDeck;
+  var rows = D.materials(S, { all: true });
+  host.innerHTML = rows.length ? rows.map(function (r, i) {
+    /* An example in an empty box reads as the answer: a grey "Kajaria" under
+       a marble nobody named the maker of looks like it was. So a row read off
+       the renders shows a dash where the mark said nothing, and only a row
+       being added by hand is shown what goes where. */
+    var f = function (k, label, v, example) {
+      return '<div class="f"><label>' + label + '</label>' +
+        '<input type="text" data-mat-k="' + k + '" value="' + esc(v || '') + '" placeholder="' +
+          esc(r.own ? example : '—') + '"></div>';
+    };
+    var thumb = r.sample ? '<img src="' + r.sample + '" alt="">'
+      : r.swatch ? '<img alt="" data-swatch="' + esc(r.swatch) + '">'
+      : '';
+    return '<div class="row' + (r.hide ? ' row--off' : '') + '" data-mat="' + esc(r.key) + '">' +
+      '<div class="row-head"><span class="row-no">' + (i + 1) + '</span>' +
+        '<span class="row-title">' + esc(r.name || r.material || 'New material') + '</span>' +
+        '<span class="row-tools"><label class="check"><input type="checkbox" data-mat-on' +
+          (r.hide ? '' : ' checked') + '> In the deck</label></span></div>' +
+      '<div class="row-in"><div class="mat-grid">' +
+        '<div class="mat-side"><div class="tray-item mat-thumb">' + thumb + '</div>' +
+          '<button class="btn btn--ghost btn--sm" data-mat-photo>' +
+            (r.sample ? 'Change photo' : 'Sample photo') + '</button>' +
+          (r.sample ? '<button class="btn btn--ghost btn--sm" data-mat-cut>' +
+            (r.own ? 'Remove photo' : 'Use the render') + '</button>' : '') +
+        '</div>' +
+        '<div class="fields">' +
+          f('name', 'Material name', r.name, 'Canyon Beige') +
+          f('code', 'Material code', r.code, 'EPL 109') +
+          f('material', 'Material', r.material, 'Wall tile') +
+          f('size', 'Size', r.size, '600x1200') +
+          f('brand', 'Brand', r.brand, 'Kajaria') +
+          (r.own ? f('where', 'Where it goes', r.where.join(', '), 'Kitchen, master toilet')
+                 : '<div class="f"><label>Where it goes</label><span class="mat-where">' +
+                     esc(r.where.join(', ')) + '</span></div>') +
+        '</div>' +
+      '</div></div></div>';
+  }).join('') : '<p class="f-hint">Nothing to list yet. Mark a material on a render as ' +
+      '<i>Wall tile · Canyon Beige 600x1200, Kajaria</i> and it appears here — or add one by hand.</p>';
+
+  host.querySelectorAll('[data-mat]').forEach(function (row) {
+    var key = row.getAttribute('data-mat');
+    row.querySelectorAll('[data-mat-k]').forEach(function (el) {
+      el.addEventListener('input', function () {
+        matKept(key)[el.getAttribute('data-mat-k')] = el.value;
+        var t = row.querySelector('.row-title');
+        if (t) {
+          t.textContent = row.querySelector('[data-mat-k="name"]').value ||
+            row.querySelector('[data-mat-k="material"]').value || 'New material';
+        }
+        paint();
+      });
+    });
+    var on = row.querySelector('[data-mat-on]');
+    on.addEventListener('change', function () {
+      matKept(key).hide = !on.checked;
+      row.classList.toggle('row--off', !on.checked);
+      paint();
+    });
+    row.querySelector('[data-mat-photo]').addEventListener('click', function () {
+      var inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*';
+      inp.onchange = function () {
+        var file = inp.files && inp.files[0];
+        if (!file) return;
+        /* a sample is looked at small — held at a size that keeps the deck light */
+        importImage(file, 320, 0.86, false).then(function (im) {
+          matKept(key).sample = im.src;
+          renderMaterials(); paint();
+          toast('Sample photo added.');
+        }).catch(function (e) { toast(e.message); });
+      };
+      inp.click();
+    });
+    var cut = row.querySelector('[data-mat-cut]');
+    if (cut) cut.addEventListener('click', function () {
+      matKept(key).sample = '';
+      renderMaterials(); paint();
+    });
+  });
+  D.swatches(host, S);
+}
+
+$('#bAddMat').addEventListener('click', function () {
+  S.materials = S.materials || [];
+  var key = 'own:' + Date.now().toString(36);
+  S.materials.push({ key: key, own: true, name: '', code: '', material: '', size: '', brand: '', where: '' });
+  renderMaterials(); paint();
+  var first = $('#matList').querySelector('[data-mat="' + key + '"] input[type=text]');
+  if (first) { first.scrollIntoView({ block: 'center' }); first.focus(); }
+});
+
 /* ── publish gates — loud, exact, and they name the offenders ──────────── */
 function gates() {
   var out = [];
@@ -4120,7 +4512,7 @@ function paint() {
   renderGates();
   saveLocal();
 }
-function renderAll() { renderPlates(); renderSpaces(); renderDocs('documents'); paint(); }
+function renderAll() { renderPlates(); renderSpaces(); renderDocs('documents'); renderMaterials(); paint(); }
 
 /* the live document can now add pictures to a space on its own; when it does,
    the editor's lists, totals and gates have to catch up */
@@ -4160,6 +4552,10 @@ function shapeOf(st) {
     basis: [p.estimateBasis, p.rateCovers, p.rateExcludes].join('|'),
     narrative: [nr.lead, nr.quote, nr.body, nr.disclaimer].join('|'),
     plates: (st.plates || []).map(function (x) { return (x.label || '') + (x.src ? '+' : '-'); }),
+    materials: (st.materials || []).map(function (m) {
+      return m ? [m.key, m.name, m.code, m.material, m.size, m.brand, m.where, m.hide ? 1 : 0,
+                  (m.sample || '').length].join('|') : '';
+    }).join('~'),
     documents: (st.documents || []).map(function (d) { return d.label || 'document'; }),
     spaces: (st.spaces || []).map(function (x) {
       return {
@@ -4185,6 +4581,7 @@ function whatChanged(was, now) {
   if (was.rate !== now.rate) out.push('the rate was changed to ' + (now.rate || 'nothing'));
   if (was.basis !== now.basis) out.push('the estimate basis was edited');
   if (was.narrative !== now.narrative) out.push('the note was edited');
+  if ((was.materials || '') !== (now.materials || '')) out.push('the materials list was edited');
   if (was.plates.join('~') !== now.plates.join('~')) out.push('the plan was changed');
   var docsWas = was.documents.length, docsNow = now.documents.length;
   if (docsNow > docsWas) out.push(plural(docsNow - docsWas, 'document') + ' added');
@@ -4287,6 +4684,7 @@ function saveLocal() {
        is a row you have to delete by hand next time the tool opens */
     light.documents = [];
     light.logo = '';
+    (light.materials || []).forEach(function (m) { if (m) m.sample = ''; });
     localStorage.setItem('essentia.deck.draft', JSON.stringify(light));
     backupDue = true;
   } catch (e) { /* private window, full quota — the .json draft is the real save */ }
