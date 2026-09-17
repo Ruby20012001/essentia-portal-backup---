@@ -281,6 +281,20 @@ a.deck-btn{display:inline-flex;align-items:center;text-decoration:none}
 .deck-mat-where{display:block;margin-top:3px;font-size:11px;color:var(--soft);line-height:1.45;max-width:34ch}
 .deck-mat-none{color:var(--faint)}
 @media print{.deck-mat-swatch{width:48px;height:48px}.deck-mat-table tr{break-inside:avoid}}
+/* on a phone, one card per material: the sample beside what it is called and who makes it */
+@media (max-width:600px){
+  .deck-est-table.deck-mat-table thead{display:none}
+  .deck-est-table.deck-mat-table,.deck-est-table.deck-mat-table tbody{display:block;width:100%}
+  .deck-est-table.deck-mat-table tr{display:grid;grid-template-columns:64px minmax(0,1fr);column-gap:14px;padding:14px 0;
+    border-bottom:1px solid var(--rule)}
+  .deck-est-table.deck-mat-table td{display:block;padding:0;border:0;white-space:normal}
+  .deck-est-table.deck-mat-table td.deck-mat-sample{grid-column:1;grid-row:1 / span 5}
+  .deck-est-table.deck-mat-table td:not(.deck-mat-sample){grid-column:2}
+  .deck-est-table.deck-mat-table td.deck-mat-blank{display:none}
+  .deck-est-table.deck-mat-table td[data-l]{margin-top:4px;font-size:13px}
+  .deck-est-table.deck-mat-table td[data-l]::before{content:attr(data-l);margin-right:8px;font-size:10px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint)}
+}
 .deck-est-table{width:100%;border-collapse:collapse;font-size:13px}
 .deck-est-table th{text-align:left;font-weight:400;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
   color:var(--faint);padding:0 14px 9px 0;border-bottom:1px solid var(--rule)}
@@ -541,7 +555,9 @@ body.deck-locked .deck-card-add,
 body.deck-locked .deck-plate-add,
 body.deck-locked .deck-dwg-add{display:none !important}
 body.is-reading .panes{grid-template-columns:1fr}
-body.is-reading .pane-view{max-width:1100px;margin:0 auto;position:static;max-height:none}
+/* as wide as the screen gives it, not as wide as its widest table: with only auto
+   margins the pane grew to fit its content, and a phone got a page it had to pan */
+body.is-reading .pane-view{width:100%;min-width:0;max-width:1100px;margin:0 auto;position:static;max-height:none}
 body.is-reading .head-edited{margin:0 0 2px}
 /* In the portal the name comes from the account that signed in. A box asking
    for it — with everybody's name on a list underneath — invites the one thing
@@ -1823,7 +1839,11 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
     if (!rows.length) return '';
     var no = stageOf(state) === 'execution' ? '07' : '06';
     var dash = '<span class="deck-mat-none">—</span>';
-    var cell = function (v) { return '<td>' + (v ? esc(v) : dash) + '</td>'; };
+    /* labelled, so a phone can show each as a line of its own; an empty one is left
+       out there, where a dash on its own line says nothing */
+    var cell = function (v, label) {
+      return '<td data-l="' + label + '"' + (v ? '' : ' class="deck-mat-blank"') + '>' + (v ? esc(v) : dash) + '</td>';
+    };
     var cut = rows.some(function (r) { return !r.sample && r.swatch; });
     return '<section class="deck-sec deck-est" id="materials">' +
       '<span class="deck-eyebrow">' + no + ' The materials</span>' +
@@ -1841,12 +1861,12 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
                 esc(r.swatch) + '">'
           : '<span class="deck-mat-swatch"></span>';
         return '<tr>' +
-          '<td>' + (r.name ? esc(r.name) : dash) +
+          '<td class="deck-mat-name">' + (r.name ? esc(r.name) : dash) +
             (r.where.length ? '<span class="deck-mat-where">' + esc(r.where.join(', ')) + '</span>' : '') +
           '</td>' +
-          cell(r.code) + cell(r.material) +
-          '<td>' + sample + '</td>' +
-          cell(r.size) + cell(r.brand) +
+          cell(r.code, 'Code') + cell(r.material, 'Material') +
+          '<td class="deck-mat-sample">' + sample + '</td>' +
+          cell(r.size, 'Size') + cell(r.brand, 'Brand') +
         '</tr>';
       }).join('') +
       '</tbody></table></div>' +
