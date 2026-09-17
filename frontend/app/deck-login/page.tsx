@@ -21,6 +21,8 @@ export const dynamic = "force-dynamic";
 function deckReturn(next: string | undefined): string {
   if (next && /^\/deck\/[0-9a-fA-F-]{36}$/.test(next)) return next;
   if (next === "/deck" || next === "/decks") return next;
+  // The design team's own tracker, for the link Vishakha is handed.
+  if (next === "/design-tracker") return next;
   return "/decks";
 }
 

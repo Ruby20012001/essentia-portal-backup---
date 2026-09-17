@@ -1824,6 +1824,37 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      name: "design tracker: the activity chart is seeded, day 1 to day 238",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM ee.design_activities) = 36
+              AND (SELECT MIN(due_day) FROM ee.design_activities) = 1
+              AND (SELECT MAX(due_day) FROM ee.design_activities) = 238
+              AND (SELECT COUNT(*) FROM ee.design_activities WHERE depends_on IS NULL) = 0
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "design tracker: one head, four designers, one settings row",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM ee.design_tracker_people WHERE role = 'head') = 1
+              AND (SELECT COUNT(*) FROM ee.design_tracker_people WHERE role = 'designer') = 4
+              AND (SELECT COUNT(*) FROM ee.design_tracker_settings) = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "design tracker: project types in both segments, two plot-only activities",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM ee.design_project_types WHERE segment = 'residential') >= 6
+              AND (SELECT COUNT(*) FROM ee.design_project_types WHERE segment = 'commercial') >= 2
+              AND (SELECT own_plot FROM ee.design_project_types WHERE code = 'farmhouse')
+              AND NOT (SELECT own_plot FROM ee.design_project_types WHERE code = 'penthouse')
+              AND (SELECT string_agg(position::TEXT, ',' ORDER BY position)
+                     FROM ee.design_activities WHERE needs_own_plot) = '9,17'
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS

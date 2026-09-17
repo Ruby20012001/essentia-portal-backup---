@@ -8,6 +8,44 @@
 
 ---
 
+## 2026-09-16 — S4c · Design Activity Tracker
+
+The WIO → PIO Tracker's layout — Today, a working table, Delays, Setup, the
+lens chips, save as JPG / PDF — run on "1.)DESIGN ACTIVITY CHART.xlsx" (sheet
+"Daily use sheet") instead of the WIO stage chain. At `/design-tracker`.
+
+**The chart is rows** (`db/050`): 36 activities, each with the day it is due by
+counted from the project start (the sheet's *standard time consumed*), its
+days, and whom it depends on (*responsibility*), plus a flag where the sheet
+says it depends on the client. The sheet's own numbers are kept, including the
+parallel tracks (lookbook at day 93 while on-site work runs to 109), so an
+activity is a due day, not a place in a queue.
+
+**Colour, derived, never stored.** Red — an open activity is past its due day;
+orange — one is due within 3 days; blue — on time. Colour only, no HOT / WARM /
+COLD words on screen (Monica: "bs color rhne do"). A project is as late as its
+worst activity; the worst late activity is "delay caused by", with its
+dependency. Delays are read off the chart, not logged, and clear when the
+activity is recorded done.
+
+**Project types** (`db/051`). Residential — apartment, penthouse, duplex,
+builder floor, kothi, bungalow, villa, farmhouse; commercial — office, club
+house, sales gallery, showroom, restaurant, hotel. A type without a plot of its
+own starts with sanctioning (9) and on-site work initiation (17) marked N/A,
+and changing the type moves only those automatic marks. Every tab can be read
+for residential or commercial alone.
+
+A write that never reaches the server now says so in the banner — "nothing was
+saved" — instead of an unhandled `Failed to fetch`; the notification bell's
+30-second poll swallows the same failure.
+
+**Access by name** (`ee.design_tracker_people`). Vishakha (head) and L0/L1 see
+everybody, pick a designer to see their projects, and add, remove and retune.
+Lavika, Akansha, Ritu and Jiya see only their own projects — filtered on the
+server — and tick activities and write notes. Anyone else gets a sentence.
+
+---
+
 ## 2026-09-16 — S11 · hiring, in the portal
 
 The HR screen has been a placeholder since the information architecture was

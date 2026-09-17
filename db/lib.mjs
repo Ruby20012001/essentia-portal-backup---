@@ -61,6 +61,8 @@ export const DEFAULT_FILES = [
   "047_tracker_alarm2_selection.sql",
   "048_tracker_client_d6_vishakha_scope_timeline.sql",
   "049_hr_interviews.sql",
+  "050_design_activity_tracker.sql",
+  "051_design_project_types.sql",
   "900_dev_fixtures.sql",
 ];
 

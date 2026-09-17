@@ -57,6 +57,8 @@ export function NotificationCenter() {
         setItems(data.notifications ?? []);
         setUnread(data.unread ?? 0);
       }
+    } catch {
+      // Unreachable server: keep what the panel already shows.
     } finally {
       setLoading(false);
     }
@@ -65,9 +67,16 @@ export function NotificationCenter() {
   // Poll the unread count so the badge stays fresh without opening the panel.
   useEffect(() => {
     let active = true;
+    // A poll that cannot reach the server (offline, a redeploy, the dev server
+    // restarting) keeps the last count and tries again next tick — the badge
+    // is not worth an error screen.
     const tick = async () => {
-      const res = await fetch("/api/notifications?status=unread");
-      if (active && res.ok) setUnread((await res.json()).unread ?? 0);
+      try {
+        const res = await fetch("/api/notifications?status=unread");
+        if (active && res.ok) setUnread((await res.json()).unread ?? 0);
+      } catch {
+        // next tick
+      }
     };
     tick();
     const t = setInterval(tick, 30_000);

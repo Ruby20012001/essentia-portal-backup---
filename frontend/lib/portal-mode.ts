@@ -67,6 +67,10 @@ const TRACKER_MODE_PREFIXES = [
   // it is the one page most of essentia will ever open.
   "/board",
   "/api/wio-tracker",
+  // The design team's own tracker — the WIO board's shape on the design
+  // activity chart. Vishakha and her designers sign in at /deck-login.
+  "/design-tracker",
+  "/api/design-tracker",
   "/login",
   "/api/auth",
   "/api/me",
