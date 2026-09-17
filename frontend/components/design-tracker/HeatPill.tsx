@@ -1,8 +1,11 @@
-import type {
-  ActivityState,
-  ComputedActivity,
-  ComputedProject,
-  Heat,
+import {
+  activitiesSkippedByType,
+  type ActivityState,
+  type ComputedActivity,
+  type ComputedProject,
+  type DesignActivity,
+  type DesignProjectType,
+  type Heat,
 } from "@/lib/services/design-tracker-logic";
 
 /**
@@ -39,6 +42,48 @@ const STATE_HEAT: Record<ActivityState, Heat> = {
   "No due day": "NOT TRACKED",
   "Not started": "NOT TRACKED",
 };
+
+/**
+ * The project's kind, so it is seen and not only stored: a house for
+ * residential, a building for commercial, then the type itself.
+ */
+export function TypeBadge({ type }: { type: DesignProjectType | null }) {
+  if (!type) return null;
+  const residential = type.segment === "residential";
+  return (
+    <span
+      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 font-body text-[11px] font-bold ${
+        residential ? "border-forest/40 bg-forest/10 text-forest" : "border-amber-deep/50 bg-amber-deep/10 text-amber-deep"
+      }`}
+    >
+      <span aria-hidden>{residential ? "🏠" : "🏢"}</span>
+      {residential ? "Residential" : "Commercial"}
+      <span className="font-light opacity-80">· {type.label}</span>
+    </span>
+  );
+}
+
+/** Said the moment a type is chosen, so the change to the chart is not silent. */
+export function typeChangeMessage(
+  projectName: string,
+  type: DesignProjectType | null,
+  activities: DesignActivity[],
+): string {
+  if (!type) return `${projectName}: type cleared — every activity is back on its chart.`;
+  const segment = type.segment === "residential" ? "Residential" : "Commercial";
+  const skipped = activitiesSkippedByType(type, activities);
+  if (skipped.length === 0) {
+    return `${projectName} is now ${segment} · ${type.label}. It stands on its own plot, so ${activities
+      .filter((a) => a.needsOwnPlot)
+      .map((a) => a.task)
+      .join(" and ")} stay on its chart — all ${activities.length} activities.`;
+  }
+  return `${projectName} is now ${segment} · ${type.label}. No plot of its own, so ${skipped
+    .map((a) => a.task)
+    .join(" and ")} ${skipped.length === 1 ? "is" : "are"} taken off its chart — ${
+    activities.length - skipped.length
+  } activities instead of ${activities.length}.`;
+}
 
 export const inputClass =
   "w-full rounded border border-line-strong bg-canvas px-2.5 py-1.5 font-body text-[13px] font-light text-ink placeholder:text-muted focus:border-amber-deep focus:outline-none disabled:opacity-50";

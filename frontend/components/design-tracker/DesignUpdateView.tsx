@@ -1,12 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { HEAT_CLASS, HEAT_DOT, HEAT_MEANING, inputClass } from "@/components/design-tracker/HeatPill";
+import {
+  HEAT_CLASS,
+  HEAT_DOT,
+  HEAT_MEANING,
+  inputClass,
+  TypeBadge,
+} from "@/components/design-tracker/HeatPill";
 import type { DesignBoard } from "@/lib/services/design-tracker";
 import {
   forPerson,
   type ComputedActivity,
   type ComputedProject,
+  type DesignProjectType,
+  NO_PLOT_REMARK,
 } from "@/lib/services/design-tracker-logic";
 
 /** What one press did, so the card can offer to take it back. */
@@ -33,6 +41,7 @@ export function DesignUpdateView({
   onMarkDone,
   onSkip,
   onSetStart,
+  onSetType,
 }: {
   board: DesignBoard;
   person: string | null;
@@ -41,6 +50,7 @@ export function DesignUpdateView({
   onMarkDone: (projectId: string, activityIds: string[], doneOn: string | null) => Promise<boolean>;
   onSkip: (projectId: string, activityId: string, notApplicable: boolean) => Promise<boolean>;
   onSetStart: (projectId: string, startDate: string) => void;
+  onSetType: (projectId: string, typeCode: string) => void;
 }) {
   const [search, setSearch] = useState("");
   const [last, setLast] = useState<Record<string, Pressed>>({});
@@ -127,6 +137,8 @@ export function DesignUpdateView({
               canSetStart={board.can.manage}
               today={today}
               onSetStart={(d) => onSetStart(p.id, d)}
+              types={board.types}
+              onSetType={(code) => onSetType(p.id, code)}
               onDone={(acts) => void done(p, acts)}
               onSkip={(a) => void skip(p, a)}
               onUndo={() => void undo(p)}
@@ -146,6 +158,8 @@ function Card({
   canSetStart,
   today,
   onSetStart,
+  types,
+  onSetType,
   onDone,
   onSkip,
   onUndo,
@@ -157,11 +171,15 @@ function Card({
   canSetStart: boolean;
   today: string;
   onSetStart: (startDate: string) => void;
+  types: DesignProjectType[];
+  onSetType: (typeCode: string) => void;
   onDone: (acts: ComputedActivity[]) => void;
   onSkip: (a: ComputedActivity) => void;
   onUndo: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
+  // The activities this project's type took off its chart — named on the card.
+  const skippedByType = p.activities.filter((a) => a.notApplicable && a.remark === NO_PLOT_REMARK);
   const now = p.current;
   // Late ones other than "now", worst first — each gets its own Done.
   const otherLate = p.late.filter((a) => a.id !== now?.id);
@@ -183,12 +201,47 @@ function Card({
         <div className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <h3 className="font-heading text-xl text-white">{p.name}</h3>
           <span className="font-body text-xs font-light text-muted">
-            {[showDesigner ? p.designer : null, p.type?.label, p.client].filter(Boolean).join(" · ")}
+            {[showDesigner ? p.designer : null, p.client].filter(Boolean).join(" · ")}
           </span>
           <span className="ml-auto whitespace-nowrap font-body text-xs text-muted">
             {p.day !== null ? `Day ${p.day} / ${p.lastDay} · ` : ""}
             {p.doneCount}/{p.applicableCount} done
           </span>
+        </div>
+
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {p.type ? (
+            <TypeBadge type={p.type} />
+          ) : canSetStart ? (
+            <label className="flex items-center gap-2 font-body text-xs font-light text-muted">
+              What kind of project?
+              <select
+                value=""
+                disabled={busy}
+                onChange={(e) => e.target.value && onSetType(e.target.value)}
+                className="rounded border border-warning/50 bg-warning/5 px-2 py-1 font-body text-xs text-ink focus:border-amber-deep focus:outline-none disabled:opacity-50"
+              >
+                <option value="">Pick a type…</option>
+                <optgroup label="🏠 Residential">
+                  {types.filter((t) => t.segment === "residential").map((t) => (
+                    <option key={t.code} value={t.code}>{t.label}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="🏢 Commercial">
+                  {types.filter((t) => t.segment === "commercial").map((t) => (
+                    <option key={t.code} value={t.code}>{t.label}</option>
+                  ))}
+                </optgroup>
+              </select>
+            </label>
+          ) : (
+            <span className="font-body text-xs font-light text-muted">Type not set</span>
+          )}
+          {skippedByType.length > 0 ? (
+            <span className="font-body text-[11px] font-light text-muted">
+              Not on this project (no plot of its own): {skippedByType.map((a) => a.task).join(", ")}
+            </span>
+          ) : null}
         </div>
 
         {last ? (

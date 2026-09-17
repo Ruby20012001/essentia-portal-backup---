@@ -13,6 +13,8 @@ import {
 import type { DesignBoard } from "@/lib/services/design-tracker";
 import {
   forPerson,
+  forSegment,
+  type ComputedProject,
   type Heat,
   heatCounts,
   holdingByDependency,
@@ -212,6 +214,8 @@ export function DesignTodayView({
           </div>
         </section>
       ) : null}
+
+      <SegmentSplit projects={projects} />
 
       <section className="mb-10">
         <h2 className="mb-1 font-heading text-2xl text-white">Who is holding what</h2>
@@ -420,5 +424,61 @@ function HeatTh({ heat }: { heat: Heat }) {
         className={`inline-block h-2.5 w-2.5 rounded-full ${HEAT_DOT[heat]}`}
       />
     </th>
+  );
+}
+
+/**
+ * Residential and commercial side by side — the same colours, counted apart,
+ * so the type a project was given shows up on the first page and not only in
+ * a filter.
+ */
+function SegmentSplit({ projects }: { projects: ComputedProject[] }) {
+  const running = projects.filter((p) => p.heat !== "DONE");
+  if (running.length === 0) return null;
+  const rows: { label: string; icon: string; rows: ComputedProject[] }[] = [
+    { label: "Residential", icon: "🏠", rows: forSegment(running, "residential") },
+    { label: "Commercial", icon: "🏢", rows: forSegment(running, "commercial") },
+    { label: "Type not set", icon: "·", rows: running.filter((p) => p.type === null) },
+  ];
+  return (
+    <section className="mb-10">
+      <h2 className="mb-1 font-heading text-2xl text-white">Residential and commercial</h2>
+      <p className="mb-3 font-body text-sm font-light text-muted">
+        Running projects by kind. A project with no plot of its own — an apartment, an office — has no sanctioning
+        and no site construction on its chart.
+      </p>
+      <div className="grid gap-4 md:grid-cols-3">
+        {rows.map((r) => {
+          const count = (h: Heat) => r.rows.filter((p) => p.heat === h).length;
+          const kinds = [...new Set(r.rows.map((p) => p.type?.label).filter(Boolean))];
+          return (
+            <div key={r.label} className="rounded-lg border border-line bg-card px-5 py-4">
+              <p className="font-body text-[11px] font-light uppercase tracking-[0.16em] text-muted">
+                <span aria-hidden className="mr-1 normal-case">{r.icon}</span>
+                {r.label}
+              </p>
+              <p className="mt-2 font-body text-2xl font-light leading-tight text-white">{r.rows.length}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-3 font-body text-xs text-secondary">
+                {(["HOT", "WARM", "COLD"] as const).map((h) => (
+                  <span key={h} className="flex items-center gap-1" title={HEAT_MEANING[h]}>
+                    <span className={`inline-block h-2.5 w-2.5 rounded-full ${HEAT_DOT[h]}`} />
+                    {count(h)}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-2 font-body text-[11px] font-light text-muted">
+                {r.label === "Type not set"
+                  ? r.rows.length > 0
+                    ? "Pick a type on the ✓ Update tab"
+                    : "Every project has a type"
+                  : kinds.length > 0
+                    ? kinds.join(", ")
+                    : "none yet"}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }

@@ -9,6 +9,7 @@ import {
   HeatPill,
   inputClass,
   labelClass,
+  TypeBadge,
 } from "@/components/design-tracker/HeatPill";
 import type { DesignBoard } from "@/lib/services/design-tracker";
 import {
@@ -707,9 +708,8 @@ function TypeHint({
 function TypeTag({ type }: { type: DesignProjectType | null }) {
   if (!type) return null;
   return (
-    <span className="mt-1 inline-block whitespace-nowrap rounded border border-line-strong bg-surface px-1.5 py-0.5 font-body text-[10.5px] font-light text-secondary">
-      {type.label}
-      <span className="text-muted"> · {type.segment === "residential" ? "Residential" : "Commercial"}</span>
+    <span className="mt-1 block">
+      <TypeBadge type={type} />
     </span>
   );
 }

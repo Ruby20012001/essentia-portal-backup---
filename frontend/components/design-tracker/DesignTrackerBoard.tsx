@@ -6,7 +6,7 @@ import { DesignProjectsView } from "@/components/design-tracker/DesignProjectsVi
 import { DesignSetupView } from "@/components/design-tracker/DesignSetupView";
 import { DesignTodayView } from "@/components/design-tracker/DesignTodayView";
 import { DesignUpdateView } from "@/components/design-tracker/DesignUpdateView";
-import { HEAT_DOT } from "@/components/design-tracker/HeatPill";
+import { HEAT_DOT, typeChangeMessage } from "@/components/design-tracker/HeatPill";
 import type { DesignBoard } from "@/lib/services/design-tracker";
 import { forPerson, forSegment, personRows, type Segment } from "@/lib/services/design-tracker-logic";
 
@@ -125,6 +125,20 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
     [refresh],
   );
 
+  /** Every project change goes here; a change of type says what it did to the chart. */
+  const patchProject = (id: string, patch: Record<string, unknown>) => {
+    const project = board.projects.find((p) => p.id === id);
+    const message =
+      patch.typeCode !== undefined && project
+        ? typeChangeMessage(
+            project.name,
+            board.types.find((t) => t.code === patch.typeCode) ?? null,
+            board.activities,
+          )
+        : undefined;
+    void call(id, `/api/design-tracker/projects/${id}`, { method: "PATCH", body: JSON.stringify(patch) }, message);
+  };
+
   const showPerson = (id: string | null) => {
     setPerson(id);
     if (tab === "setup") setTab("today");
@@ -177,7 +191,18 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
                 : "border-forest bg-card font-light text-forest"
             }`}
           >
-            {banner.message}
+            <div className="flex items-start gap-3">
+              <span className="flex-1">{banner.message}</span>
+              <button
+                type="button"
+                onClick={() => setBanner(null)}
+                aria-label="Close this message"
+                data-print="hide"
+                className="-my-1 rounded px-2 py-0.5 text-lg leading-none text-muted transition-colors hover:bg-hover hover:text-ink"
+              >
+                ×
+              </button>
+            </div>
           </div>
         ) : null}
 
@@ -291,12 +316,8 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
                 body: JSON.stringify({ notApplicable }),
               })
             }
-            onSetStart={(projectId, startDate) =>
-              void call(projectId, `/api/design-tracker/projects/${projectId}`, {
-                method: "PATCH",
-                body: JSON.stringify({ startDate }),
-              })
-            }
+            onSetStart={(projectId, startDate) => patchProject(projectId, { startDate })}
+            onSetType={(projectId, typeCode) => patchProject(projectId, { typeCode })}
           />
         ) : null}
 
@@ -315,9 +336,7 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
                 `${String(input.name)} added to the board.`,
               )
             }
-            onPatch={(id, patch) =>
-              void call(id, `/api/design-tracker/projects/${id}`, { method: "PATCH", body: JSON.stringify(patch) })
-            }
+            onPatch={patchProject}
             onDelete={(id, name) =>
               void call(id, `/api/design-tracker/projects/${id}`, { method: "DELETE" }, `${name} removed from the board.`)
             }
