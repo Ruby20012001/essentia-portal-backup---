@@ -35,6 +35,14 @@ own starts with sanctioning (9) and on-site work initiation (17) marked N/A,
 and changing the type moves only those automatic marks. Every tab can be read
 for residential or commercial alone.
 
+**✓ Update — the shortcut for whoever edits** (Monica: picking a name, opening
+a project and ticking activities one by one was too much). One card per running
+project, nothing to open: *Now* — the activity due, how late, whom it depends
+on — and one ✓ Done that moves the card on; the other late activities under it,
+each with its own Done, and "✓ All late are done" for catching up; Undo on the
+card that was pressed. A project with no start date takes its date right on the
+card. Designers land on this tab.
+
 A write that never reaches the server now says so in the banner — "nothing was
 saved" — instead of an unhandled `Failed to fetch`; the notification bell's
 30-second poll swallows the same failure.

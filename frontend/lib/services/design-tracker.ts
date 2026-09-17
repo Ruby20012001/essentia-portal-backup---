@@ -629,6 +629,67 @@ export async function markProjectActivity(
   });
 }
 
+/**
+ * Several activities on one project done (or undone) at once — the Update
+ * screen's "all late ones are done" and its Undo. One transaction: either
+ * every activity moves or none does. `doneOn: null` puts them back to open.
+ * An activity marked N/A is left alone either way.
+ */
+export async function markProjectActivitiesDone(
+  user: SessionUser,
+  projectId: string,
+  activityIds: string[],
+  doneOn: string | null,
+): Promise<number> {
+  await requireProjectEditor(user, projectId);
+  const settings = await getDesignSettings();
+  const ids = [...new Set(activityIds)];
+  if (ids.length === 0) throw new BlockingRuleError("Pick at least one activity.");
+  if (doneOn && doneOn > settings.today) {
+    throw new BlockingRuleError(
+      `${doneOn} is after today (${settings.today}). Record activities done on the day they were done.`,
+    );
+  }
+
+  const changed = await withTransaction(async (q) => {
+    const known = await q<{ id: string }>(
+      `SELECT id FROM ee.design_activities WHERE id = ANY($1::uuid[])`,
+      [ids],
+    );
+    if (known.length !== ids.length) throw new NotFoundError("One of those activities is not in the chart.");
+
+    const [project] = await q<{ start_date: string | null }>(
+      `SELECT start_date::text AS start_date FROM ee.design_projects WHERE id = $1`,
+      [projectId],
+    );
+    const start = toDayString(project?.start_date);
+    if (doneOn && start && doneOn < start) {
+      throw new BlockingRuleError(`${doneOn} is before the project started (${start}). Check the date.`);
+    }
+
+    const rows = await q<{ activity_id: string }>(
+      `INSERT INTO ee.design_project_activities (project_id, activity_id, done_on, updated_by)
+       SELECT $1, a, $2::date, $3 FROM unnest($4::uuid[]) AS a
+       ON CONFLICT (project_id, activity_id) DO UPDATE SET
+         done_on = EXCLUDED.done_on, updated_by = EXCLUDED.updated_by, updated_at = NOW()
+       WHERE NOT ee.design_project_activities.not_applicable
+       RETURNING activity_id`,
+      [projectId, doneOn, user.id, ids],
+    );
+    return rows.length;
+  });
+
+  await writeAudit({
+    userId: user.id,
+    role: user.accessLevel,
+    action: "DESIGN_ACTIVITIES_MARKED",
+    resourceType: "design_tracker",
+    resourceId: projectId,
+    newValues: { activityIds: ids, doneOn, changed },
+  });
+  return changed;
+}
+
 // ── Setup ───────────────────────────────────────────────────────────
 
 export type ChartPatch = Partial<{

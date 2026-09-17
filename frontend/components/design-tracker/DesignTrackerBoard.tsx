@@ -5,11 +5,12 @@ import { DesignDelaysView } from "@/components/design-tracker/DesignDelaysView";
 import { DesignProjectsView } from "@/components/design-tracker/DesignProjectsView";
 import { DesignSetupView } from "@/components/design-tracker/DesignSetupView";
 import { DesignTodayView } from "@/components/design-tracker/DesignTodayView";
+import { DesignUpdateView } from "@/components/design-tracker/DesignUpdateView";
 import { HEAT_DOT } from "@/components/design-tracker/HeatPill";
 import type { DesignBoard } from "@/lib/services/design-tracker";
 import { forPerson, forSegment, personRows, type Segment } from "@/lib/services/design-tracker-logic";
 
-type Tab = "today" | "projects" | "delays" | "setup";
+type Tab = "today" | "update" | "projects" | "delays" | "setup";
 type Banner = { tone: "error" | "success"; message: string };
 
 /**
@@ -22,7 +23,8 @@ type Banner = { tone: "error" | "success"; message: string };
  */
 export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
   const [board, setBoard] = useState(initial);
-  const [tab, setTab] = useState<Tab>("today");
+  // A designer comes here to update, so that is where they land.
+  const [tab, setTab] = useState<Tab>(initial.viewer.scope === "own" ? "update" : "today");
   const [banner, setBanner] = useState<Banner | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   /**
@@ -145,6 +147,7 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
 
   const tabs: { key: Tab; label: string; badge?: number }[] = [
     { key: "today", label: "Today" },
+    { key: "update", label: "✓ Update", badge: mine.filter((p) => p.heat !== "DONE").length },
     { key: "projects", label: "Projects", badge: mine.filter((p) => p.heat !== "DONE").length },
     { key: "delays", label: "Delays", badge: mine.filter((p) => p.heat === "HOT").length },
     ...(board.can.manage ? [{ key: "setup" as const, label: "Setup" }] : []),
@@ -168,10 +171,10 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
         {banner ? (
           <div
             role="alert"
-            className={`mb-6 rounded-lg border-l-4 px-5 py-3 font-body text-sm ${
+            className={`sticky top-0 z-20 mb-6 rounded-lg border-l-4 px-5 py-3 font-body text-sm shadow-sm ${
               banner.tone === "error"
-                ? "border-alert bg-alert/5 font-bold text-alert"
-                : "border-forest bg-forest/5 font-light text-forest"
+                ? "border-alert bg-card font-bold text-alert"
+                : "border-forest bg-card font-light text-forest"
             }`}
           >
             {banner.message}
@@ -269,6 +272,32 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
 
         {tab === "today" ? (
           <DesignTodayView board={lens} person={person} onPerson={showPerson} />
+        ) : null}
+
+        {tab === "update" ? (
+          <DesignUpdateView
+            board={lens}
+            person={person}
+            busyId={busyId}
+            onMarkDone={(projectId, activityIds, doneOn) =>
+              call(projectId, `/api/design-tracker/projects/${projectId}/activities`, {
+                method: "PUT",
+                body: JSON.stringify({ activityIds, doneOn }),
+              })
+            }
+            onSkip={(projectId, activityId, notApplicable) =>
+              call(projectId, `/api/design-tracker/projects/${projectId}/activities/${activityId}`, {
+                method: "PUT",
+                body: JSON.stringify({ notApplicable }),
+              })
+            }
+            onSetStart={(projectId, startDate) =>
+              void call(projectId, `/api/design-tracker/projects/${projectId}`, {
+                method: "PATCH",
+                body: JSON.stringify({ startDate }),
+              })
+            }
+          />
         ) : null}
 
         {tab === "projects" ? (
