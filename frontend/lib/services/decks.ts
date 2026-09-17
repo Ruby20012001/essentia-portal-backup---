@@ -186,16 +186,20 @@ export async function getDeck(
  * the people the deck is being shown to; it is the answer to "who do I ask".
  */
 export async function getPublicDeck(id: string): Promise<DeckDetail> {
-  const [row] = await query<DeckRow>(
-    `SELECT d.id, d.name, d.project_code, d.stage, d.version, d.state,
-            d.updated_at, u.full_name AS updated_by_name
-       FROM ee.concept_decks d
-       LEFT JOIN public.users u ON u.id = d.updated_by
-      WHERE d.id = $1 AND d.is_archived = FALSE`,
-    [id],
-  );
+  /* both at once: a reader waits for every round trip before the first
+     picture is even asked for */
+  const [[row], activity] = await Promise.all([
+    query<DeckRow>(
+      `SELECT d.id, d.name, d.project_code, d.stage, d.version, d.state,
+              d.updated_at, u.full_name AS updated_by_name
+         FROM ee.concept_decks d
+         LEFT JOIN public.users u ON u.id = d.updated_by
+        WHERE d.id = $1 AND d.is_archived = FALSE`,
+      [id],
+    ),
+    listDeckActivity(id),
+  ]);
   if (!row) throw new NotFoundError(`No deck ${id}`);
-  const activity = await listDeckActivity(id);
   return { ...toSummary(row), state: row.state, slots: [], activity, canEdit: false };
 }
 

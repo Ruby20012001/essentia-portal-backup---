@@ -1926,8 +1926,15 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
      once in the foyer and four times at the edge of a living room render,
      beside a sofa, agrees on the sofa.
 
-     The editor redraws on every keystroke: each result is kept, and a swatch
-     already being cut is waited on rather than cut again. */
+     And only when somebody is about to see it. Cutting meant fetching whole
+     renders — a dozen of them, 1.4 MB on IREO — the moment the deck opened, so
+     every reader paid for a list most of them never scroll to, while the
+     pictures they were looking at waited behind it (Monica, 17 Sep: "photo
+     bahut dheere"). So a swatch is cut when its row comes near the screen; the
+     renders already on the page (a room's first picture, shown in the grid)
+     are tried first, and the rest are fetched one at a time, stopping at the
+     first clean square. The editor redraws on every keystroke: each result is
+     kept, and a swatch already being cut is waited on rather than cut again. */
   var SWATCH_SIZES = [[0.12, 0], [0.08, 5], [0.05, 11]];
   var SWATCH_CLEAN = 30;
   var swatchKept = {}, swatchWaiting = {};
@@ -1973,7 +1980,8 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       }
       return pics[k];
     }
-    Array.prototype.forEach.call(root.querySelectorAll('img[data-swatch]'), function (hole) {
+
+    function cut(hole) {
       if (hole.getAttribute('src')) return;
       var spots = hole.getAttribute('data-swatch').split(';').map(function (one) {
         var bits = one.split('|');
@@ -1981,6 +1989,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
         var im = byId[id] && (byId[id].images || [])[ix];
         return {
           src: (im && im.src) || '',
+          first: ix === 0,
           x: x >= 0 && x <= 1 ? x : 0.5,
           y: y >= 0 && y <= 1 ? y : 0.5
         };
@@ -1992,31 +2001,60 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       if (key in swatchKept) { if (swatchKept[key]) hole.src = swatchKept[key]; return; }
       if (swatchWaiting[key]) { swatchWaiting[key].push(hole); return; }
       swatchWaiting[key] = [hole];
-      Promise.all(spots.map(function (p) { return picFor(p.src); })).then(function (loaded) {
+      /* a room's first picture is already on the page in the grid: try those first */
+      spots.sort(function (a, b) { return (a.first ? 0 : 1) - (b.first ? 0 : 1); });
+
+      var cleanest = null, next = 0;
+      function finish(use) {
         var out = '';
         try {
-          var chosen = null, cleanest = null;
-          spots.forEach(function (p, k) {
-            if (chosen || !loaded[k]) return;
-            var here = null;
-            SWATCH_SIZES.forEach(function (size) {
-              var score = swatchBusy(swatchSquare(loaded[k], p.x, p.y, size[0], 24)) + size[1];
-              if (!here || score < here.score) here = { score: score, pic: loaded[k], p: p, frac: size[0] };
-            });
-            if (here.score <= SWATCH_CLEAN) chosen = here;
-            if (!cleanest || here.score < cleanest.score) cleanest = here;
-          });
-          var use = chosen || cleanest;
-          if (use) {
-            out = swatchSquare(use.pic, use.p.x, use.p.y, use.frac, 128).toDataURL('image/jpeg', 0.86);
-          }
+          if (use) out = swatchSquare(use.pic, use.p.x, use.p.y, use.frac, 128).toDataURL('image/jpeg', 0.86);
         } catch (e) { /* a picture the browser will not let be read: the cell stays plain */ }
         swatchKept[key] = out;
         (swatchWaiting[key] || []).forEach(function (el) { if (out) el.src = out; });
         delete swatchWaiting[key];
-      });
+      }
+      (function tryNext() {
+        if (next >= spots.length) { finish(cleanest); return; }
+        var p = spots[next++];
+        picFor(p.src).then(function (pic) {
+          if (pic) {
+            try {
+              var here = null;
+              SWATCH_SIZES.forEach(function (size) {
+                var score = swatchBusy(swatchSquare(pic, p.x, p.y, size[0], 24)) + size[1];
+                if (!here || score < here.score) here = { score: score, pic: pic, p: p, frac: size[0] };
+              });
+              if (here.score <= SWATCH_CLEAN) { finish(here); return; }
+              if (!cleanest || here.score < cleanest.score) cleanest = here;
+            } catch (e) { /* unreadable: the next place it was marked */ }
+          }
+          tryNext();
+        });
+      })();
+    }
+
+    var holes = Array.prototype.filter.call(root.querySelectorAll('img[data-swatch]'), function (h) {
+      return !h.getAttribute('src');
     });
+    if (!holes.length) return;
+    if (!window.IntersectionObserver) { holes.forEach(cut); return; }
+    var watch = new IntersectionObserver(function (seen) {
+      seen.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        watch.unobserve(e.target);
+        cut(e.target);
+      });
+    }, { rootMargin: '700px 0px' });
+    holes.forEach(function (h) { watch.observe(h); });
+    /* paper does not scroll: whatever is still uncut is cut before printing */
+    swatchesForPrint = function () {
+      watch.disconnect();
+      Array.prototype.forEach.call(document.querySelectorAll('img[data-swatch]'), cut);
+    };
   }
+  var swatchesForPrint = null;
+  window.addEventListener('beforeprint', function () { if (swatchesForPrint) swatchesForPrint(); printReady(document); });
 
   /* ── 360 ──────────────────────────────────────────────────────────────
      A 360 render is the whole room unrolled into one picture, exactly twice as
@@ -2410,7 +2448,32 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
   /* The whole deck as plain document: what prints, and what anyone sees when
      the script does not run. Each image is tagged so the interactive layer can
      pick it back up out of the DOM instead of the file carrying it twice. */
-  function printHtml(state) {
+  /* The printed pages carry every render of every room. On screen they are
+     hidden, but a hidden <img> with a src is still fetched: opening IREO asked
+     for eleven renders nobody could see, 1.3 MB in front of the ones on show
+     (Monica, 17 Sep: "photo bahut dheere"). So in a deck on screen they wait
+     in data-print-src, and this puts them in when there is printing to do —
+     waiting for them, ten seconds at most, so a PDF is not saved with holes.
+     A deck written out as a file keeps its src: that is the copy that has to
+     read with no script at all. */
+  function printReady(root, only) {
+    var imgs = Array.prototype.slice.call((only || root).querySelectorAll('img[data-print-src]'));
+    return new Promise(function (done) {
+      if (!imgs.length) { done(); return; }
+      var left = imgs.length, over = false;
+      var one = function () { left -= 1; if (left <= 0 && !over) { over = true; done(); } };
+      imgs.forEach(function (img) {
+        img.addEventListener('load', one);
+        img.addEventListener('error', one);
+        img.setAttribute('loading', 'eager');
+        img.src = img.getAttribute('data-print-src');
+        img.removeAttribute('data-print-src');
+      });
+      setTimeout(function () { if (!over) { over = true; done(); } }, 10000);
+    });
+  }
+
+  function printHtml(state, later) {
     return live(state).map(function (s) {
       return '<section class="deck-print-space">' +
         '<span class="deck-eyebrow">' + esc(s.no) + (s.floor ? ' · ' + esc(s.floor) : '') + '</span>' +
@@ -2427,7 +2490,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
              out of it. On the render it stays with the render. */
           return '<figure class="deck-shot">' +
             '<img loading="lazy" decoding="async" data-sp="' + esc(s.id) + '" data-ix="' + k +
-            '" src="' + im.src + '" alt="' + esc(s.name) + '">' +
+            '" ' + (later ? 'data-print-src' : 'src') + '="' + im.src + '" alt="' + esc(s.name) + '">' +
             '<span class="deck-rev">' + esc(im.rev) + '</span></figure>' +
             (((im.spots || []).length)
               ? '<ul class="deck-spot-list">' + im.spots.map(function (q) {
@@ -2439,7 +2502,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
         (s.docs || []).filter(function (d) { return d.src; }).map(function (d, k) {
           return '<figure class="deck-shot deck-shot--doc">' +
             '<img loading="lazy" decoding="async" data-spdoc="' + esc(s.id) + '" data-ix="' + k +
-            '" src="' + d.src + '" alt="' + esc(d.label || 'Drawing') + '">' +
+            '" ' + (later ? 'data-print-src' : 'src') + '="' + d.src + '" alt="' + esc(d.label || 'Drawing') + '">' +
             '<figcaption>' + esc(d.label || 'Drawing') +
               (d.date ? ' · ' + esc(d.date) : '') + '</figcaption></figure>';
         }).join('') + '</section>';
@@ -2844,7 +2907,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       ((opts && opts.noIndex) ? '' : indexHtml(state)) +
       noteHtml(state) + estimateHtml(state) + documentsHtml(state) + finishesHtml(state) +
       materialsHtml(state) +
-      printHtml(state) + footHtml(state) + '</article>' +
+      printHtml(state, opts && opts.printLater) + footHtml(state) + '</article>' +
       '<div class="deck-lb" data-lb><div class="deck-lb-bar"><span data-lb-cap></span>' +
         '<button data-lb-close>Close</button></div><img data-lb-img alt=""></div>' +
       '<div class="deck-sheet" data-sheet><div class="deck-sheet-veil" data-sheet-close></div>' +
@@ -2992,7 +3055,8 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
         plan.parentNode.insertBefore(grid.firstChild, plan.nextSibling);
       }
     } else {
-      el.innerHTML = deckHtml(state);
+      /* on screen: the printed pages fetch their pictures when printed (printReady) */
+      el.innerHTML = deckHtml(state, { printLater: true });
     }
     el.classList.add('js-on');
     paintSwatches(el, state);
@@ -3111,7 +3175,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
         window.removeEventListener('afterprint', done);
       };
       window.addEventListener('afterprint', done);
-      setTimeout(function () { window.print(); }, 60);
+      printReady(el, target).then(function () { setTimeout(function () { window.print(); }, 60); });
       setTimeout(done, 60000);   /* a browser that never fires afterprint */
     }
 
@@ -3452,7 +3516,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
     function openBig(img) {
       var lb = el.querySelector('[data-lb]');
       if (!lb) return;
-      lb.querySelector('[data-lb-img]').src = img.getAttribute('src');
+      lb.querySelector('[data-lb-img]').src = img.getAttribute('src') || img.getAttribute('data-print-src');
       var fig = img.closest('figure');
       var cap = fig && fig.querySelector('figcaption');
       lb.querySelector('[data-lb-cap]').textContent = cap ? cap.textContent : '';
@@ -3746,7 +3810,17 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       if (jpg) { saveJpg(jpg.getAttribute('data-jpg-one'), jpg); return; }
       var one = e.target.closest('[data-pdf-one]');
       if (one) { printSpace(one.getAttribute('data-pdf-one')); return; }
-      if (e.target.closest('[data-pdf-all]')) { close(); setTimeout(function () { window.print(); }, 120); return; }
+      var pdfAll = e.target.closest('[data-pdf-all]');
+      if (pdfAll) {
+        var pdfWas = ownText(pdfAll);
+        pdfAll.textContent = 'Getting the pictures…';
+        close();
+        printReady(el).then(function () {
+          pdfAll.textContent = pdfWas;
+          setTimeout(function () { window.print(); }, 120);
+        });
+        return;
+      }
       var t = e.target.closest('[data-space]');
       if (t) { open(t.getAttribute('data-space')); return; }
       var au = e.target.closest('[data-auto]');
@@ -3864,7 +3938,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
   }
 
   root.EssentiaDeck = { mount: mount, live: live, esc: esc, html: deckHtml, lock: lock,
-    materials: materialRows, swatches: paintSwatches, importPano: importPano,
+    materials: materialRows, swatches: paintSwatches, importPano: importPano, printReady: printReady,
     ownText: ownText,
     card: spaceCard, slug: slugify, save: saveDataUri,
     number: numberRenders, revName: revName,
@@ -4260,7 +4334,7 @@ function renderPlates() {
                   : 'Click, drop, or paste the plan sheet — a screenshot works (Win+Shift+S, then Ctrl+V here)') +
         '</div>' +
         (pl.src ? '<div class="tray"><div class="tray-item" style="width:132px;height:96px">' +
-            '<img src="' + pl.src + '" alt=""></div></div>' : '') +
+            '<img loading="lazy" decoding="async" src="' + pl.src + '" alt=""></div></div>' : '') +
       '</div></div>';
   }).join('');
 
@@ -4381,7 +4455,7 @@ function renderSpaces() {
         '</div>' +
         (s.docs || []).map(function (d, k) {
           return '<div class="spdoc">' +
-            '<img src="' + d.src + '" alt="">' +
+            '<img loading="lazy" decoding="async" src="' + d.src + '" alt="">' +
             '<input type="text" placeholder="Working drawing" data-spdoc-k="label" data-spdoc-i="' +
               i + '_' + k + '" value="' + esc(d.label || '') + '">' +
             '<input type="text" placeholder="04.06.2026" data-spdoc-k="date" data-spdoc-i="' +
@@ -4395,14 +4469,14 @@ function renderSpaces() {
         '</div>' +
         (s.panos || []).map(function (pn, k) {
           return '<div class="spdoc">' +
-            '<img src="' + pn.src + '" alt="" style="width:84px">' +
+            '<img loading="lazy" decoding="async" src="' + pn.src + '" alt="" style="width:84px">' +
             '<input type="text" placeholder="From the door" data-pano-k="label" data-pano-i="' +
               i + '_' + k + '" value="' + esc(pn.label || '') + '">' +
             '<button class="btn btn--sm btn--danger" data-pano-del="' + i + '_' + k + '">Remove</button>' +
           '</div>';
         }).join('') +
         '<div class="tray">' + revs.map(function (im, k) {
-          return '<div class="tray-item"><img src="' + im.src + '" alt="">' +
+          return '<div class="tray-item"><img loading="lazy" decoding="async" src="' + im.src + '" alt="">' +
             '<button class="tray-x" data-img-del="' + i + '_' + k + '" title="Remove">&times;</button>' +
             (k === 0 ? '<span class="tray-hero">HERO</span>' :
               '<button class="tray-x" style="left:2px;right:auto" data-img-hero="' + i + '_' + k + '" title="Make this the one the client opens on">&uarr;</button>') +
@@ -4790,7 +4864,7 @@ function renderDocs(key) {
           '<input type="text" placeholder="04.06.2026" data-doc-k="date" data-doc-i="' + i + '" value="' + esc(d.date || '') + '"></div>' +
       '</div>' +
       '<div class="tray"><div class="tray-item" style="width:150px;height:104px;background:#fff">' +
-        '<img src="' + d.src + '" alt="" style="object-fit:contain"></div></div>' +
+        '<img loading="lazy" decoding="async" src="' + d.src + '" alt="" style="object-fit:contain"></div></div>' +
       '</div></div>';
   }).join('');
 
@@ -4880,7 +4954,7 @@ function renderMaterials() {
         '<input type="text" data-mat-k="' + k + '" value="' + esc(v || '') + '" placeholder="' +
           esc(r.own ? example : '—') + '"></div>';
     };
-    var thumb = r.sample ? '<img src="' + r.sample + '" alt="">'
+    var thumb = r.sample ? '<img loading="lazy" decoding="async" src="' + r.sample + '" alt="">'
       : r.swatch ? '<img alt="" data-swatch="' + esc(r.swatch) + '">'
       : '';
     return '<div class="row' + (r.hide ? ' row--off' : '') + '" data-mat="' + esc(r.key) + '">' +
@@ -5652,6 +5726,9 @@ function portalLoad() {
       });
       var last = (d.activity || [])[0];
       if (last) S.lastEdit = { by: last.by || 'the import script', at: last.at };
+      /* a reader’s page is a reader’s from its first drawing: the editor’s cards
+         are never on show to them, so their pictures are never asked for */
+      if (!d.canEdit) document.body.classList.add('is-reading');
       boot();
       portalSay(d.canEdit ? 'Open · version ' + d.version : 'Reading · version ' + d.version);
       return me.then(function (who) {
@@ -5720,19 +5797,28 @@ function newPictures(st) {
 
 function sendPictures() {
   var list = newPictures(S);
-  return list.reduce(function (chain, pic, n) {
-    return chain.then(function () {
-      portalSay('Sending pictures · ' + (n + 1) + ' of ' + list.length);
-      return portalSend('/api/decks/' + PORTAL.id + '/images', 'POST', JSON.stringify({ src: pic.src }))
-        .then(function (res) {
-          if (!res.ok || !res.data.url) {
-            throw new Error((res.data.error || 'A picture could not be sent.') + ' The deck was not saved.');
-          }
-          /* only where it is still that picture — it may have been swapped meanwhile */
-          pic.at.forEach(function (a) { if (a[0][a[1]] === pic.src) a[0][a[1]] = res.data.url; });
-        });
-    });
-  }, Promise.resolve());
+  var total = list.length, sent = 0, at = 0, failed = null;
+  if (!total) return Promise.resolve();
+  portalSay('Sending pictures · 0 of ' + total);
+  /* three at a time: one after another, a dozen renders on an office line was
+     the better part of a minute of watching a counter */
+  function lane() {
+    if (failed || at >= total) return Promise.resolve();
+    var pic = list[at++];
+    return portalSend('/api/decks/' + PORTAL.id + '/images', 'POST', JSON.stringify({ src: pic.src }))
+      .then(function (res) {
+        if (!res.ok || !res.data.url) {
+          throw new Error((res.data.error || 'A picture could not be sent.') + ' The deck was not saved.');
+        }
+        /* only where it is still that picture — it may have been swapped meanwhile */
+        pic.at.forEach(function (a) { if (a[0][a[1]] === pic.src) a[0][a[1]] = res.data.url; });
+        sent += 1;
+        portalSay('Sending pictures · ' + sent + ' of ' + total);
+        return lane();
+      })
+      .catch(function (e) { failed = failed || e; throw failed; });
+  }
+  return Promise.all([lane(), lane(), lane()]);
 }
 
 function portalSave() {
@@ -5766,7 +5852,9 @@ function portalSave() {
     .then(function () {
       portalSay('Saving…');
       return portalSend('/api/decks/' + PORTAL.id, 'PUT', JSON.stringify({
-        state: S, version: PORTAL.version, did: did, what: 'saved',
+        /* not the logo: the tool carries it and puts it back on every open, and
+           inside the deck it was 97 KB of the 136 KB every reader waited for */
+        state: Object.assign({}, S, { logo: '' }), version: PORTAL.version, did: did, what: 'saved',
         name: S.project.name || 'Untitled deck',
         projectCode: S.project.code || null,
         stage: S.project.stage === 'execution' ? 'execution' : 'concept'
@@ -5877,11 +5965,15 @@ $('#bPreview').addEventListener('click', function () {
   window.scrollTo(0, 0);
 });
 $('#bFullClose').addEventListener('click', function () { document.body.classList.remove('preview-full'); });
-$('#bFullPrint').addEventListener('click', function () { window.print(); });
+$('#bFullPrint').addEventListener('click', function () {
+  window.EssentiaDeck.printReady($('#fullpane')).then(function () { window.print(); });
+});
 $('#bPrint').addEventListener('click', function () {
   window.EssentiaDeck.mount($('#fullpane'), S);
   document.body.classList.add('preview-full');
-  setTimeout(function () { window.print(); }, 120);
+  window.EssentiaDeck.printReady($('#fullpane')).then(function () {
+    setTimeout(function () { window.print(); }, 120);
+  });
 });
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
