@@ -10,6 +10,7 @@ import { runKekaSync } from "@/lib/integrations/keka/sync";
 import { evaluateWorkflowTimers } from "@/lib/services/workflow-timers";
 import { snapshotFounderBrief } from "@/lib/services/founder-brief";
 import { draftWeeklyPulses } from "@/lib/services/weekly-pulse";
+import { draftWelcomeLetters } from "@/lib/services/welcome-letter";
 import { fireExitProtocol } from "@/lib/services/exit-protocol";
 import { generateSuccessionPacks } from "@/lib/services/succession-pack";
 import { expireStandingDelegations } from "@/lib/services/workflow-delegations";
@@ -52,6 +53,7 @@ const HANDLERS: Record<string, JobHandler> = {
   "workflow-timers": (actor) => evaluateWorkflowTimers(actor),
   "founder-morning-brief": (actor) => snapshotFounderBrief(actor),
   "weekly-pulse-draft": (actor) => draftWeeklyPulses(actor),
+  "welcome-letter-draft": (actor) => draftWelcomeLetters(actor),
   "exit-protocol": (actor) => fireExitProtocol(actor),
   "succession-pack": (actor) => generateSuccessionPacks(actor),
   "delegation-expiry": (actor) => expireStandingDelegations(actor),

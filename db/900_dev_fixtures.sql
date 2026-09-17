@@ -398,3 +398,36 @@ SELECT ec.id, CURRENT_DATE, '00000000-0000-4000-8000-000000000006', TRUE,
 FROM eh.experience_centres ec
 WHERE ec.code = 'gurugram_hq'
 ON CONFLICT (ec_id, check_date) DO NOTHING;
+
+-- ---------------------------------------------------------------------
+-- Velocity Gate 8 · Welcome Letter — the trigger and the SLA, both shapes.
+--
+-- The gate is "Welcome Letter within 4hrs of first instalment". Two projects
+-- carry a confirmed first instalment so the sweep has real work:
+--
+--   ED/26-27/901  paid 1 hour ago  → drafts INSIDE the promise
+--   ED/26-27/902  paid 3 days ago  → the letter is already late, and the
+--                                    board must say so rather than average it
+--                                    away (ADR-HS-01)
+--
+-- Nothing is pre-drafted here: the letters are produced by the scheduled
+-- handler itself, so what the screen shows is what the auto-pilot actually did.
+-- ---------------------------------------------------------------------
+INSERT INTO ee.billing_milestones
+  (project_id, milestone_name, sequence_no, amount, milestone_pct, trigger_type,
+   is_due, due_date, invoice_raised, invoice_date, invoice_number,
+   amount_paid, payment_date, payment_confirmed_at, payment_ref)
+SELECT v.project_id::uuid, v.name, 1, v.amount, 10, 'manual',
+       TRUE, v.confirmed_at::date, TRUE, v.confirmed_at::date, v.invoice_no,
+       v.amount, v.confirmed_at::date, v.confirmed_at, v.payment_ref
+FROM (VALUES
+  -- confirmed an hour ago → the draft lands well inside the 4-hour promise
+  ('00000000-0000-4000-8000-00000000a001', 'Design fee instalment 1', 850000.00,
+   NOW() - INTERVAL '1 hour',  'DEV-INV-0101', 'NEFT-DEV-901'),
+  -- confirmed three days ago → the letter is late, and the board says so
+  ('00000000-0000-4000-8000-00000000a002', 'Design fee instalment 1', 620000.00,
+   NOW() - INTERVAL '3 days',  'DEV-INV-0102', 'NEFT-DEV-902')
+) AS v(project_id, name, amount, confirmed_at, invoice_no, payment_ref)
+WHERE NOT EXISTS (
+  SELECT 1 FROM ee.billing_milestones b WHERE b.invoice_number = v.invoice_no
+);

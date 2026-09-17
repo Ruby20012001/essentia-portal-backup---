@@ -41,6 +41,7 @@ export const DEFAULT_FILES = [
   "027_workflow_definition_admin.sql",
   "028_wio_approval.sql",
   "029_eh_experience_centre.sql",
+  "030_welcome_letter.sql",
   "900_dev_fixtures.sql",
 ];
 

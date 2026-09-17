@@ -1544,6 +1544,69 @@ if (!failed) {
       // S6 · EH (Velocity Gate 5). Three centres seed, each with a target, and
       // the gate threshold is a per-centre COLUMN, not a constant in code —
       // the business retunes a centre by UPDATE (ADR-EP-01).
+      // VELOCITY GATE 8 — the promise is measurable, and configurable.
+      // A 4-hour SLA cannot be measured against a DATE, so db/030 adds
+      // payment_confirmed_at. Without it every payment reads as midnight and
+      // the gate is unmeasurable rather than merely failing.
+      name: "comms: Gate 8 — the welcome-letter clock has a start time and a configurable promise",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema='ee' AND table_name='billing_milestones'
+                  AND column_name='payment_confirmed_at') = 1
+              AND (SELECT (value #>> '{}')::int FROM portal.app_config
+                     WHERE key='comms.welcome_letter_sla_hours') = 4
+              AND (SELECT enabled FROM portal.scheduled_jobs
+                     WHERE name='welcome-letter-draft')
+              AND (SELECT schedule_kind FROM portal.scheduled_jobs
+                     WHERE name='welcome-letter-draft') = 'interval'
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // The trigger: a confirmed first instalment. Two projects carry one, and
+      // one of them is deliberately old so a breach is exercised, not assumed.
+      name: "comms: Gate 8 — two confirmed first instalments seed, one already past the promise",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM ee.billing_milestones
+                WHERE amount_paid > 0 AND payment_confirmed_at IS NOT NULL) = 2
+              AND (SELECT COUNT(*) FROM ee.billing_milestones
+                     WHERE amount_paid > 0
+                       AND payment_confirmed_at < NOW() - INTERVAL '4 hours') = 1
+              AND (SELECT COUNT(*) FROM ee.billing_milestones
+                     WHERE amount_paid > 0
+                       AND payment_confirmed_at >= NOW() - INTERVAL '4 hours') = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // The read gate exists as a column and defaults to FALSE — a letter is
+      // never born already-read (CLAUDE.md permanent constraint).
+      // The SLA must be readable by the TL who works the board. Billing is
+      // fenced to L0/L1, so the letter carries its own trigger stamp — the
+      // promise is visible without the money being visible.
+      name: "comms: Gate 8 — the letter carries its own trigger time, independent of billing RLS",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema='portal' AND table_name='communication_spine'
+                  AND column_name IN ('trigger_at','trigger_precise')) = 2
+              AND (SELECT COUNT(*) FROM pg_policies
+                     WHERE schemaname='ee' AND tablename='billing_milestones') > 0
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "comms: Gate 8 — scroll_complete defaults FALSE, so no letter starts pre-read",
+      sql: `SELECT (
+              (SELECT column_default LIKE '%false%' FROM information_schema.columns
+                WHERE table_schema='portal' AND table_name='communication_spine'
+                  AND column_name='scroll_complete')
+              AND (SELECT COUNT(*) FROM portal.communication_spine
+                     WHERE letter_type='welcome_letter' AND scroll_complete
+                       AND reviewed_by IS NULL) = 0
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
       name: "eh: three Experience Centres seed with per-centre discount thresholds",
       sql: `SELECT (
               (SELECT COUNT(*) FROM eh.experience_centres) = 3
