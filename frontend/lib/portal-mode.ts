@@ -71,6 +71,8 @@ const TRACKER_MODE_PREFIXES = [
   // activity chart. Vishakha and her designers sign in at /deck-login.
   "/design-tracker",
   "/api/design-tracker",
+  // Its 09:00 morning reminders, called by Vercel Cron (vercel.json).
+  "/api/jobs/design-reminders",
   "/login",
   "/api/auth",
   "/api/me",

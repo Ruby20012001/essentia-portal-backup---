@@ -43,6 +43,16 @@ each with its own Done, and "✓ All late are done" for catching up; Undo on the
 card that was pressed. A project with no start date takes its date right on the
 card. Designers land on this tab.
 
+**🔔 Morning reminders and escalation** (`db/052`). At 09:00 IST (Vercel Cron,
+`frontend/vercel.json`; Sundays skipped by default) each designer gets what is
+late and what is due today or tomorrow; anything late 3+ days goes to
+Vishakha; late 7+ days to a chosen L0/L1 (Monica by default). Bell always,
+email when Brevo is on; a person can have their own reminder address, since the
+`design.*` accounts may not be read mailboxes. One per person per day —
+`ee.design_reminder_log` is the record and the lock. The cron route refuses
+everyone unless `CRON_SECRET` is set. The 🔔 Reminders tab shows the rules,
+what would go now, "Send today's now", and what went.
+
 A write that never reaches the server now says so in the banner — "nothing was
 saved" — instead of an unhandled `Failed to fetch`; the notification bell's
 30-second poll swallows the same failure.

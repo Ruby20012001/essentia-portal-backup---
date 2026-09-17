@@ -180,7 +180,8 @@ export function computeActivity(
     state = "No due day";
   } else {
     daysToDue = daysBetween(settings.today, dueDate);
-    daysLate = -daysToDue;
+    // 0 - 0 is -0 in JavaScript; a due-today activity is 0 days late, not -0.
+    daysLate = 0 - daysToDue || 0;
     state = daysToDue < 0 ? "HOT" : daysToDue <= settings.warmWithin ? "WARM" : "COLD";
   }
 

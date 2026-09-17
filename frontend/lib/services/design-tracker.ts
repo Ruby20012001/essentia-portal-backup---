@@ -263,6 +263,37 @@ async function listProjectInputs(designerId: string | null): Promise<DesignProje
   }));
 }
 
+/**
+ * Every project, computed, with nobody's lens on it — for the morning
+ * reminders, which run with no one signed in. Asks no permission: callers
+ * decide who may trigger it (the cron secret, or a manager).
+ */
+export async function loadWholeDesignBoard(): Promise<{
+  settings: DesignSettings;
+  activities: DesignActivity[];
+  people: DesignPerson[];
+  projects: ComputedProject[];
+}> {
+  const [settings, activities, people, types, inputs] = await Promise.all([
+    getDesignSettings(),
+    listActivities(),
+    listPeople(),
+    listTypes(),
+    listProjectInputs(null),
+  ]);
+  return {
+    settings,
+    activities,
+    people,
+    projects: computeProjects(inputs, activities, people, settings, types),
+  };
+}
+
+/** Manager check for routes outside this file (the reminders screen). */
+export async function requireDesignManager(user: SessionUser): Promise<void> {
+  await requireManager(user);
+}
+
 export async function getDesignBoard(user: SessionUser): Promise<DesignBoard> {
   const viewer = await resolveViewer(user);
 

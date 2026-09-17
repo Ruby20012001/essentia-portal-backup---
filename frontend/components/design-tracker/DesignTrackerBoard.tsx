@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DesignDelaysView } from "@/components/design-tracker/DesignDelaysView";
 import { DesignProjectsView } from "@/components/design-tracker/DesignProjectsView";
+import { DesignRemindersView } from "@/components/design-tracker/DesignRemindersView";
 import { DesignSetupView } from "@/components/design-tracker/DesignSetupView";
 import { DesignTodayView } from "@/components/design-tracker/DesignTodayView";
 import { DesignUpdateView } from "@/components/design-tracker/DesignUpdateView";
@@ -10,7 +11,7 @@ import { HEAT_DOT, typeChangeMessage } from "@/components/design-tracker/HeatPil
 import type { DesignBoard } from "@/lib/services/design-tracker";
 import { forPerson, forSegment, personRows, type Segment } from "@/lib/services/design-tracker-logic";
 
-type Tab = "today" | "update" | "projects" | "delays" | "setup";
+type Tab = "today" | "update" | "projects" | "delays" | "reminders" | "setup";
 type Banner = { tone: "error" | "success"; message: string };
 
 /**
@@ -141,7 +142,7 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
 
   const showPerson = (id: string | null) => {
     setPerson(id);
-    if (tab === "setup") setTab("today");
+    if (tab === "setup" || tab === "reminders") setTab("today");
   };
 
   /**
@@ -164,7 +165,12 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
     { key: "update", label: "✓ Update", badge: mine.filter((p) => p.heat !== "DONE").length },
     { key: "projects", label: "Projects", badge: mine.filter((p) => p.heat !== "DONE").length },
     { key: "delays", label: "Delays", badge: mine.filter((p) => p.heat === "HOT").length },
-    ...(board.can.manage ? [{ key: "setup" as const, label: "Setup" }] : []),
+    ...(board.can.manage
+      ? [
+          { key: "reminders" as const, label: "🔔 Reminders" },
+          { key: "setup" as const, label: "Setup" },
+        ]
+      : []),
   ];
   const label = tabs.find((t) => t.key === tab)?.label ?? "";
 
@@ -250,7 +256,7 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
 
         {/* The person lens — the WIO board's team chips. Vishakha's name first
             (the whole team), then each designer with a dot for their heat. */}
-        {!own && tab !== "setup" ? (
+        {!own && tab !== "setup" && tab !== "reminders" ? (
           <div className="mb-5 flex flex-wrap items-center gap-2">
             <span className="font-body text-[11px] font-light uppercase tracking-[0.14em] text-muted">
               Designer
@@ -278,7 +284,7 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
           </div>
         ) : null}
 
-        {tab !== "setup" && board.types.length > 0 ? (
+        {tab !== "setup" && tab !== "reminders" && board.types.length > 0 ? (
           <div className="mb-5 flex flex-wrap items-center gap-2">
             <span className="font-body text-[11px] font-light uppercase tracking-[0.14em] text-muted">
               Type
@@ -350,6 +356,8 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
         ) : null}
 
         {tab === "delays" ? <DesignDelaysView board={lens} person={person} onPerson={showPerson} /> : null}
+
+        {tab === "reminders" && board.can.manage ? <DesignRemindersView /> : null}
 
         {tab === "setup" && board.can.manage ? (
           <DesignSetupView

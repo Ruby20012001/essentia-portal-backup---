@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/jobs/design-reminders",
+      "schedule": "30 3 * * *"
+    }
+  ]
+}

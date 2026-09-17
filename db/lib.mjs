@@ -63,6 +63,7 @@ export const DEFAULT_FILES = [
   "049_hr_interviews.sql",
   "050_design_activity_tracker.sql",
   "051_design_project_types.sql",
+  "052_design_reminders.sql",
   "900_dev_fixtures.sql",
 ];
 
