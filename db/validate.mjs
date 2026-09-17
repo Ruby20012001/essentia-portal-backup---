@@ -1824,6 +1824,96 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      // The Submit that used to 500 for every interviewer outside HR: the
+      // trail's read policy doubled as its INSERT check. No RETURNING — a
+      // panel member may write the line but still reads none of the trail.
+      name: "hiring: a panel member outside HR may write their own trail line",
+      setupSql: `
+        SELECT set_config('app.user_id', '00000000-0000-4000-8000-00000000000e', FALSE),
+               set_config('app.user_access_level', 'L2', FALSE)`,
+      asRestrictedRole: true,
+      sql: `INSERT INTO hr.candidate_activity (candidate_id, user_id, what, detail)
+            VALUES ('00000000-0000-4000-8000-00000000c201',
+                    '00000000-0000-4000-8000-00000000000e',
+                    'wrote up Department round', 'yes')`,
+      ok: () => true,
+    },
+    {
+      name: "hiring: …but not about a candidate they are not interviewing",
+      setupSql: `
+        SELECT set_config('app.user_id', '00000000-0000-4000-8000-00000000000e', FALSE),
+               set_config('app.user_access_level', 'L2', FALSE)`,
+      asRestrictedRole: true,
+      sql: `INSERT INTO hr.candidate_activity (candidate_id, user_id, what)
+            VALUES ('00000000-0000-4000-8000-00000000c202',
+                    '00000000-0000-4000-8000-00000000000e', 'wrote up HR conversation')`,
+      expectError: true,
+      ok: () => true,
+    },
+    {
+      name: "hiring: …and not in somebody else's name",
+      setupSql: `
+        SELECT set_config('app.user_id', '00000000-0000-4000-8000-00000000000e', FALSE),
+               set_config('app.user_access_level', 'L2', FALSE)`,
+      asRestrictedRole: true,
+      sql: `INSERT INTO hr.candidate_activity (candidate_id, user_id, what)
+            VALUES ('00000000-0000-4000-8000-00000000c201',
+                    '00000000-0000-4000-8000-00000000000d', 'wrote up Department round')`,
+      expectError: true,
+      ok: () => true,
+    },
+    {
+      // Panel members are told through the engine every module uses; a route
+      // with no template, or a template with no route, sends nothing silently.
+      name: "hiring: panel notifications are routed to a template",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM portal.event_routes r
+                 JOIN portal.notification_templates t ON t.code = r.template_code
+                WHERE r.event_type IN ('hiring.panel_added', 'hiring.round_changed')
+                  AND r.recipient_strategy = 'explicit' AND r.is_active) = 2
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // The validate role (app_user) is not the role the app runs as, so a
+      // missing grant on a new write path used to pass here and fail as a raw
+      // "permission denied" on the screen. This is the list of what
+      // lib/services/hiring.ts actually does, per table, checked against
+      // essentia_app itself.
+      name: "hiring: the app role can do every write the code does",
+      sql: `SELECT bool_and(has_table_privilege('essentia_app', t.tbl, t.priv))::TEXT AS v
+              FROM (VALUES
+                ('hr.interview_stages','SELECT'),
+                ('hr.open_roles','SELECT'), ('hr.open_roles','INSERT'), ('hr.open_roles','UPDATE'),
+                ('hr.candidates','SELECT'), ('hr.candidates','INSERT'), ('hr.candidates','UPDATE'),
+                ('hr.interviews','SELECT'), ('hr.interviews','INSERT'), ('hr.interviews','UPDATE'),
+                ('hr.interview_panel','SELECT'), ('hr.interview_panel','INSERT'),
+                ('hr.interview_panel','UPDATE'), ('hr.interview_panel','DELETE'),
+                ('hr.question_sets','SELECT'), ('hr.question_sets','INSERT'), ('hr.question_sets','UPDATE'),
+                ('hr.questions','SELECT'), ('hr.questions','INSERT'), ('hr.questions','DELETE'),
+                ('hr.scorecards','SELECT'), ('hr.scorecards','INSERT'), ('hr.scorecards','UPDATE'),
+                ('hr.scorecard_answers','SELECT'), ('hr.scorecard_answers','INSERT'),
+                ('hr.scorecard_answers','UPDATE'),
+                ('hr.candidate_activity','SELECT'), ('hr.candidate_activity','INSERT')
+              ) AS t(tbl, priv)`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "hiring: …and still cannot rewrite or remove a line of the trail",
+      sql: `SELECT (NOT has_table_privilege('essentia_app', 'hr.candidate_activity', 'UPDATE')
+               AND NOT has_table_privilege('essentia_app', 'hr.candidate_activity', 'DELETE'))::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "hiring: excusing somebody from a write-up needs a reason",
+      sql: `UPDATE hr.interview_panel
+               SET excused_at = NOW(), excused_by = '00000000-0000-4000-8000-00000000000d'
+             WHERE interview_id = '00000000-0000-4000-8000-00000000c301'
+               AND user_id = '00000000-0000-4000-8000-00000000000e'`,
+      expectError: true,
+      ok: () => true,
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
@@ -1832,6 +1922,9 @@ if (!failed) {
     CREATE ROLE app_user NOLOGIN;
     GRANT USAGE ON SCHEMA ee, eh, factory, proc, portal, audit, hr TO app_user;
     GRANT SELECT ON ALL TABLES IN SCHEMA ee, eh, public, hr TO app_user;
+    -- the one write the RLS checks exercise: a panel member's trail line
+    GRANT INSERT ON hr.candidate_activity TO app_user;
+    GRANT USAGE ON SEQUENCE hr.candidate_activity_id_seq TO app_user;
   `);
 
   for (const check of checks) {

@@ -1,13 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Scorecard } from "@/lib/services/hiring";
-import { Field, inputClass, primaryClass } from "@/components/hiring/HiringBoard";
-import { RecommendationPill } from "@/components/hiring/CandidateFile";
-import { when } from "@/components/hiring/RoundsList";
+import { scorecardSubmitRefusal, type RoundStatus } from "@/lib/services/hiring-logic";
+import { formatIST } from "@/lib/format";
+import {
+  Field,
+  Notice,
+  RecommendationPill,
+  ghostClass,
+  inputClass,
+  primaryClass,
+  sendJson,
+  type NoticeState,
+} from "@/components/hiring/ui";
 
-type Banner = { tone: "error" | "success"; message: string };
 type Call = NonNullable<Scorecard["recommendation"]>;
 
 const CALLS: { value: Call; label: string }[] = [
@@ -18,21 +26,30 @@ const CALLS: { value: Call; label: string }[] = [
 ];
 
 /**
- * Your own write-up of a round you sat in.
+ * Your own write-up of an interview you sat in.
  *
- * Saving keeps a draft; submitting is one way, and the screen says so before
- * you press it. That is not caution for its own sake: what a scorecard is
- * worth is that it was written before you heard what everybody else thought,
- * and a form that lets you go back and soften it is worth nothing.
+ * Saving keeps a draft; submitting is one way, available once the interview
+ * has started, and the screen says so before you press it. What a write-up
+ * is worth is that it was written after the conversation and before you heard
+ * what everybody else thought — a form that lets you submit the day before,
+ * or go back and soften it afterwards, is worth nothing.
  */
 export function ScorecardForm({
   interviewId,
   questions,
   existing,
+  submitBlocked,
+  scheduledAt,
+  status,
 }: {
   interviewId: string;
   questions: { id: string; seq: number; prompt: string; guidance: string | null }[];
   existing: Scorecard | null;
+  /** Worked out on the server when the page loaded… */
+  submitBlocked: string | null;
+  /** …and re-checked here, so a tab opened before the interview unlocks itself when it starts. */
+  scheduledAt: string;
+  status: RoundStatus;
 }) {
   const router = useRouter();
   const submitted = Boolean(existing?.submittedAt);
@@ -40,9 +57,7 @@ export function ScorecardForm({
   const [call, setCall] = useState<Call | "">(existing?.recommendation ?? "");
   const [strengths, setStrengths] = useState(existing?.strengths ?? "");
   const [concerns, setConcerns] = useState(existing?.concerns ?? "");
-  const [answers, setAnswers] = useState<
-    Record<string, { rating: number | null; notes: string }>
-  >(() => {
+  const [answers, setAnswers] = useState<Record<string, { rating: number | null; notes: string }>>(() => {
     const seed: Record<string, { rating: number | null; notes: string }> = {};
     for (const question of questions) {
       const prior = existing?.answers.find((a) => a.questionId === question.id);
@@ -50,41 +65,78 @@ export function ScorecardForm({
     }
     return seed;
   });
-  const [banner, setBanner] = useState<Banner | null>(null);
+  const [notice, setNotice] = useState<NoticeState>(null);
   const [busy, setBusy] = useState(false);
+  const [blocked, setBlocked] = useState<string | null>(submitBlocked);
+
+  // Somebody who opened the interview beforehand to read the questions keeps
+  // the tab open through the conversation. Submit has to unlock by itself when
+  // the interview starts — a reload to unlock it would throw away the write-up.
+  useEffect(() => {
+    const check = () => setBlocked(scorecardSubmitRefusal({ status, scheduledAt }, Date.now()));
+    check();
+    const timer = window.setInterval(check, 30_000);
+    return () => window.clearInterval(timer);
+  }, [status, scheduledAt]);
+
+  // If HR changes the questions while this form is open, the refresh brings
+  // the new ones. Keep what was written against questions that are still
+  // asked, drop the rest, and say so — rather than keep sending answers to
+  // questions the interview no longer asks, which every save then refused.
+  const questionKey = questions.map((q) => q.id).join(",");
+  const firstKey = useRef(questionKey);
+  useEffect(() => {
+    setAnswers((current) => {
+      const next: Record<string, { rating: number | null; notes: string }> = {};
+      for (const question of questions) {
+        next[question.id] = current[question.id] ?? { rating: null, notes: "" };
+      }
+      return next;
+    });
+    if (questionKey !== firstKey.current) {
+      firstKey.current = questionKey;
+      setNotice({
+        tone: "error",
+        message:
+          "HR changed the questions for this interview. Your strengths, concerns and call are kept; " +
+          "answer the questions below again.",
+      });
+    }
+    // questions is derived from questionKey for this purpose
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questionKey]);
 
   async function save(submit: boolean) {
-    setBusy(true);
-    setBanner(null);
-    try {
-      const res = await fetch(`/api/hiring/interviews/${interviewId}/scorecard`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recommendation: call || null,
-          strengths: strengths || null,
-          concerns: concerns || null,
-          answers: Object.entries(answers).map(([questionId, value]) => ({
-            questionId,
-            rating: value.rating,
-            notes: value.notes || null,
-          })),
-          submit,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setBanner({ tone: "error", message: data.error ?? `Request failed (${res.status})` });
-        return;
-      }
-      setBanner({
-        tone: "success",
-        message: submit ? "Submitted. It is on the candidate's file now." : "Saved as a draft.",
-      });
-      router.refresh();
-    } finally {
-      setBusy(false);
+    if (submit && !call) {
+      setNotice({ tone: "error", message: "Choose your call — yes or no — before you submit." });
+      return;
     }
+    const callLabel = CALLS.find((c) => c.value === call)?.label ?? "";
+    if (submit && !window.confirm(`Submit your write-up with the call “${callLabel}”? It cannot be changed afterwards.`)) {
+      return;
+    }
+    setBusy(true);
+    setNotice(null);
+    const res = await sendJson(`/api/hiring/interviews/${interviewId}/scorecard`, "PUT", {
+      recommendation: call || null,
+      strengths: strengths || null,
+      concerns: concerns || null,
+      answers: questions.map((q) => ({
+        questionId: q.id,
+        rating: answers[q.id]?.rating ?? null,
+        notes: answers[q.id]?.notes || null,
+      })),
+      submit,
+    });
+    setBusy(false);
+    setNotice(
+      res.ok
+        ? { tone: "success", message: submit ? "Submitted. It is on the candidate's file now." : "Saved as a draft." }
+        : { tone: "error", message: res.data.error ?? "" },
+    );
+    // Also after a refusal: if what is on the server moved on (it was submitted
+    // from another tab, say), the page should show that rather than a live form.
+    router.refresh();
   }
 
   if (submitted && existing) {
@@ -95,11 +147,9 @@ export function ScorecardForm({
           <RecommendationPill call={existing.recommendation} />
         </div>
         <p className="mt-1 font-body text-sm font-light text-muted">
-          Submitted {existing.submittedAt ? when(existing.submittedAt) : ""}. This is
-          what you thought before you heard what anybody else thought, and it
-          stays that way.
+          Submitted {existing.submittedAt ? `${formatIST(existing.submittedAt)} IST` : ""}. This is what
+          you thought before you heard what anybody else thought, and it stays that way.
         </p>
-
         {existing.strengths ? (
           <p className="mt-4 font-body text-sm font-light text-white">
             <span className="font-bold text-muted">Strengths. </span>
@@ -112,7 +162,6 @@ export function ScorecardForm({
             {existing.concerns}
           </p>
         ) : null}
-
         {existing.answers.length > 0 ? (
           <ol className="mt-4 space-y-3 border-t border-line pt-4">
             {existing.answers.map((answer) => (
@@ -136,33 +185,19 @@ export function ScorecardForm({
       <p className="mt-1 font-body text-sm font-light text-muted">
         {questions.length > 0
           ? "The same questions are asked of everybody against this seat, so two people can actually be compared."
-          : "No question set for this round — say what you made of the conversation."}
+          : "No question set for this interview — say what you made of the conversation."}
       </p>
-
-      {banner ? (
-        <div
-          className={`mt-4 rounded-lg border-l-4 px-5 py-3 font-body text-sm ${
-            banner.tone === "error"
-              ? "border-alert bg-alert/5 text-alert"
-              : "border-forest bg-forest/5 text-success"
-          }`}
-          role="status"
-        >
-          {banner.message}
-        </div>
-      ) : null}
 
       {questions.length > 0 ? (
         <ol className="mt-5 space-y-5">
           {questions.map((question) => (
             <li key={question.id} className="border-t border-line pt-4 first:border-0 first:pt-0">
-              <p className="font-body text-[15px] text-white">{question.prompt}</p>
+              <p className="font-body text-[15px] text-white">
+                {question.seq}. {question.prompt}
+              </p>
               {question.guidance ? (
-                <p className="mt-0.5 font-body text-xs font-light text-muted">
-                  {question.guidance}
-                </p>
+                <p className="mt-0.5 font-body text-xs font-light text-muted">{question.guidance}</p>
               ) : null}
-
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {[1, 2, 3, 4].map((rating) => {
                   const active = answers[question.id]?.rating === rating;
@@ -174,16 +209,11 @@ export function ScorecardForm({
                       onClick={() =>
                         setAnswers((a) => ({
                           ...a,
-                          [question.id]: {
-                            rating: active ? null : rating,
-                            notes: a[question.id]?.notes ?? "",
-                          },
+                          [question.id]: { rating: active ? null : rating, notes: a[question.id]?.notes ?? "" },
                         }))
                       }
                       className={`h-9 w-9 rounded-lg border font-body text-sm font-bold ${
-                        active
-                          ? "border-forest bg-forest text-cream"
-                          : "border-line text-white hover:bg-hover"
+                        active ? "border-forest bg-forest text-cream" : "border-line text-white hover:bg-hover"
                       }`}
                     >
                       {rating}
@@ -192,16 +222,12 @@ export function ScorecardForm({
                 })}
                 <span className="font-body text-xs font-light text-muted">1 poor · 4 excellent</span>
               </div>
-
               <textarea
                 value={answers[question.id]?.notes ?? ""}
                 onChange={(e) =>
                   setAnswers((a) => ({
                     ...a,
-                    [question.id]: {
-                      rating: a[question.id]?.rating ?? null,
-                      notes: e.target.value,
-                    },
+                    [question.id]: { rating: a[question.id]?.rating ?? null, notes: e.target.value },
                   }))
                 }
                 rows={2}
@@ -232,8 +258,15 @@ export function ScorecardForm({
             placeholder="What would worry you if they started on Monday."
           />
         </Field>
-
-        <Field label="Your call">
+        {/* A group, not a <label>: a label forwards any click inside it to its
+            first control, so clicking the gap beside "No" chose "Strong yes". */}
+        <div role="group" aria-labelledby="scorecard-call-label" className="mt-3">
+          <span
+            id="scorecard-call-label"
+            className="mb-1 block font-body text-[11px] font-bold uppercase tracking-[0.16em] text-muted"
+          >
+            Your call
+          </span>
           <div className="flex flex-wrap gap-2">
             {CALLS.map((option) => (
               <button
@@ -253,23 +286,24 @@ export function ScorecardForm({
               </button>
             ))}
           </div>
-        </Field>
+        </div>
       </div>
 
+      <Notice notice={notice} />
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void save(false)}
-          className="rounded-lg border border-line px-4 py-2 font-body text-sm font-bold text-white hover:bg-hover disabled:opacity-40"
-        >
+        <button type="button" disabled={busy} onClick={() => void save(false)} className={ghostClass}>
           Save a draft
         </button>
-        <button type="button" disabled={busy} onClick={() => void save(true)} className={primaryClass}>
+        <button
+          type="button"
+          disabled={busy || Boolean(blocked)}
+          onClick={() => void save(true)}
+          className={primaryClass}
+        >
           Submit
         </button>
         <span className="font-body text-xs font-light text-muted">
-          Submitting is one way. Nothing changes it afterwards.
+          {blocked ?? "Submitting is one way. Nothing changes it afterwards."}
         </span>
       </div>
     </section>

@@ -47,9 +47,14 @@ export async function getUserById(id: string): Promise<PortalUser | null> {
 }
 
 /** Search active internal staff by name / email — for pickers (e.g. delegate). */
+/**
+ * `excludeId` is null when the searcher may pick themselves — an interview
+ * panel, where the HR person scheduling a call is very often the one holding
+ * it. The delegate picker passes its own id: nobody delegates to themselves.
+ */
 export async function searchColleagues(
   q: string,
-  excludeId: string,
+  excludeId: string | null,
   limit = 8,
 ): Promise<Array<{ id: string; name: string; email: string; jobTitle: string | null }>> {
   const term = `%${q.trim()}%`;
@@ -57,7 +62,8 @@ export async function searchColleagues(
     `SELECT u.id, COALESCE(u.display_name, u.full_name) AS name, u.email,
             u.job_title AS "jobTitle"
      FROM public.users u
-     WHERE u.is_active AND NOT u.is_external AND u.id <> $2
+     WHERE u.is_active AND NOT u.is_external
+       AND ($2::uuid IS NULL OR u.id <> $2::uuid)
        AND (u.full_name ILIKE $1 OR u.display_name ILIKE $1 OR u.email ILIKE $1)
      ORDER BY u.full_name
      LIMIT $3`,

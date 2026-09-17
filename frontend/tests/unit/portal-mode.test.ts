@@ -84,6 +84,24 @@ describe("tracker mode — one screen", () => {
   it("goes home to the tracker", () => {
     expect(homeHref(TRACKER)).toBe("/wio-tracker");
   });
+
+  it("serves hiring and everything its screens call, from its own prefixes", () => {
+    for (const p of [
+      "/hr",
+      "/hr/candidates/00000000-0000-4000-8000-00000000c201",
+      "/hr/rounds/00000000-0000-4000-8000-00000000c301",
+      "/hr/questions",
+      "/api/hiring/roles",
+      "/api/hiring/colleagues",
+      "/api/hiring/interviews/00000000-0000-4000-8000-00000000c301/scorecard",
+    ]) {
+      expect(isRouteAllowed(p, TRACKER), p).toBe(true);
+    }
+    // …without opening the general directory or a lookalike route.
+    expect(isRouteAllowed("/api/users", TRACKER)).toBe(false);
+    expect(isRouteAllowed("/hr-admin", TRACKER)).toBe(false);
+    expect(isRouteAllowed("/api/hiring-export", TRACKER)).toBe(false);
+  });
 });
 
 describe("tracker mode — the nav", () => {

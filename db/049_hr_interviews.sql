@@ -38,6 +38,8 @@
 --   Additive + idempotent.
 --   ROLLBACK: DROP SCHEMA hr CASCADE;
 --             DELETE FROM public.permissions WHERE resource_type = 'hiring';
+--             DELETE FROM portal.event_routes WHERE event_type LIKE 'hiring.%';
+--             DELETE FROM portal.notification_templates WHERE code LIKE 'hiring_%';
 -- =====================================================================
 
 CREATE SCHEMA IF NOT EXISTS hr;
@@ -178,7 +180,17 @@ CREATE TABLE IF NOT EXISTS hr.interview_panel (
   user_id        UUID NOT NULL REFERENCES public.users(id),
   is_lead        BOOLEAN NOT NULL DEFAULT FALSE,
   added_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (interview_id, user_id)
+  -- Excused from writing it up: on leave, left the company, never actually
+  -- came in. Without this, one unsubmitted draft held a candidate still for
+  -- ever — calling the round off is refused once anybody has written it up,
+  -- and taking the person off the panel is refused once they have started.
+  -- The reason is required and goes on the trail; nothing is deleted.
+  excused_at     TIMESTAMPTZ,
+  excused_by     UUID REFERENCES public.users(id),
+  excused_reason TEXT,
+  PRIMARY KEY (interview_id, user_id),
+  CONSTRAINT hr_interview_panel_excuse_has_reason
+    CHECK (excused_at IS NULL OR (excused_by IS NOT NULL AND excused_reason IS NOT NULL))
 );
 
 CREATE INDEX IF NOT EXISTS hr_interview_panel_user_idx
@@ -347,7 +359,56 @@ BEGIN
     CREATE POLICY candidate_activity_hr ON hr.candidate_activity
       USING (hr.may_see_hiring());
   END IF;
+
+  -- …but a panel member does WRITE one line to it: "wrote up the department
+  -- round". Without this, the policy above doubled as the INSERT check, and
+  -- every interviewer outside HR got a raw RLS error on Submit — after their
+  -- scorecard had already been saved. They may add a line in their own name,
+  -- about a candidate they are on a panel for, and still read none of it.
+  IF NOT EXISTS (SELECT 1 FROM pg_policies
+                  WHERE schemaname='hr' AND tablename='candidate_activity'
+                    AND policyname='candidate_activity_panel_writes') THEN
+    CREATE POLICY candidate_activity_panel_writes ON hr.candidate_activity
+      FOR INSERT
+      WITH CHECK (
+        user_id = hr.acting_user()
+        AND EXISTS (
+          SELECT 1 FROM hr.interviews i
+            JOIN hr.interview_panel p ON p.interview_id = i.id
+           WHERE i.candidate_id = candidate_activity.candidate_id
+             AND p.user_id = hr.acting_user()
+        )
+      );
+  END IF;
 END $policies$;
+
+-- ── telling the panel ──────────────────────────────────────────────────
+-- A department HOD put on a panel had no reason to open the Hiring screen, so
+-- nothing told them there was an interview to sit in or a write-up to do.
+-- These go through the notification engine every other module uses: a
+-- template, and a route that sends it to the people named in the event.
+--
+-- Every {{variable}} below is supplied by lib/services/hiring.ts, and a unit
+-- test holds it to that — an unsupplied one renders as literal braces.
+INSERT INTO portal.notification_templates
+  (code, tier, title_template, body_template, action_url_template, action_label, description) VALUES
+  ('hiring_panel_added', 'action_required',
+   'Interview — {{candidateName}}',
+   '{{stageLabel}} for {{roleTitle}} · {{when}} IST · {{mode}}{{whereLine}}. You are on the panel; write yours up after the conversation.',
+   '/hr/rounds/{{interviewId}}', 'Open the round',
+   'S11: somebody was put on an interview panel'),
+  ('hiring_round_changed', 'action_required',
+   'Interview changed — {{candidateName}}',
+   '{{stageLabel}} for {{roleTitle}}: {{change}}',
+   '/hr/rounds/{{interviewId}}', 'Open the round',
+   'S11: a round a panel member sits in was rescheduled or called off')
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO portal.event_routes
+  (event_type, category, notification_type, template_code, recipient_strategy, default_channels, priority) VALUES
+  ('hiring.panel_added',   'user', 'assignment', 'hiring_panel_added',   'explicit', '["in_app"]', 'action_required'),
+  ('hiring.round_changed', 'user', 'reminder',   'hiring_round_changed', 'explicit', '["in_app"]', 'action_required')
+ON CONFLICT (event_type) DO NOTHING;
 
 -- ── the app role ───────────────────────────────────────────────────────
 -- db/007 granted what existed then; every table since has needed its own
@@ -358,7 +419,8 @@ GRANT SELECT ON hr.interview_stages                  TO essentia_app;
 GRANT SELECT, INSERT, UPDATE ON hr.open_roles        TO essentia_app;
 GRANT SELECT, INSERT, UPDATE ON hr.candidates        TO essentia_app;
 GRANT SELECT, INSERT, UPDATE ON hr.interviews        TO essentia_app;
-GRANT SELECT, INSERT, DELETE ON hr.interview_panel   TO essentia_app;
+-- UPDATE: the lead changes, and people are excused from a write-up.
+GRANT SELECT, INSERT, UPDATE, DELETE ON hr.interview_panel TO essentia_app;
 GRANT SELECT, INSERT, UPDATE ON hr.question_sets     TO essentia_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON hr.questions TO essentia_app;
 GRANT SELECT, INSERT, UPDATE ON hr.scorecards        TO essentia_app;

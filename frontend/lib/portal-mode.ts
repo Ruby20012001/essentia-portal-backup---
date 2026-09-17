@@ -66,6 +66,13 @@ const TRACKER_MODE_PREFIXES = [
   // The open, read-only board (app/board). Served in tracker mode too —
   // it is the one page most of essentia will ever open.
   "/board",
+  // Hiring (S11). This deployment is the only one there is, so a module left
+  // off this list is a module nobody can reach. The API is one prefix on
+  // purpose: the panel picker searches /api/hiring/colleagues rather than
+  // /api/users, so serving hiring does not also open the general directory.
+  // Who may see what inside it is still RBAC and RLS, never this list.
+  "/hr",
+  "/api/hiring",
   "/api/wio-tracker",
   "/login",
   "/api/auth",

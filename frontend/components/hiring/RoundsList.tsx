@@ -1,23 +1,51 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import type { InterviewSummary } from "@/lib/services/hiring";
+import { formatIST } from "@/lib/format";
+import { modeLabel } from "@/lib/services/hiring-logic";
+import { Notice, ghostClass, pillClass, sendJson, type NoticeState } from "@/components/hiring/ui";
+
+export type RoundEditMode = "full" | "add";
 
 /**
- * Rounds, as a list. Used twice: the diary on the hiring board, and "your
- * rounds" for whoever is sitting in them.
+ * Interviews, as a list. Used for "your interviews", the board's diary, and the
+ * interviews on a candidate's page.
  *
- * `viewerId` is what turns a list into a to-do: when it is given, a round that
- * has happened and is still missing this person's write-up says so, in place
- * of a count that means nothing to them.
+ * Two readers, two questions. An interviewer (`viewerId`) asks "do I owe a
+ * write-up?" — so their own state is shown, not a panel-wide count. HR
+ * (`canManage`) asks "did it happen, and is everybody's feedback in?" — and can
+ * say so: held, called off, nobody came, or excuse somebody who cannot write it
+ * up. Nothing here reads the clock: whether an interview has started comes from
+ * the server, so the page renders the same on both sides of hydration.
  */
 export function RoundsList({
   rounds,
   viewerId,
+  canManage = false,
+  canView = false,
+  currentCandidateId,
+  renderEdit,
   emptyMessage = "Nothing in the diary.",
 }: {
   rounds: InterviewSummary[];
   viewerId?: string;
+  canManage?: boolean;
+  /** HR may open any interview to check it, and open the candidate's file. */
+  canView?: boolean;
+  /** On a candidate's own page the "Candidate" link would point at itself. */
+  currentCandidateId?: string;
+  /** The edit form, drawn inline: the whole interview while it is ahead, only adding people once it has started. */
+  renderEdit?: (round: InterviewSummary, mode: RoundEditMode, done: (message: string) => void) => React.ReactNode;
   emptyMessage?: string;
 }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [notices, setNotices] = useState<Record<string, NoticeState>>({});
+  const [editing, setEditing] = useState<{ id: string; mode: RoundEditMode } | null>(null);
+
   if (rounds.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-line-strong bg-card px-6 py-8 text-center font-body text-sm font-light text-muted">
@@ -26,69 +54,178 @@ export function RoundsList({
     );
   }
 
+  function say(roundId: string, notice: NoticeState) {
+    setNotices((n) => ({ ...n, [roundId]: notice }));
+  }
+
+  async function setStatus(round: InterviewSummary, status: InterviewSummary["status"], said: string) {
+    if (
+      (status === "cancelled" || status === "no_show") &&
+      !window.confirm(
+        `${status === "cancelled" ? "Call off" : "Record that nobody came to"} the ${round.stageLabel} with ` +
+          `${round.candidateName}?${round.started ? "" : " The panel will be told."}`,
+      )
+    ) {
+      return;
+    }
+    setBusy(round.id);
+    const res = await sendJson(`/api/hiring/interviews/${round.id}`, "PATCH", { status });
+    setBusy(null);
+    say(round.id, res.ok ? { tone: "success", message: said } : { tone: "error", message: res.data.error ?? "" });
+    if (res.ok) router.refresh();
+  }
+
+  async function excuse(round: InterviewSummary, person: InterviewSummary["panel"][number]) {
+    const reason = window.prompt(
+      `Excuse ${person.name} from writing up the ${round.stageLabel} with ${round.candidateName}?\n\n` +
+        `Say why — it goes on the candidate's trail.`,
+    );
+    if (reason === null) return;
+    setBusy(round.id);
+    const res = await sendJson(`/api/hiring/interviews/${round.id}`, "PATCH", {
+      excuse: { userId: person.userId, reason },
+    });
+    setBusy(null);
+    say(
+      round.id,
+      res.ok
+        ? { tone: "success", message: `${person.name} is excused from this write-up.` }
+        : { tone: "error", message: res.data.error ?? "" },
+    );
+    if (res.ok) router.refresh();
+  }
+
   return (
     <ul className="space-y-3">
       {rounds.map((round) => {
-        const owed = Math.max(0, round.panel.length - round.scorecardsIn);
+        const onPanel = Boolean(viewerId && round.panel.some((p) => p.userId === viewerId));
+        const tookPlace = round.status !== "cancelled" && round.status !== "no_show";
+        // Per person, not panel size minus cards in: an excused person who
+        // wrote it up anyway would otherwise make the count come out short.
+        const owing = round.panel.filter((p) => !p.submitted && !p.excused);
+        const owed = owing.length;
         return (
           <li key={round.id} className="rounded-lg border border-line bg-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-body text-[15px] font-bold text-white">
-                    {round.candidateName}
-                  </h3>
-                  <span className="rounded-full bg-white/5 px-2 py-0.5 font-body text-[10px] font-bold uppercase tracking-wide text-muted">
-                    {round.stageLabel}
-                  </span>
-                  {round.status === "done" ? (
-                    <span className="rounded-full bg-success/10 px-2 py-0.5 font-body text-[10px] font-bold uppercase tracking-wide text-success">
-                      Held
-                    </span>
-                  ) : null}
-                  {round.status === "cancelled" || round.status === "no_show" ? (
-                    <span className="rounded-full bg-alert/10 px-2 py-0.5 font-body text-[10px] font-bold uppercase tracking-wide text-alert">
-                      {round.status === "no_show" ? "Nobody came" : "Called off"}
-                    </span>
+                  <h3 className="font-body text-[15px] font-bold text-white">{round.candidateName}</h3>
+                  <span className={`${pillClass} bg-white/5 text-muted`}>{round.stageLabel}</span>
+                  <RoundStatePill round={round} />
+                  {round.candidateStatus !== "active" && round.candidateStatus !== "offered" ? (
+                    <span className={`${pillClass} bg-alert/10 text-alert`}>candidate {round.candidateStatus}</span>
                   ) : null}
                 </div>
                 <p className="mt-0.5 font-body text-xs font-light text-muted">
-                  {round.roleTitle} · {when(round.scheduledAt)} · {round.durationMins} min ·{" "}
+                  {round.roleTitle} · {formatIST(round.scheduledAt)} IST · {round.durationMins} min ·{" "}
                   {modeLabel(round.mode)}
                   {round.location ? ` · ${round.location}` : ""}
                 </p>
                 <p className="mt-1 font-body text-xs font-light text-muted">
-                  {round.panel.map((p) => p.name).join(", ") || "No panel"}
+                  In the room:{" "}
+                  {round.panel.length === 0
+                    ? "nobody"
+                    : round.panel
+                        .map((p) => (p.excused ? `${p.name} (excused${p.excusedReason ? ` — ${p.excusedReason}` : ""})` : p.name))
+                        .join(", ")}
+                </p>
+                <p className="mt-1 font-body text-xs font-light text-muted">
+                  {round.questionSetName
+                    ? `Questions: ${round.questionSetName} (${round.questionCount})`
+                    : "No question set — a conversation"}
                 </p>
               </div>
 
-              <div className="flex shrink-0 items-center gap-3">
-                {round.status === "done" ? (
-                  <span
-                    className={`font-body text-xs ${owed > 0 ? "text-amber-deep" : "text-success"}`}
-                  >
-                    {owed > 0
-                      ? `${owed} still to write up`
-                      : `${round.scorecardsIn} written up`}
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                {onPanel ? (
+                  <MyState round={round} viewerId={viewerId as string} />
+                ) : round.happened && tookPlace ? (
+                  <span className={`font-body text-xs ${owed > 0 ? "text-amber-deep" : "text-success"}`}>
+                    {owed > 0 ? `${owed} still to write up` : "Every write-up is in"}
                   </span>
                 ) : null}
-                {viewerId && round.panel.some((p) => p.userId === viewerId) ? (
-                  <Link
-                    href={`/hr/rounds/${round.id}`}
-                    className="rounded-lg border border-line px-3 py-1.5 font-body text-sm font-bold text-white hover:bg-hover"
-                  >
-                    Open
-                  </Link>
-                ) : (
-                  <Link
-                    href={`/hr/candidates/${round.candidateId}`}
-                    className="font-body text-sm text-muted underline underline-offset-4 hover:text-white"
-                  >
-                    Candidate
-                  </Link>
-                )}
+
+                <div className="flex flex-wrap justify-end gap-2">
+                  {onPanel ? (
+                    <Link href={`/hr/rounds/${round.id}`} className={ghostClass}>
+                      Open
+                    </Link>
+                  ) : canView ? (
+                    <Link href={`/hr/rounds/${round.id}`} className={ghostClass}>
+                      View interview
+                    </Link>
+                  ) : null}
+                  {canView && currentCandidateId !== round.candidateId ? (
+                    <Link
+                      href={`/hr/candidates/${round.candidateId}`}
+                      className="self-center font-body text-sm text-muted underline underline-offset-4 hover:text-white"
+                    >
+                      Candidate
+                    </Link>
+                  ) : null}
+                </div>
               </div>
             </div>
+
+            {canManage && tookPlace ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+                {round.status === "scheduled" && round.started ? (
+                  <button type="button" disabled={busy === round.id} className={ghostClass} onClick={() => void setStatus(round, "done", "Marked held.")}>
+                    Held
+                  </button>
+                ) : null}
+                {round.status === "scheduled" ? (
+                  <button type="button" disabled={busy === round.id} className={ghostClass} onClick={() => void setStatus(round, "cancelled", "Called off.")}>
+                    Called off
+                  </button>
+                ) : null}
+                {round.status === "scheduled" && round.started ? (
+                  <button type="button" disabled={busy === round.id} className={ghostClass} onClick={() => void setStatus(round, "no_show", "Recorded that nobody came.")}>
+                    Nobody came
+                  </button>
+                ) : null}
+                {renderEdit ? (
+                  <button
+                    type="button"
+                    className={ghostClass}
+                    onClick={() =>
+                      setEditing((v) =>
+                        v?.id === round.id ? null : { id: round.id, mode: round.started ? "add" : "full" },
+                      )
+                    }
+                  >
+                    {editing?.id === round.id ? "Close" : round.started ? "Add somebody who sat in" : "Change time or panel"}
+                  </button>
+                ) : null}
+                {round.happened
+                  ? owing.map((person) => (
+                      <button
+                        key={person.userId}
+                        type="button"
+                        disabled={busy === round.id}
+                        className="font-body text-xs text-muted underline underline-offset-4 hover:text-white"
+                        onClick={() => void excuse(round, person)}
+                      >
+                        Excuse {person.name}
+                      </button>
+                    ))
+                  : null}
+              </div>
+            ) : canManage && !tookPlace ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+                <button type="button" disabled={busy === round.id} className={ghostClass} onClick={() => void setStatus(round, "scheduled", "Back in the diary.")}>
+                  Undo — back in the diary
+                </button>
+              </div>
+            ) : null}
+
+            <Notice notice={notices[round.id] ?? null} />
+            {editing?.id === round.id && renderEdit
+              ? renderEdit(round, editing.mode, (message) => {
+                  setEditing(null);
+                  say(round.id, { tone: "success", message });
+                })
+              : null}
           </li>
         );
       })}
@@ -96,31 +233,26 @@ export function RoundsList({
   );
 }
 
-/**
- * A moment, in the time zone the company actually works in.
- *
- * Elsewhere in the portal a timestamp is rendered by slicing the ISO string,
- * which shows UTC. On an audit stamp that is untidy; on an interview it is a
- * missed interview — 11:30 in Gurugram renders as 06:00 and somebody believes
- * it. The zone is named rather than taken from the machine so the server and
- * the browser render the same string and hydration does not tear.
- */
-const IST = new Intl.DateTimeFormat("en-IN", {
-  timeZone: "Asia/Kolkata",
-  day: "2-digit",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-
-export function when(iso: string): string {
-  const at = new Date(iso);
-  return Number.isNaN(at.getTime()) ? iso : IST.format(at).replace(",", "");
+function RoundStatePill({ round }: { round: InterviewSummary }) {
+  if (round.status === "done") return <span className={`${pillClass} bg-success/10 text-success`}>Held</span>;
+  if (round.status === "cancelled") return <span className={`${pillClass} bg-alert/10 text-alert`}>Called off</span>;
+  if (round.status === "no_show") return <span className={`${pillClass} bg-alert/10 text-alert`}>Nobody came</span>;
+  if (round.happened) return <span className={`${pillClass} bg-amber/10 text-amber-deep`}>Time has passed</span>;
+  return null;
 }
 
-export function modeLabel(mode: InterviewSummary["mode"]): string {
-  if (mode === "video") return "video";
-  if (mode === "phone") return "phone";
-  return "in person";
+function MyState({ round, viewerId }: { round: InterviewSummary; viewerId: string }) {
+  if (round.status === "cancelled" || round.status === "no_show") return null;
+  if (round.mine === "submitted") return <span className="font-body text-xs text-success">Yours is in</span>;
+  if (round.panel.find((p) => p.userId === viewerId)?.excused) {
+    return <span className="font-body text-xs text-muted">You are excused from this write-up</span>;
+  }
+  if (round.happened) {
+    return (
+      <span className="font-body text-xs font-bold text-amber-deep">
+        {round.mine === "draft" ? "Your draft is saved — submit it" : "Yours to write up"}
+      </span>
+    );
+  }
+  return round.mine === "draft" ? <span className="font-body text-xs text-muted">Draft saved</span> : null;
 }

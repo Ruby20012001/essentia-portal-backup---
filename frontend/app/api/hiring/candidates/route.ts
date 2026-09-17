@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
+  DuplicateCandidateError,
   addCandidate,
   hiringRights,
   listCandidates,
@@ -27,7 +28,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/** Somebody new against a seat. */
+/**
+ * Somebody new against a seat. A person who has applied before comes back as
+ * a 409 naming the earlier records; resending with `confirmDuplicate: true`
+ * adds them as a new application with a line on the trail saying so.
+ */
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -41,6 +46,7 @@ export async function POST(request: NextRequest) {
       expectedCtc?: number | null;
       noticeDays?: number | null;
       resumeUrl?: string | null;
+      confirmDuplicate?: boolean;
     };
     if (!body.roleId) {
       return NextResponse.json(
@@ -58,9 +64,16 @@ export async function POST(request: NextRequest) {
       expectedCtc: body.expectedCtc ?? null,
       noticeDays: body.noticeDays ?? null,
       resumeUrl: body.resumeUrl ?? null,
+      confirmDuplicate: body.confirmDuplicate === true,
     });
     return NextResponse.json(candidate, { status: 201 });
   } catch (error) {
+    if (error instanceof DuplicateCandidateError) {
+      return NextResponse.json(
+        { error: error.message, duplicates: error.matches },
+        { status: 409 },
+      );
+    }
     return toErrorResponse(error);
   }
 }
