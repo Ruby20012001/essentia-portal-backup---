@@ -159,7 +159,7 @@ export function Ring({
             y={CENTRE + 5}
             textAnchor="middle"
             dominantBaseline="middle"
-            className="fill-muted font-body text-[3px] font-light"
+            className="fill-muted font-body text-[3.4px] font-light uppercase tracking-[0.1em]"
           >
             {sub}
           </text>

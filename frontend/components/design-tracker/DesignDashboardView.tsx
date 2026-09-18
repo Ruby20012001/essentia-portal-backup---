@@ -221,7 +221,7 @@ export function DesignDashboardView({
         {/* ── each designer as a ring: how much of their work is late ── */}
         <Panel
           title="Each designer"
-          note="The ring is how many of their projects are late. Click a name for their projects."
+          note="The ring counts projects — how many of theirs are late. The line under it counts the activities inside those projects."
         >
           {byDesigner.length === 0 ? (
             <Empty>Nobody has a running project.</Empty>
@@ -240,12 +240,17 @@ export function DesignDashboardView({
                         active ? "bg-hover" : ""
                       }`}
                     >
+                      {/* The ring counts PROJECTS; the line under it counts
+                          ACTIVITIES. Both are wanted, and "1/2" beside "4 late
+                          activities" read as a contradiction until the ring
+                          said what it was counting (Monica, 18 Sep). */}
                       <Ring
                         value={d.hot}
                         total={Math.max(1, d.projects)}
                         tone={d.hot > 0 ? "text-alert" : "text-navy"}
                         centre={`${d.hot}/${d.projects}`}
-                        title={`${d.name}: ${d.hot} of ${d.projects} projects late`}
+                        sub="projects"
+                        title={`${d.name}: ${d.hot} of ${d.projects} projects late, ${d.total} activities late in them`}
                       />
                       <span className="mt-1.5 flex items-center gap-1.5 font-body text-[13px] font-bold text-ink">
                         <DesignAvatar name={d.name} size={20} />
@@ -254,7 +259,7 @@ export function DesignDashboardView({
                       <span className="font-body text-[11px] font-light text-muted">
                         {d.total === 0
                           ? "nothing late"
-                          : `${d.total} late ${d.total === 1 ? "activity" : "activities"}`}
+                          : `${d.total} ${d.total === 1 ? "activity" : "activities"} late in them`}
                       </span>
                       {d.client > 0 ? (
                         <span className="font-body text-[11px] font-light text-warning">
