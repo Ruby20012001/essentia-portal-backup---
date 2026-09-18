@@ -5,6 +5,7 @@ import {
   computeProject,
   computeProjects,
   forSegment,
+  guessProjectType,
   heatCounts,
   holdingByDependency,
   personRows,
@@ -238,6 +239,22 @@ describe("project types (db/051)", () => {
   it("keeps it for a plot — and never shortens the chart on a missing type", () => {
     expect(activitiesSkippedByType(farmhouse, plotChart)).toEqual([]);
     expect(activitiesSkippedByType(null, plotChart)).toEqual([]);
+  });
+
+  it("reads the kind from the project's own name, and says which word said so", () => {
+    const types = [penthouse, farmhouse, office];
+    expect(guessProjectType("Indiabulls Residence", types)).toMatchObject({
+      matched: "residence",
+      segment: "residential",
+      type: null, // "residence" does not say apartment or kothi
+    });
+    expect(guessProjectType("Cyber Hub Office — fit out", types)?.type?.code).toBe("office");
+    expect(guessProjectType("Sector 42 PENTHOUSE", types)?.type?.code).toBe("penthouse");
+    // Longer words win: a club house is not a house.
+    expect(guessProjectType("Emerald Club House", types)?.segment).toBe("commercial");
+    expect(guessProjectType("Mr Bansal — Farm House", types)?.type?.code).toBe("farmhouse");
+    expect(guessProjectType("Plot 14", types)).toBeNull();
+    expect(guessProjectType(null, types)).toBeNull();
   });
 
   it("carries the type onto the project, and narrows by segment", () => {

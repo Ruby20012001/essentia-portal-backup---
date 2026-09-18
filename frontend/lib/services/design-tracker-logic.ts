@@ -408,3 +408,75 @@ export function forSegment<T extends { type: DesignProjectType | null }>(
 ): T[] {
   return segment === null ? rows : rows.filter((r) => r.type?.segment === segment);
 }
+
+/**
+ * What the name suggests this project is — read from the words people already
+ * write in a project's name or client, so nobody has to answer a question the
+ * name already answers ("Indiabulls Residence" is residential; "… Office" is
+ * commercial).
+ *
+ * It SUGGESTS, never decides: the card offers it and a person presses it. A
+ * silent guess would put the wrong chart on a project and quietly drop two
+ * activities from it.
+ *
+ * Longest words first, so "club house" is not read as "house" and "farm house"
+ * is not read as "house" either.
+ */
+const TYPE_WORDS: { word: string; code?: string; segment: Segment }[] = [
+  // commercial
+  { word: "club house", code: "club_house", segment: "commercial" },
+  { word: "clubhouse", code: "club_house", segment: "commercial" },
+  { word: "experience centre", code: "sales_gallery", segment: "commercial" },
+  { word: "experience center", code: "sales_gallery", segment: "commercial" },
+  { word: "sales gallery", code: "sales_gallery", segment: "commercial" },
+  { word: "restaurant", code: "restaurant", segment: "commercial" },
+  { word: "showroom", code: "showroom", segment: "commercial" },
+  { word: "corporate", segment: "commercial" },
+  { word: "workspace", code: "office", segment: "commercial" },
+  { word: "office", code: "office", segment: "commercial" },
+  { word: "retail", code: "showroom", segment: "commercial" },
+  { word: "resort", code: "hotel", segment: "commercial" },
+  { word: "hotel", code: "hotel", segment: "commercial" },
+  { word: "cafe", code: "restaurant", segment: "commercial" },
+  { word: "café", code: "restaurant", segment: "commercial" },
+  { word: "club", code: "club_house", segment: "commercial" },
+  // residential
+  { word: "builder floor", code: "builder_floor", segment: "residential" },
+  { word: "farm house", code: "farmhouse", segment: "residential" },
+  { word: "farmhouse", code: "farmhouse", segment: "residential" },
+  { word: "penthouse", code: "penthouse", segment: "residential" },
+  { word: "apartment", code: "apartment", segment: "residential" },
+  { word: "residency", segment: "residential" },
+  { word: "residence", segment: "residential" },
+  { word: "bungalow", code: "bungalow", segment: "residential" },
+  { word: "duplex", code: "duplex", segment: "residential" },
+  { word: "villa", code: "villa", segment: "residential" },
+  { word: "kothi", code: "kothi", segment: "residential" },
+  { word: "house", segment: "residential" },
+  { word: "home", segment: "residential" },
+  { word: "flat", code: "apartment", segment: "residential" },
+];
+
+export type TypeGuess = {
+  /** The word in the name that suggested it — shown, so the guess is checkable. */
+  matched: string;
+  segment: Segment;
+  /** The exact type, when the word names one. Otherwise only the segment is known. */
+  type: DesignProjectType | null;
+};
+
+export function guessProjectType(
+  text: string | null | undefined,
+  types: DesignProjectType[],
+): TypeGuess | null {
+  if (!text) return null;
+  const haystack = text.toLowerCase();
+  for (const w of TYPE_WORDS) {
+    if (!haystack.includes(w.word)) continue;
+    const type = w.code ? (types.find((t) => t.code === w.code) ?? null) : null;
+    // A word whose type is not on this board (somebody deactivated it) still
+    // tells us the segment.
+    return { matched: w.word, segment: w.segment, type };
+  }
+  return null;
+}

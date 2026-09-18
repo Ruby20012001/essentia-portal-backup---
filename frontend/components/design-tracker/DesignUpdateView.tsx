@@ -15,6 +15,7 @@ import {
   type ComputedActivity,
   type ComputedProject,
   type DesignProjectType,
+  guessProjectType,
   NO_PLOT_REMARK,
 } from "@/lib/services/design-tracker-logic";
 
@@ -196,6 +197,9 @@ function Card({
 }) {
   const [showAll, setShowAll] = useState(false);
   const [showAllDone, setShowAllDone] = useState(false);
+  const [changingType, setChangingType] = useState(false);
+  /** What the project's own name suggests it is — offered, never applied by itself. */
+  const guess = guessProjectType([p.name, p.client].filter(Boolean).join(" "), types);
   /**
    * What has been marked done lately, newest first — today's at the top. The
    * card's own way back: Undo dies with the page, this does not.
@@ -235,15 +239,30 @@ function Card({
         </div>
 
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          {p.type ? (
-            <TypeBadge type={p.type} />
+          {p.type && !changingType ? (
+            <>
+              <TypeBadge type={p.type} />
+              {canSetStart ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setChangingType(true)}
+                  className="font-body text-[11px] font-light text-muted underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink disabled:opacity-50"
+                >
+                  change
+                </button>
+              ) : null}
+            </>
           ) : canSetStart ? (
-            <label className="flex items-center gap-2 font-body text-xs font-light text-muted">
-              What kind of project?
+            <label className="flex flex-wrap items-center gap-2 font-body text-xs font-light text-muted">
+              {p.type ? "Change the type:" : "What kind of project?"}
               <select
-                value=""
+                value={p.type?.code ?? ""}
                 disabled={busy}
-                onChange={(e) => e.target.value && onSetType(e.target.value)}
+                onChange={(e) => {
+                  setChangingType(false);
+                  onSetType(e.target.value);
+                }}
                 // The background must be OPAQUE. A translucent one (bg-warning/5)
                 // is what the open list is painted with, so in dark mode the
                 // Residential / Commercial list came out invisible — white text
@@ -251,7 +270,7 @@ function Card({
                 // comm list ni dikhri").
                 className="rounded border border-warning/60 bg-canvas px-2 py-1 font-body text-xs text-ink focus:border-amber-deep focus:outline-none disabled:opacity-50"
               >
-                <option value="">Pick a type…</option>
+                <option value="">{p.type ? "Not set" : "Pick a type…"}</option>
                 <optgroup label="🏠 Residential">
                   {types.filter((t) => t.segment === "residential").map((t) => (
                     <option key={t.code} value={t.code}>{t.label}</option>
@@ -263,9 +282,40 @@ function Card({
                   ))}
                 </optgroup>
               </select>
+              {p.type ? (
+                <button
+                  type="button"
+                  onClick={() => setChangingType(false)}
+                  className="font-body text-[11px] font-light text-muted underline decoration-line-strong underline-offset-2 hover:text-ink"
+                >
+                  cancel
+                </button>
+              ) : null}
+              {/* What the name says it is. It is offered, never applied on its
+                  own: a wrong guess would quietly take two activities off the
+                  project's chart. */}
+              {guess && guess.type && guess.type.code !== p.type?.code ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setChangingType(false);
+                    onSetType(guess.type!.code);
+                  }}
+                  className="rounded border border-forest/50 px-2 py-1 font-body text-[11px] font-bold text-forest transition-colors hover:bg-forest/10 disabled:opacity-50"
+                >
+                  {guess.segment === "residential" ? "🏠" : "🏢"} looks like {guess.type.label} — use it
+                </button>
+              ) : guess && !guess.type ? (
+                <span className="font-body text-[11px] font-light text-secondary">
+                  the name says {guess.segment} (&ldquo;{guess.matched}&rdquo;) — pick which
+                </span>
+              ) : null}
             </label>
           ) : (
-            <span className="font-body text-xs font-light text-muted">Type not set</span>
+            <span className="font-body text-xs font-light text-muted">
+              {p.type ? `${p.type.segment === "residential" ? "🏠" : "🏢"} ${p.type.label}` : "Type not set"}
+            </span>
           )}
           {skippedByType.length > 0 ? (
             <span className="font-body text-[11px] font-light text-muted">

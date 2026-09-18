@@ -329,7 +329,8 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
               })
             }
             onSetStart={(projectId, startDate) => patchProject(projectId, { startDate })}
-            onSetType={(projectId, typeCode) => patchProject(projectId, { typeCode })}
+            // An empty choice means "not set", which the API takes as null.
+            onSetType={(projectId, typeCode) => patchProject(projectId, { typeCode: typeCode || null })}
           />
         ) : null}
 
