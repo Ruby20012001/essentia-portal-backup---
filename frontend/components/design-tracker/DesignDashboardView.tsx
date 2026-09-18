@@ -5,7 +5,7 @@ import { DesignAvatar } from "@/components/design-tracker/DesignAvatar";
 import { Donut, Ring } from "@/components/design-tracker/DesignDonut";
 import { DayBadge, HEAT_DOT, HEAT_MEANING, HeatPill } from "@/components/design-tracker/HeatPill";
 import type { DesignBoard } from "@/lib/services/design-tracker";
-import { forPerson, type Heat } from "@/lib/services/design-tracker-logic";
+import { forPerson, type Heat, teamsWaitedOn } from "@/lib/services/design-tracker-logic";
 
 /**
  * Dashboard — the first page, read rather than worked (Monica, 18 Sep:
@@ -68,7 +68,14 @@ export function DesignDashboardView({
       case "designer":
         return running.filter((p) => p.designerId === focus.id);
       case "dependency":
-        return running.filter((p) => p.late.some((a) => a.dependsOn === focus.name));
+        // Matched against the split team names, not the raw column: the bars
+        // now say "CRM", and CRM's work sits on rows whose RESPONSIBILITY reads
+        // "CRM · ID team" and "CRM (follow up) · Architecture (…)". Comparing
+        // the whole string would have found none of them and filtered the page
+        // down to nothing.
+        return running.filter((p) =>
+          p.late.some((a) => teamsWaitedOn(a.dependsOn).includes(focus.name)),
+        );
       default:
         return running;
     }
@@ -101,17 +108,50 @@ export function DesignDashboardView({
     .filter((d) => d.projects > 0 || d.total > 0)
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 
+  /**
+   * Who the overdue work is sitting with — by TEAM, and counted in tasks.
+   *
+   * Two things were wrong with reading the chart's RESPONSIBILITY column whole
+   * (Monica, 18 Sep, pointing at this panel). The labels were unreadable —
+   * "CRM (follow up) · Procurement (hiring, work order) · Architecture (drawing
+   * coordination)" as one bar — and because every combination made its own row,
+   * CRM's actual share was scattered across five of them and visible in none.
+   *
+   * And the measure was days summed, which on this board reads as a claim
+   * nobody means: ten tasks overdue at once totalled "228 days late" where the
+   * worst project is fifty days behind. Tasks cannot be misread that way, and
+   * the longest single wait carries the urgency.
+   *
+   * A task naming two teams counts under both, so these do not add up to the
+   * number of late tasks. The panel's note says so.
+   */
   const byDependency = (() => {
-    const map = new Map<string, { name: string; count: number; days: number }>();
+    type Row = {
+      name: string;
+      count: number;
+      longest: number;
+      longestTask: string;
+      longestProject: string;
+    };
+    const map = new Map<string, Row>();
     for (const p of running) {
       for (const a of p.late) {
-        const row = map.get(a.dependsOn) ?? { name: a.dependsOn, count: 0, days: 0 };
-        row.count += 1;
-        row.days += a.daysLate ?? 0;
-        map.set(a.dependsOn, row);
+        for (const team of teamsWaitedOn(a.dependsOn)) {
+          const row =
+            map.get(team) ?? { name: team, count: 0, longest: -1, longestTask: "", longestProject: "" };
+          row.count += 1;
+          if ((a.daysLate ?? 0) > row.longest) {
+            row.longest = a.daysLate ?? 0;
+            row.longestTask = a.task;
+            row.longestProject = p.name;
+          }
+          map.set(team, row);
+        }
       }
     }
-    return [...map.values()].sort((a, b) => b.days - a.days).slice(0, 6);
+    return [...map.values()]
+      .sort((a, b) => b.count - a.count || b.longest - a.longest)
+      .slice(0, 6);
   })();
 
   const focusLabel =
@@ -142,7 +182,7 @@ export function DesignDashboardView({
         </div>
       ) : (
         <p className="mb-4 font-body text-sm font-light text-muted">
-          Click any bar to narrow the page to it. Read against {board.settings.today}.
+          Click any piece, ring or row to narrow the page to it. Read against {board.settings.today}.
         </p>
       )}
 
@@ -278,30 +318,70 @@ export function DesignDashboardView({
       {/* ── who the delay waits on ─────────────────────────────────── */}
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
         <Panel
-          title="Who the delay is waiting on"
-          note="Total days late, by the chart's RESPONSIBILITY. Click one to see its projects."
+          title="Who we are waiting for"
+          note="Overdue tasks, by whose desk they are on. A task waiting on two teams shows under both. Click one to see its projects."
         >
           {byDependency.length === 0 ? (
             <Empty>Nothing is late.</Empty>
           ) : (
-            <BarRows
-              max={Math.max(1, ...byDependency.map((d) => d.days))}
-              rows={byDependency.map((d) => ({
-                key: d.name,
-                label: d.name,
-                value: d.days,
-                unit: "d",
-                parts: [{ value: d.days, pattern: false, title: `${d.days} days late in total` }],
-                sub: `${d.count} ${d.count === 1 ? "activity" : "activities"}`,
-                active: focus.kind === "dependency" && focus.name === d.name,
-                onClick: () =>
-                  setFocus(
-                    focus.kind === "dependency" && focus.name === d.name
-                      ? { kind: "none" }
-                      : { kind: "dependency", name: d.name },
-                  ),
-              }))}
-            />
+            /* A table, not bars (Monica, 18 Sep: "isko is format se hata kar
+               normal table de do"). The bar length only ever encoded the task
+               count, which the column states outright, and it cost the row the
+               width that the team name and the task actually needed.
+
+               Rows stay the filter they were: a whole row is the click target,
+               and the chosen one is marked rather than merely hovered, because
+               with the bars gone there is no other sign the page is narrowed. */
+            <table className="w-full text-left font-body text-[12.5px]">
+              <thead>
+                <tr className="border-b border-line text-[10px] uppercase tracking-[0.12em] text-muted">
+                  <th className="py-2 pr-3 font-bold">Waiting on</th>
+                  <th className="py-2 pr-3 text-right font-bold">Tasks</th>
+                  <th className="py-2 text-right font-bold">Longest</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {byDependency.map((d) => {
+                  const on = focus.kind === "dependency" && focus.name === d.name;
+                  const pick = () =>
+                    setFocus(on ? { kind: "none" } : { kind: "dependency", name: d.name });
+                  return (
+                    /* The bars this replaced were buttons, so they answered the
+                       keyboard. A row with an onClick does not, so it is given
+                       the focus and the keys back by hand — otherwise the whole
+                       filter would have quietly become mouse-only. */
+                    <tr
+                      key={d.name}
+                      onClick={pick}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          pick();
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-pressed={on}
+                      aria-label={`Show projects waiting on ${d.name}`}
+                      className={`cursor-pointer transition-colors ${on ? "bg-selected" : "hover:bg-hover"}`}
+                    >
+                      <td className="py-2.5 pr-3">
+                        <span className="block font-bold text-ink">{d.name}</span>
+                        <span className="block text-[11px] font-light text-muted">
+                          {d.longestTask} · {d.longestProject}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap py-2.5 pr-3 text-right font-bold text-ink">
+                        {d.count}
+                      </td>
+                      <td className="whitespace-nowrap py-2.5 text-right font-bold text-alert">
+                        {d.longest}d
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           )}
         </Panel>
 
@@ -450,71 +530,3 @@ function Empty({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Horizontal bars, label on the left, value direct-labelled at the end. */
-function BarRows({
-  rows,
-  max,
-}: {
-  max: number;
-  rows: {
-    key: string;
-    label: string;
-    value: number;
-    unit?: string;
-    sub?: string;
-    active: boolean;
-    onClick: () => void;
-    parts: { value: number; pattern: boolean; title: string }[];
-  }[];
-}) {
-  return (
-    <ul className="space-y-2">
-      {rows.map((r) => (
-        <li key={r.key}>
-          <button
-            type="button"
-            onClick={r.onClick}
-            className={`w-full rounded px-1 py-1 text-left transition-colors hover:bg-hover ${r.active ? "bg-hover" : ""}`}
-          >
-            <span className="flex items-baseline gap-2 font-body text-[13px]">
-              <span className="truncate text-ink">{r.label}</span>
-              {r.sub ? <span className="truncate text-[11px] font-light text-muted">{r.sub}</span> : null}
-              <span className="ml-auto whitespace-nowrap font-bold text-ink">
-                {r.value}
-                {r.unit ?? ""}
-              </span>
-            </span>
-            <span className="mt-1 flex h-3 w-full items-stretch gap-[2px]">
-              {r.value === 0 ? (
-                <span className="h-full w-full rounded bg-line-strong/70" />
-              ) : (
-                <>
-                  {r.parts
-                    .filter((p) => p.value > 0)
-                    .map((p, i) => (
-                      // Solid = held by us. Diagonal lines = waiting on the
-                      // client: the same red, carrying a second signal. The
-                      // fill is a token class — an inline `background`
-                      // shorthand was dropped and left every bar empty.
-                      <span
-                        key={i}
-                        title={p.title}
-                        className={`h-full rounded ${p.pattern ? "bg-alert/25" : "bg-alert"}`}
-                        style={{
-                          width: `${(p.value / max) * 100}%`,
-                          backgroundImage: p.pattern
-                            ? "repeating-linear-gradient(45deg, rgb(var(--c-error)) 0 3px, transparent 3px 6px)"
-                            : undefined,
-                        }}
-                      />
-                    ))}
-                  <span className="h-full flex-1 rounded bg-line-strong/70" />
-                </>
-              )}
-            </span>
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}

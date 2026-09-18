@@ -480,3 +480,33 @@ export function guessProjectType(
   }
   return null;
 }
+
+/**
+ * The teams a late task is waiting on, as names a person would say out loud.
+ *
+ * The activity chart's RESPONSIBILITY column frequently names several at once,
+ * with the job in brackets — "CRM (follow up) · Procurement (hiring, work
+ * order) · Architecture (drawing coordination)". Taken whole, that whole string
+ * became one entry on a chart: unreadable at that width, and the same team
+ * appeared again under every other combination it took part in, so CRM's real
+ * share of the delay was never visible anywhere.
+ *
+ * Split on the separators and with the bracket dropped, CRM is CRM wherever it
+ * turns up. The bracketed part is not lost — it is still on the row in "Who we
+ * are waiting for, in full", where there is width for it.
+ *
+ * Shared by the Dashboard and What's new so the two can never disagree about
+ * who is holding what.
+ */
+export function teamsWaitedOn(dependsOn: string): string[] {
+  return (
+    dependsOn
+      // The bracket goes FIRST. "Procurement (hiring, work order)" carries a
+      // comma of its own, so splitting before stripping tore the name in half
+      // and left "Procurement (hiring" in the legend.
+      .replace(/\s*\([^)]*\)/g, "")
+      .split(/\s*(?:[·&,/]|\band\b)\s*/i)
+      .map((t) => t.trim())
+      .filter(Boolean)
+  );
+}

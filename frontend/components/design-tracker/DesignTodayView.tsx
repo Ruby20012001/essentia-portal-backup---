@@ -20,6 +20,7 @@ import {
   heatCounts,
   holdingByDependency,
   personRows,
+  teamsWaitedOn,
 } from "@/lib/services/design-tracker-logic";
 
 /**
@@ -127,6 +128,9 @@ export function DesignTodayView({
       .slice(0, 5);
   })();
   const mostTasks = Math.max(1, ...waitingOn.map((r) => r.tasks));
+  /* Not the same row as the busiest team: the pile and the single oldest task
+     are different questions, and it is the oldest that usually wants chasing. */
+  const longestWait = [...waitingOn].sort((a, b) => b.oldestDays - a.oldestDays)[0] ?? null;
 
   /**
    * What has actually moved — the page's namesake (Monica, 18 Sep: "what's new
@@ -340,81 +344,109 @@ export function DesignTodayView({
         </Panel>
 
         <Panel
-          className="lg:col-span-4"
+          className="lg:col-span-8"
           title="Who we are waiting for"
           note="Tasks off the chart that are overdue, by whose desk they are on. A task waiting on two teams shows under both."
         >
           {waitingOn.length === 0 ? (
             <Empty>Nothing is late.</Empty>
           ) : (
-            /* Bars, not a circle (Monica, 18 Sep: "who the delay is hard to
-               understand for them"). A donut asks the reader to judge one arc
-               against another and then convert that to a quantity; bars off a
-               common baseline are read by length alone, which is the comparison
-               people make accurately without being taught. The sentence above
-               says the finding outright, so the picture confirms rather than
-               sets homework. Name over bar, not beside it — this panel is a
-               third of the row wide and team names do not fit alongside. */
-            <div>
-              <p className="mb-4 font-body text-sm font-light text-ink">
-                <span className="font-bold">{waitingOn[0]!.team}</span> has the most of our work —{" "}
-                <span className="font-bold">
-                  {waitingOn[0]!.tasks} {waitingOn[0]!.tasks === 1 ? "task" : "tasks"}
-                </span>
-                , the oldest waiting{" "}
-                <span className="font-bold">
-                  {waitingOn[0]!.oldestDays} {waitingOn[0]!.oldestDays === 1 ? "day" : "days"}
-                </span>
-                .
-              </p>
-              <ul className="space-y-3">
-                {waitingOn.map((r, i) => (
-                  <li key={r.team}>
-                    <div className="flex items-baseline justify-between gap-2 font-body text-[12px]">
-                      <span className="truncate text-secondary">{r.team}</span>
-                      <span className="whitespace-nowrap font-bold text-ink">
-                        {r.tasks} {r.tasks === 1 ? "task" : "tasks"}
-                      </span>
-                    </div>
-                    <div className="mt-1 h-2.5 w-full overflow-hidden rounded-sm bg-hover">
-                      {/* Against the longest bar rather than a total, so the
-                          smaller teams stay a visible length instead of a
-                          sliver nobody can compare. */}
-                      <div
-                        className={`h-full rounded-sm ${BAR_STEP[i] ?? "bg-alert/30"}`}
-                        style={{ width: `${Math.max(3, (r.tasks / mostTasks) * 100)}%` }}
-                      />
-                    </div>
-                    {/* Which one to chase, named. "Oldest" is the task that has
-                        waited longest, not the biggest pile. */}
-                    <p className="mt-1 font-body text-[11px] font-light text-muted">
-                      oldest {r.oldestDays}d · {r.oldestTask} ({r.oldestProject})
-                    </p>
+            /* A table (Monica, 18 Sep: "table format me bnadio"). The bar that
+               was here compared one thing — how many tasks — and everything
+               else had to hang off it as a caption. Columns let the count, the
+               longest wait and the task itself sit side by side, each read down
+               its own column, and give the oldest task the width to be named
+               rather than truncated. The panel takes two thirds of the row for
+               the same reason; a table in a third of a row is a list.
+
+               The count keeps a bar behind it, drawn inside the cell — the
+               ranking stays visible at a glance without a column of its own. */
+            <div className="overflow-x-auto">
+              {/* Said in sentences first, then the table (Monica, 18 Sep:
+                  "vaakya upar, table neeche"). Somebody in a hurry reads three
+                  lines and leaves; somebody chasing it reads down the columns.
+                  Two different readers, one panel, neither made to do the
+                  other's work. */}
+              <ul className="mb-4 space-y-1 font-body text-sm font-light text-ink">
+                <li>
+                  <span className="font-bold">{counts.lateActivities}</span>{" "}
+                  {counts.lateActivities === 1 ? "task is" : "tasks are"} overdue across the team.
+                </li>
+                <li>
+                  <span className="font-bold">{waitingOn[0]!.team}</span> has the most —{" "}
+                  <span className="font-bold">{waitingOn[0]!.tasks}</span> of them, the oldest waiting{" "}
+                  <span className="font-bold">
+                    {waitingOn[0]!.oldestDays} {waitingOn[0]!.oldestDays === 1 ? "day" : "days"}
+                  </span>
+                  .
+                </li>
+                {/* Only when it is somebody else — otherwise it repeats the
+                    line above in different words. */}
+                {longestWait && longestWait.team !== waitingOn[0]!.team ? (
+                  <li>
+                    The single longest wait is{" "}
+                    <span className="font-bold">{longestWait.team}</span>&rsquo;s —{" "}
+                    <span className="font-bold">
+                      {longestWait.oldestDays} {longestWait.oldestDays === 1 ? "day" : "days"}
+                    </span>{" "}
+                    on {longestWait.oldestProject}.
                   </li>
-                ))}
+                ) : null}
               </ul>
+              <table className="w-full text-left font-body text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-line text-[10px] uppercase tracking-[0.12em] text-muted">
+                    <th className="py-2 pr-3 font-bold">Waiting on</th>
+                    <th className="py-2 pr-3 font-bold">Tasks overdue</th>
+                    <th className="py-2 pr-3 text-right font-bold">Longest</th>
+                    <th className="py-2 font-bold">That task</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {waitingOn.map((r, i) => (
+                    <tr key={r.team}>
+                      <td className="py-2.5 pr-3 font-bold text-ink">{r.team}</td>
+                      <td className="py-2.5 pr-3">
+                        <span className="flex items-center gap-2">
+                          <span className="w-4 shrink-0 font-bold text-ink">{r.tasks}</span>
+                          <span className="h-2 w-full min-w-[3rem] overflow-hidden rounded-sm bg-hover">
+                            <span
+                              className={`block h-full rounded-sm ${BAR_STEP[i] ?? "bg-alert/30"}`}
+                              style={{ width: `${Math.max(4, (r.tasks / mostTasks) * 100)}%` }}
+                            />
+                          </span>
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap py-2.5 pr-3 text-right font-bold text-alert">
+                        {r.oldestDays}d
+                      </td>
+                      <td className="py-2.5 text-secondary">
+                        {r.oldestTask}
+                        <span className="text-muted"> · {r.oldestProject}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </Panel>
 
-        <Panel
-          className="lg:col-span-4"
-          title="How much is finished"
-          note="Steps ticked off, across every running project."
-        >
-          <Gauge
-            value={doneActivities}
-            max={Math.max(1, applicableActivities)}
-            tone={counts.hot > 0 ? "text-alert" : "text-forest"}
-            centre={`${Math.round((doneActivities / Math.max(1, applicableActivities)) * 100)}%`}
-            centreSub="done"
-            minLabel="0"
-            maxLabel={String(applicableActivities)}
-            title={`${doneActivities} of ${applicableActivities} activities done`}
-          />
-        </Panel>
-
+        {/* The gauge and the two numbers share the remaining third, stacked,
+            now that the table has taken two thirds of the row. */}
         <div className="grid gap-4 lg:col-span-4">
+          <Panel title="How much is finished" note="Steps ticked off, across every running project.">
+            <Gauge
+              value={doneActivities}
+              max={Math.max(1, applicableActivities)}
+              tone={counts.hot > 0 ? "text-alert" : "text-forest"}
+              centre={`${Math.round((doneActivities / Math.max(1, applicableActivities)) * 100)}%`}
+              centreSub="done"
+              minLabel="0"
+              maxLabel={String(applicableActivities)}
+              title={`${doneActivities} of ${applicableActivities} activities done`}
+            />
+          </Panel>
           <BigNumber
             value={counts.lateActivities}
             label="Late activities"
@@ -688,32 +720,6 @@ function NewsList({
         ) : null}
       </ul>
     </div>
-  );
-}
-
-/**
- * The teams a late task is waiting on, as names a person would say out loud.
- *
- * The activity chart's RESPONSIBILITY column frequently names several at once,
- * with the job in brackets — "CRM (follow up) · Procurement (hiring, work
- * order) · Architecture (drawing coordination)". Taken whole, that whole string
- * became one entry in the legend: unreadable, and the same team appeared again
- * under every other combination it took part in. Split on the separators and
- * with the bracket dropped, CRM is CRM wherever it turns up.
- *
- * The bracketed part is not lost to the reader — it is still on the row in
- * "Who we are waiting for, in full", where there is width for it.
- */
-function teamsWaitedOn(dependsOn: string): string[] {
-  return (
-    dependsOn
-      // The bracket goes FIRST. "Procurement (hiring, work order)" carries a
-      // comma of its own, so splitting before stripping tore the name in half
-      // and left "Procurement (hiring" in the legend.
-      .replace(/\s*\([^)]*\)/g, "")
-      .split(/\s*(?:[·&,/]|\band\b)\s*/i)
-      .map((t) => t.trim())
-      .filter(Boolean)
   );
 }
 
