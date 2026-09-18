@@ -14,6 +14,7 @@
  *
  * The connection string is read from the environment and never printed.
  */
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -197,6 +198,12 @@ ${what} · version ${version}`);
   };
 
   const isData = (v) => typeof v === 'string' && v.startsWith('data:');
+  /* the same address the portal gives a picture sent to it: pic:<sha-256> */
+  const fingerprint = (dataUri) => {
+    const m = /^data:[^,]*,(.*)$/s.exec(dataUri);
+    const bytes = Buffer.from(m ? m[1] : '', 'base64');
+    return 'pic:' + createHash('sha256').update(bytes).digest('hex').slice(0, 32);
+  };
   if (isData(state.logo)) state.logo = await keep('logo', state.logo);
   for (const [k, plate] of (state.plates || []).entries()) {
     if (isData(plate.src)) plate.src = await keep(`plate:${k}`, plate.src);
@@ -210,6 +217,17 @@ ${what} · version ${version}`);
     }
     for (const [k, d] of (space.docs || []).entries()) {
       if (isData(d.src)) d.src = await keep(`space:${space.id}:doc:${k}`, d.src);
+    }
+    /* A 360 view is up to four megabytes on its own. Left in the deck's JSON,
+       two of them would stop the deck opening — so it goes out like the rest,
+       under its fingerprint, the way the portal keeps a picture added in it. */
+    for (const pano of space.panos || []) {
+      if (isData(pano.src)) pano.src = await keep(fingerprint(pano.src), pano.src);
+    }
+  }
+  for (const material of state.materials || []) {
+    if (material && isData(material.sample)) {
+      material.sample = await keep(fingerprint(material.sample), material.sample);
     }
   }
 

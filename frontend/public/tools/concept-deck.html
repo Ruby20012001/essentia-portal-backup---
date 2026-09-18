@@ -281,6 +281,55 @@ a.deck-btn{display:inline-flex;align-items:center;text-decoration:none}
 .deck-mat-where{display:block;margin-top:3px;font-size:11px;color:var(--soft);line-height:1.45;max-width:34ch}
 .deck-mat-none{color:var(--faint)}
 @media print{.deck-mat-swatch{width:48px;height:48px}.deck-mat-table tr{break-inside:avoid}}
+/* the 360 view: the room all round, turned with a finger */
+.deck-hero-360{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:4;display:flex;
+  align-items:center;gap:7px;border:0;border-radius:999px;background:rgba(0,0,0,.74);color:#fff;font:inherit;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;line-height:1;padding:10px 16px;cursor:pointer;
+  white-space:nowrap;transition:background .15s,color .15s}
+.deck-hero-360:hover,.deck-hero-360:focus-visible{background:var(--amber);color:#000;outline:none}
+.deck-hero-360 svg{width:15px;height:15px;flex:none}
+.deck-sheet-hero--none .deck-hero-360{position:static;transform:none;margin:14px auto 0}
+.deck-sheet-hero--none{flex-direction:column}
+.deck-sheet-hero.is-marking .deck-hero-360{display:none}
+.deck-card-360{position:absolute;left:0;top:0;z-index:1;background:rgba(0,0,0,.72);color:#fff;font-size:10px;
+  letter-spacing:.12em;line-height:1;padding:5px 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.deck-pano{position:fixed;inset:0;z-index:90;background:#000;color:#fff;touch-action:none;overscroll-behavior:contain;
+  -webkit-user-select:none;user-select:none;font-family:Lato,'Helvetica Neue',Arial,sans-serif}
+.deck-pano-c,.deck-pano-flat{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;
+  touch-action:none;outline:none}
+.deck-pano-c:active,.deck-pano-flat:active{cursor:grabbing}
+.deck-pano-flat{background-repeat:repeat-x;background-size:auto 100%;background-position:50% 50%}
+.deck-pano-bar{position:absolute;left:0;right:0;top:0;display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+  padding:max(12px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 24px max(14px,env(safe-area-inset-left));
+  background:linear-gradient(rgba(0,0,0,.62),rgba(0,0,0,0));font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;pointer-events:none}
+.deck-pano-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.deck-pano-pick{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
+/* on a phone the room keeps its name: the title takes the first line, the views and Close the next */
+@media (max-width:600px){.deck-pano-t{flex:1 1 100%}.deck-pano-bar button{padding:12px 14px}}
+.deck-pano-bar button{pointer-events:auto;font:inherit;color:#fff;background:rgba(0,0,0,.45);
+  border:1px solid rgba(255,255,255,.55);padding:10px 14px;line-height:1;cursor:pointer}
+.deck-pano-bar button:hover,.deck-pano-bar button:focus-visible{border-color:#fff;outline:none}
+.deck-pano-pick button[aria-current="true"]{background:#fff;color:#000;border-color:#fff}
+.deck-pano-say{position:absolute;left:50%;bottom:max(26px,env(safe-area-inset-bottom));transform:translateX(-50%);
+  max-width:calc(100% - 32px);background:rgba(0,0,0,.62);padding:10px 16px;font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;line-height:1.5;text-align:center;pointer-events:none;transition:opacity .5s}
+.deck-pano-say.is-gone{opacity:0}
+@media print{.deck-hero-360,.deck-card-360,.deck-pano{display:none !important}}
+/* on a phone, one card per material: the sample beside what it is called and who makes it */
+@media (max-width:600px){
+  .deck-est-table.deck-mat-table thead{display:none}
+  .deck-est-table.deck-mat-table,.deck-est-table.deck-mat-table tbody{display:block;width:100%}
+  .deck-est-table.deck-mat-table tr{display:grid;grid-template-columns:64px minmax(0,1fr);column-gap:14px;padding:14px 0;
+    border-bottom:1px solid var(--rule)}
+  .deck-est-table.deck-mat-table td{display:block;padding:0;border:0;white-space:normal}
+  .deck-est-table.deck-mat-table td.deck-mat-sample{grid-column:1;grid-row:1 / span 5}
+  .deck-est-table.deck-mat-table td:not(.deck-mat-sample){grid-column:2}
+  .deck-est-table.deck-mat-table td.deck-mat-blank{display:none}
+  .deck-est-table.deck-mat-table td[data-l]{margin-top:4px;font-size:13px}
+  .deck-est-table.deck-mat-table td[data-l]::before{content:attr(data-l);margin-right:8px;font-size:10px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint)}
+}
 .deck-est-table{width:100%;border-collapse:collapse;font-size:13px}
 .deck-est-table th{text-align:left;font-weight:400;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
   color:var(--faint);padding:0 14px 9px 0;border-bottom:1px solid var(--rule)}
@@ -529,6 +578,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 body.deck-locked [data-add],
 body.deck-locked [data-add-space],
 body.deck-locked [data-add-space-doc],
+body.deck-locked [data-add-pano],
 body.deck-locked [data-add-plate],
 body.deck-locked [data-del-plate],
 body.deck-locked [data-del-space],
@@ -541,7 +591,9 @@ body.deck-locked .deck-card-add,
 body.deck-locked .deck-plate-add,
 body.deck-locked .deck-dwg-add{display:none !important}
 body.is-reading .panes{grid-template-columns:1fr}
-body.is-reading .pane-view{max-width:1100px;margin:0 auto;position:static;max-height:none}
+/* as wide as the screen gives it, not as wide as its widest table: with only auto
+   margins the pane grew to fit its content, and a phone got a page it had to pan */
+body.is-reading .pane-view{width:100%;min-width:0;max-width:1100px;margin:0 auto;position:static;max-height:none}
 body.is-reading .head-edited{margin:0 0 2px}
 /* In the portal the name comes from the account that signed in. A box asking
    for it — with everybody's name on a list underneath — invites the one thing
@@ -1523,8 +1575,8 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
              picture in the deck — the grid is where most people look first */
           (hero ? '<span class="deck-card-img"><img loading="lazy" decoding="async" src="' + hero +
                   '" alt="' + esc(s.name) + '">' +
-                  '<span class="deck-rev">' + esc(s.images[0].rev) + '</span></span>'
-                : '<span class="deck-card-img deck-card-img--none"><span>No visual yet</span></span>') +
+                  '<span class="deck-rev">' + esc(s.images[0].rev) + '</span>' + badge360(s) + '</span>'
+                : '<span class="deck-card-img deck-card-img--none"><span>No visual yet</span>' + badge360(s) + '</span>') +
           '<span class="deck-card-body">' +
             '<span class="deck-card-no">' + esc(s.no) + (s.floor ? ' · ' + esc(s.floor) : '') + '</span>' +
             '<span class="deck-card-name">' + esc(s.name) + '</span>' +
@@ -1823,7 +1875,11 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
     if (!rows.length) return '';
     var no = stageOf(state) === 'execution' ? '07' : '06';
     var dash = '<span class="deck-mat-none">—</span>';
-    var cell = function (v) { return '<td>' + (v ? esc(v) : dash) + '</td>'; };
+    /* labelled, so a phone can show each as a line of its own; an empty one is left
+       out there, where a dash on its own line says nothing */
+    var cell = function (v, label) {
+      return '<td data-l="' + label + '"' + (v ? '' : ' class="deck-mat-blank"') + '>' + (v ? esc(v) : dash) + '</td>';
+    };
     var cut = rows.some(function (r) { return !r.sample && r.swatch; });
     return '<section class="deck-sec deck-est" id="materials">' +
       '<span class="deck-eyebrow">' + no + ' The materials</span>' +
@@ -1841,12 +1897,12 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
                 esc(r.swatch) + '">'
           : '<span class="deck-mat-swatch"></span>';
         return '<tr>' +
-          '<td>' + (r.name ? esc(r.name) : dash) +
+          '<td class="deck-mat-name">' + (r.name ? esc(r.name) : dash) +
             (r.where.length ? '<span class="deck-mat-where">' + esc(r.where.join(', ')) + '</span>' : '') +
           '</td>' +
-          cell(r.code) + cell(r.material) +
-          '<td>' + sample + '</td>' +
-          cell(r.size) + cell(r.brand) +
+          cell(r.code, 'Code') + cell(r.material, 'Material') +
+          '<td class="deck-mat-sample">' + sample + '</td>' +
+          cell(r.size, 'Size') + cell(r.brand, 'Brand') +
         '</tr>';
       }).join('') +
       '</tbody></table></div>' +
@@ -1870,8 +1926,15 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
      once in the foyer and four times at the edge of a living room render,
      beside a sofa, agrees on the sofa.
 
-     The editor redraws on every keystroke: each result is kept, and a swatch
-     already being cut is waited on rather than cut again. */
+     And only when somebody is about to see it. Cutting meant fetching whole
+     renders — a dozen of them, 1.4 MB on IREO — the moment the deck opened, so
+     every reader paid for a list most of them never scroll to, while the
+     pictures they were looking at waited behind it (Monica, 17 Sep: "photo
+     bahut dheere"). So a swatch is cut when its row comes near the screen; the
+     renders already on the page (a room's first picture, shown in the grid)
+     are tried first, and the rest are fetched one at a time, stopping at the
+     first clean square. The editor redraws on every keystroke: each result is
+     kept, and a swatch already being cut is waited on rather than cut again. */
   var SWATCH_SIZES = [[0.12, 0], [0.08, 5], [0.05, 11]];
   var SWATCH_CLEAN = 30;
   var swatchKept = {}, swatchWaiting = {};
@@ -1917,7 +1980,8 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       }
       return pics[k];
     }
-    Array.prototype.forEach.call(root.querySelectorAll('img[data-swatch]'), function (hole) {
+
+    function cut(hole) {
       if (hole.getAttribute('src')) return;
       var spots = hole.getAttribute('data-swatch').split(';').map(function (one) {
         var bits = one.split('|');
@@ -1925,6 +1989,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
         var im = byId[id] && (byId[id].images || [])[ix];
         return {
           src: (im && im.src) || '',
+          first: ix === 0,
           x: x >= 0 && x <= 1 ? x : 0.5,
           y: y >= 0 && y <= 1 ? y : 0.5
         };
@@ -1936,30 +2001,439 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       if (key in swatchKept) { if (swatchKept[key]) hole.src = swatchKept[key]; return; }
       if (swatchWaiting[key]) { swatchWaiting[key].push(hole); return; }
       swatchWaiting[key] = [hole];
-      Promise.all(spots.map(function (p) { return picFor(p.src); })).then(function (loaded) {
+      /* a room's first picture is already on the page in the grid: try those first */
+      spots.sort(function (a, b) { return (a.first ? 0 : 1) - (b.first ? 0 : 1); });
+
+      var cleanest = null, next = 0;
+      function finish(use) {
         var out = '';
         try {
-          var chosen = null, cleanest = null;
-          spots.forEach(function (p, k) {
-            if (chosen || !loaded[k]) return;
-            var here = null;
-            SWATCH_SIZES.forEach(function (size) {
-              var score = swatchBusy(swatchSquare(loaded[k], p.x, p.y, size[0], 24)) + size[1];
-              if (!here || score < here.score) here = { score: score, pic: loaded[k], p: p, frac: size[0] };
-            });
-            if (here.score <= SWATCH_CLEAN) chosen = here;
-            if (!cleanest || here.score < cleanest.score) cleanest = here;
-          });
-          var use = chosen || cleanest;
-          if (use) {
-            out = swatchSquare(use.pic, use.p.x, use.p.y, use.frac, 128).toDataURL('image/jpeg', 0.86);
-          }
+          if (use) out = swatchSquare(use.pic, use.p.x, use.p.y, use.frac, 128).toDataURL('image/jpeg', 0.86);
         } catch (e) { /* a picture the browser will not let be read: the cell stays plain */ }
         swatchKept[key] = out;
         (swatchWaiting[key] || []).forEach(function (el) { if (out) el.src = out; });
         delete swatchWaiting[key];
-      });
+      }
+      (function tryNext() {
+        if (next >= spots.length) { finish(cleanest); return; }
+        var p = spots[next++];
+        picFor(p.src).then(function (pic) {
+          if (pic) {
+            try {
+              var here = null;
+              SWATCH_SIZES.forEach(function (size) {
+                var score = swatchBusy(swatchSquare(pic, p.x, p.y, size[0], 24)) + size[1];
+                if (!here || score < here.score) here = { score: score, pic: pic, p: p, frac: size[0] };
+              });
+              if (here.score <= SWATCH_CLEAN) { finish(here); return; }
+              if (!cleanest || here.score < cleanest.score) cleanest = here;
+            } catch (e) { /* unreadable: the next place it was marked */ }
+          }
+          tryNext();
+        });
+      })();
+    }
+
+    var holes = Array.prototype.filter.call(root.querySelectorAll('img[data-swatch]'), function (h) {
+      return !h.getAttribute('src');
     });
+    if (!holes.length) return;
+    if (!window.IntersectionObserver) { holes.forEach(cut); return; }
+    var watch = new IntersectionObserver(function (seen) {
+      seen.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        watch.unobserve(e.target);
+        cut(e.target);
+      });
+    }, { rootMargin: '700px 0px' });
+    holes.forEach(function (h) { watch.observe(h); });
+    /* paper does not scroll: whatever is still uncut is cut before printing */
+    swatchesForPrint = function () {
+      watch.disconnect();
+      Array.prototype.forEach.call(document.querySelectorAll('img[data-swatch]'), cut);
+    };
+  }
+  var swatchesForPrint = null;
+  window.addEventListener('beforeprint', function () { if (swatchesForPrint) swatchesForPrint(); printReady(document); });
+
+  /* ── 360 ──────────────────────────────────────────────────────────────
+     A 360 render is the whole room unrolled into one picture, exactly twice as
+     wide as it is tall. On the screen it is wrapped back into a sphere and the
+     reader stands in the middle of it: drag to turn round, pinch or scroll to
+     go closer. Monica, 17 Sep 2026: a button, the photo opens, and the room is
+     turned with a finger.
+
+     Drawn by the graphics chip in one small shader, with nothing downloaded —
+     a deck opened from an email with no network has to turn just the same.
+     Where WebGL is missing the picture still pans round, so the button never
+     leads to a blank. */
+  var PANO_VS = 'attribute vec2 p;varying vec2 v;void main(){v=p;gl_Position=vec4(p,0.,1.);}';
+  var PANO_FS = 'varying vec2 v;uniform sampler2D t;uniform vec2 r;uniform vec3 a;' +
+    'void main(){' +
+      'float k=tan(a.z*.5);' +
+      'vec3 d=normalize(vec3(v.x*k*r.x/r.y,v.y*k,-1.));' +
+      'float c=cos(a.y),s=sin(a.y);' +
+      'd=vec3(d.x,d.y*c-d.z*s,d.y*s+d.z*c);' +
+      'c=cos(a.x);s=sin(a.x);' +
+      'd=vec3(d.x*c-d.z*s,d.y,d.x*s+d.z*c);' +
+      'gl_FragColor=texture2D(t,vec2(atan(d.x,-d.z)/6.2831853+.5,.5-asin(clamp(d.y,-1.,1.))/3.1415927));' +
+    '}';
+  var PANO_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>';
+
+  function panosOf(s) {
+    return ((s && s.panos) || []).filter(function (p) { return p && p.src; });
+  }
+  function badge360(s) {
+    return panosOf(s).length ? '<span class="deck-card-360">360&deg;</span>' : '';
+  }
+  function hero360(s) {
+    return panosOf(s).length
+      ? '<button class="deck-hero-360" data-pano="' + esc(s.id) + '">' + PANO_ICON + '360&deg; view</button>'
+      : '';
+  }
+
+  /* A 360 is recognised by its shape. Anything else would be stretched round
+     the viewer into nonsense, so it is refused with what to do instead. It is
+     kept at 4096 × 2048: the largest a phone's graphics chip reliably takes, a
+     power of two so the view closes on itself without a seam, and small enough
+     to go up to the portal in one piece. */
+  function importPano(file) {
+    return new Promise(function (resolve, reject) {
+      var name = (file && file.name) || 'That file';
+      if (!file || !/^image\//.test(file.type || '')) {
+        reject(new Error(name + ' is not a picture. A 360 view is a JPG exported from the render.'));
+        return;
+      }
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        reject(new Error(name + ' could not be opened as a picture.'));
+      };
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var w = img.naturalWidth, h = img.naturalHeight;
+        if (!(h > 0 && w / h > 1.95 && w / h < 2.05)) {
+          reject(new Error(name + ' is ' + w + ' × ' + h + ', so it is not a 360 view. Export the ' +
+            'render as a 360 panorama — twice as wide as it is tall, for example 6000 × 3000.'));
+          return;
+        }
+        var size = w >= 3000 ? 4096 : 2048;
+        var c = document.createElement('canvas');
+        c.width = size; c.height = size / 2;
+        c.getContext('2d').drawImage(img, 0, 0, size, size / 2);
+        var q = 0.86, out = c.toDataURL('image/jpeg', q);
+        while (out.length > 3600000 && q > 0.5) { q -= 0.08; out = c.toDataURL('image/jpeg', q); }
+        resolve({ src: out, w: size, h: size / 2, label: '' });
+      };
+      img.src = url;
+    });
+  }
+
+  function panoGl(canvas) {
+    var gl = canvas.getContext('webgl', { antialias: false, alpha: false }) ||
+      canvas.getContext('experimental-webgl', { antialias: false, alpha: false });
+    if (!gl) return null;
+    var high = gl.getShaderPrecisionFormat &&
+      gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
+    var shader = function (type, src) {
+      var sh = gl.createShader(type);
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      return gl.getShaderParameter(sh, gl.COMPILE_STATUS) ? sh : null;
+    };
+    var vs = shader(gl.VERTEX_SHADER, PANO_VS);
+    var fs = shader(gl.FRAGMENT_SHADER,
+      'precision ' + (high && high.precision > 0 ? 'highp' : 'mediump') + ' float;' + PANO_FS);
+    if (!vs || !fs) return null;
+    var prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+    gl.useProgram(prog);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    /* one triangle that covers the screen; the shader does the rest */
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    var at = gl.getAttribLocation(prog, 'p');
+    gl.enableVertexAttribArray(at);
+    gl.vertexAttribPointer(at, 2, gl.FLOAT, false, 0, 0);
+    return { gl: gl, r: gl.getUniformLocation(prog, 'r'), a: gl.getUniformLocation(prog, 'a'),
+      max: gl.getParameter(gl.MAX_TEXTURE_SIZE) || 2048 };
+  }
+
+  /* The viewer lives on the page, not inside the deck: the deck can sit in a
+     panel that moves, and a 360 has to fill the screen whatever is behind it. */
+  function openPano(state, id, from) {
+    var sp = (state.spaces || []).filter(function (x) { return String(x.id) === String(id); })[0];
+    var list = panosOf(sp);
+    if (!list.length) return;
+    /* the number is the one on the plan, which only the live list carries */
+    var numbered = live(state).filter(function (x) { return String(x.id) === String(id); })[0];
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var box = document.createElement('div');
+    box.className = 'deck-pano';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-label', '360° view of ' + (sp.name || 'this space'));
+    box.innerHTML =
+      '<canvas class="deck-pano-c" tabindex="0" aria-label="Drag to look around"></canvas>' +
+      '<div class="deck-pano-bar">' +
+        '<span class="deck-pano-t">' + esc(numbered ? numbered.no + ' · ' : '') + esc(sp.name || '') + ' · 360&deg;</span>' +
+        (list.length > 1 ? '<span class="deck-pano-pick">' + list.map(function (p, k) {
+          return '<button data-pano-pick="' + k + '" aria-current="' + (k === 0) + '">' +
+            esc(p.label || 'View ' + (k + 1)) + '</button>';
+        }).join('') + '</span>' : '') +
+        '<button data-pano-close>Close</button>' +
+      '</div>' +
+      '<div class="deck-pano-say" data-pano-say>Opening the 360 view…</div>';
+    document.body.appendChild(box);
+
+    var canvas = box.querySelector('canvas');
+    var say = box.querySelector('[data-pano-say]');
+    var g = null, flat = null, tex = null, pic = null;
+    try { g = panoGl(canvas); } catch (e) { g = null; }
+    if (!g) {
+      flat = document.createElement('div');
+      flat.className = 'deck-pano-flat';
+      flat.setAttribute('tabindex', '0');
+      box.replaceChild(flat, canvas);
+    }
+    var surface = g ? canvas : flat;
+    box.setAttribute('data-mode', g ? 'gl' : 'flat');
+
+    var view = { yaw: 0, pitch: 0, fov: (innerWidth < innerHeight ? 100 : 75) * Math.PI / 180, vy: 0, vp: 0 };
+    var alive = true, raf = 0, dirty = true, touched = false, last = 0;
+    var W = 0, H = 0, hintTimer = 0;
+
+    function hint(text, stay) {
+      clearTimeout(hintTimer);
+      say.textContent = text;
+      say.classList.remove('is-gone');
+      if (!stay) hintTimer = setTimeout(function () { say.classList.add('is-gone'); }, 3500);
+    }
+    function fit() {
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = Math.max(1, Math.round(box.clientWidth * dpr));
+      H = Math.max(1, Math.round(box.clientHeight * dpr));
+      if (g) { canvas.width = W; canvas.height = H; g.gl.viewport(0, 0, W, H); }
+      kick();
+    }
+    function tidy() {
+      view.fov = Math.max(0.6, Math.min(1.92, view.fov));
+      var lim = Math.PI / 2 - 0.02;
+      view.pitch = Math.max(-lim, Math.min(lim, view.pitch));
+      while (view.yaw > Math.PI) view.yaw -= 2 * Math.PI;
+      while (view.yaw < -Math.PI) view.yaw += 2 * Math.PI;
+    }
+    function draw(now) {
+      raf = 0;
+      if (!alive) return;
+      var dt = last ? Math.min(50, now - last) : 16;
+      last = now;
+      var moving = false;
+      if (!drag && !pinch && (Math.abs(view.vy) > 0.00002 || Math.abs(view.vp) > 0.00002)) {
+        view.yaw += view.vy * dt;
+        view.pitch += view.vp * dt;
+        view.vy *= Math.pow(0.9, dt / 16);
+        view.vp *= Math.pow(0.9, dt / 16);
+        moving = dirty = true;
+      }
+      /* a slow turn until the first touch says, without words, that it turns */
+      if (!touched && !still && pic) { view.yaw += 0.00012 * dt; moving = dirty = true; }
+      if (dirty) {
+        dirty = false;
+        tidy();
+        if (g && tex) {
+          g.gl.uniform2f(g.r, W, H);
+          g.gl.uniform3f(g.a, view.yaw, view.pitch, view.fov);
+          g.gl.drawArrays(g.gl.TRIANGLES, 0, 3);
+        } else if (flat && pic) {
+          var band = box.clientHeight * 2;
+          var u = 0.5 + view.yaw / (2 * Math.PI);
+          flat.style.backgroundPosition = Math.round(box.clientWidth / 2 - u * band) + 'px 50%';
+        }
+        box.setAttribute('data-yaw', String(Math.round(view.yaw * 180 / Math.PI)));
+        box.setAttribute('data-pitch', String(Math.round(view.pitch * 180 / Math.PI)));
+        box.setAttribute('data-fov', String(Math.round(view.fov * 180 / Math.PI)));
+      }
+      if (moving) kick();
+    }
+    function kick() {
+      dirty = true;
+      if (!raf && alive) raf = requestAnimationFrame(draw);
+    }
+
+    function show(k) {
+      Array.prototype.forEach.call(box.querySelectorAll('[data-pano-pick]'), function (b) {
+        b.setAttribute('aria-current', String(+b.getAttribute('data-pano-pick') === k));
+      });
+      box.removeAttribute('data-ready');
+      hint('Opening the 360 view…', true);
+      var img = new Image();
+      img.onload = function () {
+        if (!alive) return;
+        try {
+          if (g) {
+            var gl = g.gl;
+            var size = Math.min(4096, g.max);
+            var source = img;
+            if (img.naturalWidth !== size || img.naturalHeight !== size / 2) {
+              source = document.createElement('canvas');
+              source.width = size; source.height = size / 2;
+              source.getContext('2d').drawImage(img, 0, 0, size, size / 2);
+            }
+            if (!tex) tex = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, source);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          } else {
+            flat.style.backgroundImage = 'url("' + String(img.src).replace(/"/g, '%22') + '")';
+          }
+        } catch (e) {
+          hint('This 360 view could not be drawn on this device.', true);
+          return;
+        }
+        pic = img;
+        view.yaw = 0; view.pitch = 0; view.vy = view.vp = 0;
+        box.setAttribute('data-ready', '1');
+        hint('Drag to look around');
+        kick();
+      };
+      img.onerror = function () { if (alive) hint('This 360 view could not be opened.', true); };
+      img.src = list[k].src;
+    }
+
+    /* one finger turns, two fingers go closer or further, and a flick keeps
+       turning for a moment — the way a photo sphere on a phone already moves */
+    var pointers = {}, drag = null, pinch = null;
+    function perPixel() {
+      var w = box.clientWidth || 1, h = box.clientHeight || 1;
+      var across = 2 * Math.atan(Math.tan(view.fov / 2) * w / h);
+      return { x: across / w, y: view.fov / h };
+    }
+    function spread() {
+      var ids = Object.keys(pointers);
+      var a = pointers[ids[0]], b = pointers[ids[1]];
+      return Math.max(1, Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)));
+    }
+    function begin() {
+      if (!touched) { touched = true; say.classList.add('is-gone'); }
+    }
+    surface.addEventListener('pointerdown', function (e) {
+      begin();
+      if (surface.setPointerCapture) { try { surface.setPointerCapture(e.pointerId); } catch (x) { /* fine */ } }
+      pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+      if (Object.keys(pointers).length >= 2) {
+        pinch = { d: spread(), fov: view.fov };
+        drag = null;
+      } else {
+        drag = { x: e.clientX, y: e.clientY, t: performance.now() };
+        view.vy = view.vp = 0;
+      }
+      e.preventDefault();
+    });
+    surface.addEventListener('pointermove', function (e) {
+      if (!pointers[e.pointerId]) return;
+      pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+      if (pinch && Object.keys(pointers).length >= 2) {
+        view.fov = pinch.fov * pinch.d / spread();
+        kick();
+        return;
+      }
+      if (!drag) return;
+      var per = perPixel(), now = performance.now();
+      var dx = e.clientX - drag.x, dy = e.clientY - drag.y, dt = Math.max(8, now - drag.t);
+      view.yaw -= dx * per.x;
+      view.pitch += dy * per.y;
+      view.vy = -dx * per.x / dt;
+      view.vp = dy * per.y / dt;
+      drag = { x: e.clientX, y: e.clientY, t: now };
+      kick();
+    });
+    function lift(e) {
+      if (!pointers[e.pointerId]) return;
+      delete pointers[e.pointerId];
+      var ids = Object.keys(pointers);
+      if (ids.length < 2) pinch = null;
+      if (ids.length === 1) {
+        drag = { x: pointers[ids[0]].x, y: pointers[ids[0]].y, t: performance.now() };
+        view.vy = view.vp = 0;
+      } else if (!ids.length) {
+        /* a finger that stopped before it lifted is not a flick */
+        if (drag && performance.now() - drag.t > 90) view.vy = view.vp = 0;
+        drag = null;
+        kick();
+      }
+    }
+    surface.addEventListener('pointerup', lift);
+    surface.addEventListener('pointercancel', lift);
+    surface.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      begin();
+      view.fov *= Math.exp(e.deltaY * 0.0015);
+      kick();
+    }, { passive: false });
+    if (g) {
+      canvas.addEventListener('webglcontextlost', function (e) {
+        e.preventDefault();
+        hint('The 360 view was interrupted. Close it and open it again.', true);
+      });
+    }
+
+    function keys(e) {
+      if (!alive) return;
+      var turn = 0.08;
+      if (e.key === 'Escape') { close(); }
+      else if (e.key === 'ArrowLeft') view.yaw -= turn;
+      else if (e.key === 'ArrowRight') view.yaw += turn;
+      else if (e.key === 'ArrowUp') view.pitch += turn;
+      else if (e.key === 'ArrowDown') view.pitch -= turn;
+      else if (e.key === '+' || e.key === '=') view.fov *= 0.9;
+      else if (e.key === '-' || e.key === '_') view.fov /= 0.9;
+      else return;
+      /* the space behind is not to move while the room is being turned */
+      e.preventDefault();
+      e.stopPropagation();
+      begin();
+      kick();
+    }
+    function close() {
+      if (!alive) return;
+      alive = false;
+      if (raf) cancelAnimationFrame(raf);
+      clearTimeout(hintTimer);
+      document.removeEventListener('keydown', keys, true);
+      window.removeEventListener('resize', fit);
+      if (g) {
+        try {
+          if (tex) g.gl.deleteTexture(tex);
+          var lose = g.gl.getExtension('WEBGL_lose_context');
+          if (lose) lose.loseContext();
+        } catch (e) { /* the page is letting it go either way */ }
+      }
+      if (box.parentNode) box.parentNode.removeChild(box);
+      if (from && from.focus) { try { from.focus(); } catch (e) { /* gone with a redraw */ } }
+    }
+    box.addEventListener('click', function (e) {
+      if (e.target.closest('[data-pano-close]')) { close(); return; }
+      var pick = e.target.closest('[data-pano-pick]');
+      if (pick) show(+pick.getAttribute('data-pano-pick'));
+    });
+    document.addEventListener('keydown', keys, true);
+    window.addEventListener('resize', fit);
+    box.__close = close;
+
+    fit();
+    show(0);
+    try { surface.focus({ preventScroll: true }); } catch (e) { surface.focus(); }
   }
 
   function noteHtml(state) {
@@ -1974,7 +2448,32 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
   /* The whole deck as plain document: what prints, and what anyone sees when
      the script does not run. Each image is tagged so the interactive layer can
      pick it back up out of the DOM instead of the file carrying it twice. */
-  function printHtml(state) {
+  /* The printed pages carry every render of every room. On screen they are
+     hidden, but a hidden <img> with a src is still fetched: opening IREO asked
+     for eleven renders nobody could see, 1.3 MB in front of the ones on show
+     (Monica, 17 Sep: "photo bahut dheere"). So in a deck on screen they wait
+     in data-print-src, and this puts them in when there is printing to do —
+     waiting for them, ten seconds at most, so a PDF is not saved with holes.
+     A deck written out as a file keeps its src: that is the copy that has to
+     read with no script at all. */
+  function printReady(root, only) {
+    var imgs = Array.prototype.slice.call((only || root).querySelectorAll('img[data-print-src]'));
+    return new Promise(function (done) {
+      if (!imgs.length) { done(); return; }
+      var left = imgs.length, over = false;
+      var one = function () { left -= 1; if (left <= 0 && !over) { over = true; done(); } };
+      imgs.forEach(function (img) {
+        img.addEventListener('load', one);
+        img.addEventListener('error', one);
+        img.setAttribute('loading', 'eager');
+        img.src = img.getAttribute('data-print-src');
+        img.removeAttribute('data-print-src');
+      });
+      setTimeout(function () { if (!over) { over = true; done(); } }, 10000);
+    });
+  }
+
+  function printHtml(state, later) {
     return live(state).map(function (s) {
       return '<section class="deck-print-space">' +
         '<span class="deck-eyebrow">' + esc(s.no) + (s.floor ? ' · ' + esc(s.floor) : '') + '</span>' +
@@ -1991,7 +2490,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
              out of it. On the render it stays with the render. */
           return '<figure class="deck-shot">' +
             '<img loading="lazy" decoding="async" data-sp="' + esc(s.id) + '" data-ix="' + k +
-            '" src="' + im.src + '" alt="' + esc(s.name) + '">' +
+            '" ' + (later ? 'data-print-src' : 'src') + '="' + im.src + '" alt="' + esc(s.name) + '">' +
             '<span class="deck-rev">' + esc(im.rev) + '</span></figure>' +
             (((im.spots || []).length)
               ? '<ul class="deck-spot-list">' + im.spots.map(function (q) {
@@ -2003,7 +2502,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
         (s.docs || []).filter(function (d) { return d.src; }).map(function (d, k) {
           return '<figure class="deck-shot deck-shot--doc">' +
             '<img loading="lazy" decoding="async" data-spdoc="' + esc(s.id) + '" data-ix="' + k +
-            '" src="' + d.src + '" alt="' + esc(d.label || 'Drawing') + '">' +
+            '" ' + (later ? 'data-print-src' : 'src') + '="' + d.src + '" alt="' + esc(d.label || 'Drawing') + '">' +
             '<figcaption>' + esc(d.label || 'Drawing') +
               (d.date ? ' · ' + esc(d.date) : '') + '</figcaption></figure>';
         }).join('') + '</section>';
@@ -2408,7 +2907,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       ((opts && opts.noIndex) ? '' : indexHtml(state)) +
       noteHtml(state) + estimateHtml(state) + documentsHtml(state) + finishesHtml(state) +
       materialsHtml(state) +
-      printHtml(state) + footHtml(state) + '</article>' +
+      printHtml(state, opts && opts.printLater) + footHtml(state) + '</article>' +
       '<div class="deck-lb" data-lb><div class="deck-lb-bar"><span data-lb-cap></span>' +
         '<button data-lb-close>Close</button></div><img data-lb-img alt=""></div>' +
       '<div class="deck-sheet" data-sheet><div class="deck-sheet-veil" data-sheet-close></div>' +
@@ -2486,7 +2985,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
           ? '<button class="deck-hero-dots" data-dots aria-pressed="false">Materials</button>'
           : '')
       : '<span>No visual yet</span>';
-    return '<div class="deck-sheet-hero' + (imgs[0] ? '' : ' deck-sheet-hero--none') + '">' + hero +
+    return '<div class="deck-sheet-hero' + (imgs[0] ? '' : ' deck-sheet-hero--none') + '">' + hero + hero360(s) +
         '<button class="deck-x" data-sheet-close aria-label="Close">&times;</button></div>' +
       '<div class="deck-thumbs">' + imgs.map(function (im, k) {
         return '<button class="deck-thumb" data-thumb="' + k + '" aria-current="' + (k === 0) + '">' +
@@ -2514,6 +3013,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
           '<button class="deck-btn" data-jpg-one="' + esc(s.id) + '">Save as image</button>' +
           '<button class="deck-btn" data-pdf-one="' + esc(s.id) + '">Save as PDF</button>' +
           '<button class="deck-btn" data-add-space="' + esc(s.id) + '">Add pictures here</button>' +
+          '<button class="deck-btn" data-add-pano="' + esc(s.id) + '">Add a 360&deg; view</button>' +
           /* The drawings sit in their own chapter at the foot of the deck, which
              is a long way from the room being discussed. These two put them
              within reach of the room instead: attach one, or look at one, with
@@ -2555,7 +3055,8 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
         plan.parentNode.insertBefore(grid.firstChild, plan.nextSibling);
       }
     } else {
-      el.innerHTML = deckHtml(state);
+      /* on screen: the printed pages fetch their pictures when printed (printReady) */
+      el.innerHTML = deckHtml(state, { printLater: true });
     }
     el.classList.add('js-on');
     paintSwatches(el, state);
@@ -2575,6 +3076,9 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       bound.forEach(function (off) { off(); });
       bound = [];
     };
+    /* the mount that is there now — a picture added from inside a room makes
+       the editor redraw, and the room has to reopen in the redrawn deck */
+    el.__deckOpen = open;
     var plog = el.querySelector('[data-print-logo]');
     if (plog && state.logo) plog.src = state.logo;
     var spaces = live(state);
@@ -2671,7 +3175,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
         window.removeEventListener('afterprint', done);
       };
       window.addEventListener('afterprint', done);
-      setTimeout(function () { window.print(); }, 60);
+      printReady(el, target).then(function () { setTimeout(function () { window.print(); }, 60); });
       setTimeout(done, 60000);   /* a browser that never fires afterprint */
     }
 
@@ -2778,7 +3282,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
           if (liveSp && liveSp.docs !== sp.docs) liveSp.docs = sp.docs;
           btn.disabled = false; btn.textContent = label;
           el.dispatchEvent(new CustomEvent('deck:changed', { bubbles: true }));
-          open(id);
+          (el.__deckOpen || open)(id);
         }, function () { btn.disabled = false; btn.textContent = label; });
       };
       inp.click();
@@ -3012,7 +3516,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
     function openBig(img) {
       var lb = el.querySelector('[data-lb]');
       if (!lb) return;
-      lb.querySelector('[data-lb-img]').src = img.getAttribute('src');
+      lb.querySelector('[data-lb-img]').src = img.getAttribute('src') || img.getAttribute('data-print-src');
       var fig = img.closest('figure');
       var cap = fig && fig.querySelector('figcaption');
       lb.querySelector('[data-lb-cap]').textContent = cap ? cap.textContent : '';
@@ -3129,6 +3633,37 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       })();
     }
 
+    /* A 360 view goes with the space it is of, the way its renders do — added
+       from the space itself, where the person holding it is already looking. */
+    function addPanoTo(id, btn) {
+      var sp = (state.spaces || []).filter(function (x) { return String(x.id) === String(id); })[0];
+      if (!sp) return;
+      var inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/jpeg,image/png,image/webp'; inp.multiple = true;
+      inp.onchange = function () {
+        var files = Array.prototype.slice.call(inp.files || []);
+        if (!files.length) return;
+        var label = ownText(btn);
+        btn.disabled = true; btn.textContent = 'Adding…';
+        Promise.all(files.map(importPano)).then(function (got) {
+          /* pushed in place: live() hands out copies that share this array */
+          if (!sp.panos) sp.panos = [];
+          Array.prototype.push.apply(sp.panos, got);
+          var liveSp = spaces.filter(function (x) { return String(x.id) === String(id); })[0];
+          if (liveSp && liveSp.panos !== sp.panos) liveSp.panos = sp.panos;
+          btn.disabled = false; btn.textContent = label;
+          el.dispatchEvent(new CustomEvent('deck:changed', { bubbles: true }));
+          /* the redraw that event causes mounts the deck again: reopen the room there */
+          (el.__deckOpen || open)(id);
+        }, function (err) {
+          btn.disabled = false;
+          btn.textContent = err.message;
+          setTimeout(function () { btn.textContent = label; }, 9000);
+        });
+      };
+      inp.click();
+    }
+
     /* Attach a render to the room being looked at, from inside the room.
        Fifteen spaces each wanting a picture is fifteen trips through a form
        otherwise; here the space is already open and already named. */
@@ -3170,7 +3705,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
                 '" alt="' + esc(sp.name) + '">';
             }
           }
-          open(id);
+          (el.__deckOpen || open)(id);
         }, function () { btn.disabled = false; btn.textContent = label; });
       };
       inp.click();
@@ -3206,14 +3741,18 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
         if (firstDoc) openBig(firstDoc);
         return;
       }
+      var panoBtn = e.target.closest('[data-pano]');
+      if (panoBtn) { openPano(state, panoBtn.getAttribute('data-pano'), panoBtn); return; }
       /* one gate, before any of the controls that change something */
       if (locked && e.target.closest('[data-add],[data-add-space],[data-add-space-doc],' +
           '[data-add-plate],[data-del-plate],[data-mark],[data-spot-x],[data-save-self],' +
-          '[data-edit-toggle],[data-thumb-up],[data-del-space]')) { return; }
+          '[data-edit-toggle],[data-thumb-up],[data-del-space],[data-add-pano]')) { return; }
       var addSpDoc = e.target.closest('[data-add-space-doc]');
       if (addSpDoc) { addSpaceDoc(addSpDoc.getAttribute('data-add-space-doc'), addSpDoc); return; }
       var addSp = e.target.closest('[data-add-space]');
       if (addSp) { addToSpace(addSp.getAttribute('data-add-space'), addSp); return; }
+      var addPn = e.target.closest('[data-add-pano]');
+      if (addPn) { addPanoTo(addPn.getAttribute('data-add-pano'), addPn); return; }
       var delPl = e.target.closest('[data-del-plate]');
       if (delPl) {
         var di = +delPl.getAttribute('data-del-plate');
@@ -3271,7 +3810,17 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       if (jpg) { saveJpg(jpg.getAttribute('data-jpg-one'), jpg); return; }
       var one = e.target.closest('[data-pdf-one]');
       if (one) { printSpace(one.getAttribute('data-pdf-one')); return; }
-      if (e.target.closest('[data-pdf-all]')) { close(); setTimeout(function () { window.print(); }, 120); return; }
+      var pdfAll = e.target.closest('[data-pdf-all]');
+      if (pdfAll) {
+        var pdfWas = ownText(pdfAll);
+        pdfAll.textContent = 'Getting the pictures…';
+        close();
+        printReady(el).then(function () {
+          pdfAll.textContent = pdfWas;
+          setTimeout(function () { window.print(); }, 120);
+        });
+        return;
+      }
       var t = e.target.closest('[data-space]');
       if (t) { open(t.getAttribute('data-space')); return; }
       var au = e.target.closest('[data-auto]');
@@ -3389,7 +3938,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
   }
 
   root.EssentiaDeck = { mount: mount, live: live, esc: esc, html: deckHtml, lock: lock,
-    materials: materialRows, swatches: paintSwatches,
+    materials: materialRows, swatches: paintSwatches, importPano: importPano, printReady: printReady,
     ownText: ownText,
     card: spaceCard, slug: slugify, save: saveDataUri,
     number: numberRenders, revName: revName,
@@ -3785,7 +4334,7 @@ function renderPlates() {
                   : 'Click, drop, or paste the plan sheet — a screenshot works (Win+Shift+S, then Ctrl+V here)') +
         '</div>' +
         (pl.src ? '<div class="tray"><div class="tray-item" style="width:132px;height:96px">' +
-            '<img src="' + pl.src + '" alt=""></div></div>' : '') +
+            '<img loading="lazy" decoding="async" src="' + pl.src + '" alt=""></div></div>' : '') +
       '</div></div>';
   }).join('');
 
@@ -3865,6 +4414,7 @@ function renderSpaces() {
           '<span class="row-tools">' +
             '<span class="pill ' + (pinned ? 'pill--ok' : 'pill--bad') + '">' + (pinned ? 'pinned' : 'no pin') + '</span>' +
             '<span class="pill ' + (nImg ? 'pill--ok' : 'pill--bad') + '">' + (nImg ? nImg + ' visual' + (nImg > 1 ? 's' : '') : 'no visual') + '</span>' +
+            ((s.panos || []).length ? '<span class="pill pill--ok">360&deg;</span>' : '') +
             '<button class="btn btn--sm btn--ghost" data-up="' + i + '"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
             '<button class="btn btn--sm btn--ghost" data-down="' + i + '"' + (i === S.spaces.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
             '<button class="btn btn--sm btn--danger" data-del="' + i + '">Delete</button>' +
@@ -3905,7 +4455,7 @@ function renderSpaces() {
         '</div>' +
         (s.docs || []).map(function (d, k) {
           return '<div class="spdoc">' +
-            '<img src="' + d.src + '" alt="">' +
+            '<img loading="lazy" decoding="async" src="' + d.src + '" alt="">' +
             '<input type="text" placeholder="Working drawing" data-spdoc-k="label" data-spdoc-i="' +
               i + '_' + k + '" value="' + esc(d.label || '') + '">' +
             '<input type="text" placeholder="04.06.2026" data-spdoc-k="date" data-spdoc-i="' +
@@ -3913,8 +4463,20 @@ function renderSpaces() {
             '<button class="btn btn--sm btn--danger" data-spdoc-del="' + i + '_' + k + '">Remove</button>' +
           '</div>';
         }).join('') +
+        /* the room turned round: a 360 panorama, which opens from the space's picture */
+        '<div class="droprow" style="margin-top:14px">' +
+          '<div class="drop" tabindex="0" data-pano-drop="' + i + '">360&deg; view — a panorama exported twice as wide as it is tall</div>' +
+        '</div>' +
+        (s.panos || []).map(function (pn, k) {
+          return '<div class="spdoc">' +
+            '<img loading="lazy" decoding="async" src="' + pn.src + '" alt="" style="width:84px">' +
+            '<input type="text" placeholder="From the door" data-pano-k="label" data-pano-i="' +
+              i + '_' + k + '" value="' + esc(pn.label || '') + '">' +
+            '<button class="btn btn--sm btn--danger" data-pano-del="' + i + '_' + k + '">Remove</button>' +
+          '</div>';
+        }).join('') +
         '<div class="tray">' + revs.map(function (im, k) {
-          return '<div class="tray-item"><img src="' + im.src + '" alt="">' +
+          return '<div class="tray-item"><img loading="lazy" decoding="async" src="' + im.src + '" alt="">' +
             '<button class="tray-x" data-img-del="' + i + '_' + k + '" title="Remove">&times;</button>' +
             (k === 0 ? '<span class="tray-hero">HERO</span>' :
               '<button class="tray-x" style="left:2px;right:auto" data-img-hero="' + i + '_' + k + '" title="Make this the one the client opens on">&uarr;</button>') +
@@ -4035,6 +4597,46 @@ function renderSpaces() {
     d.addEventListener('dragover', function (e) { e.preventDefault(); d.classList.add('over'); });
     d.addEventListener('dragleave', function () { d.classList.remove('over'); });
     d.addEventListener('drop', function (e) { e.preventDefault(); d.classList.remove('over'); take(e.dataTransfer.files); });
+  });
+  /* the 360 views of a space: dropped here, named, taken out again */
+  host.querySelectorAll('[data-pano-drop]').forEach(function (d) {
+    var i = +d.getAttribute('data-pano-drop');
+    function take(files) {
+      var fs = Array.prototype.slice.call(files || []);
+      if (!fs.length) return;
+      d.textContent = 'Reading ' + fs.length + ' 360 view' + (fs.length > 1 ? 's' : '') + '…';
+      Promise.all(fs.map(window.EssentiaDeck.importPano))
+        .then(function (got) {
+          var sp = S.spaces[i];
+          sp.panos = (sp.panos || []).concat(got);
+          renderAll();
+          toast(got.length + ' 360° view' + (got.length > 1 ? 's' : '') + ' added to ' + (sp.name || 'the space') + '.');
+        })
+        .catch(function (e) { renderAll(); toast(e.message); });
+    }
+    d.addEventListener('click', function () {
+      var inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/jpeg,image/png,image/webp'; inp.multiple = true;
+      inp.onchange = function () { take(inp.files); };
+      inp.click();
+    });
+    d.addEventListener('dragover', function (e) { e.preventDefault(); d.classList.add('over'); });
+    d.addEventListener('dragleave', function () { d.classList.remove('over'); });
+    d.addEventListener('drop', function (e) { e.preventDefault(); d.classList.remove('over'); take(e.dataTransfer.files); });
+  });
+  host.querySelectorAll('[data-pano-k]').forEach(function (el) {
+    var q = el.getAttribute('data-pano-i').split('_');
+    el.addEventListener('input', function () {
+      var p = ((S.spaces[+q[0]] || {}).panos || [])[+q[1]];
+      if (p) { p[el.getAttribute('data-pano-k')] = el.value; paint(); }
+    });
+  });
+  host.querySelectorAll('[data-pano-del]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var q = b.getAttribute('data-pano-del').split('_');
+      (S.spaces[+q[0]].panos || []).splice(+q[1], 1);
+      renderAll();
+    });
   });
   host.querySelectorAll('[data-img-add]').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -4262,7 +4864,7 @@ function renderDocs(key) {
           '<input type="text" placeholder="04.06.2026" data-doc-k="date" data-doc-i="' + i + '" value="' + esc(d.date || '') + '"></div>' +
       '</div>' +
       '<div class="tray"><div class="tray-item" style="width:150px;height:104px;background:#fff">' +
-        '<img src="' + d.src + '" alt="" style="object-fit:contain"></div></div>' +
+        '<img loading="lazy" decoding="async" src="' + d.src + '" alt="" style="object-fit:contain"></div></div>' +
       '</div></div>';
   }).join('');
 
@@ -4352,7 +4954,7 @@ function renderMaterials() {
         '<input type="text" data-mat-k="' + k + '" value="' + esc(v || '') + '" placeholder="' +
           esc(r.own ? example : '—') + '"></div>';
     };
-    var thumb = r.sample ? '<img src="' + r.sample + '" alt="">'
+    var thumb = r.sample ? '<img loading="lazy" decoding="async" src="' + r.sample + '" alt="">'
       : r.swatch ? '<img alt="" data-swatch="' + esc(r.swatch) + '">'
       : '';
     return '<div class="row' + (r.hide ? ' row--off' : '') + '" data-mat="' + esc(r.key) + '">' +
@@ -4565,7 +5167,8 @@ function shapeOf(st) {
         pinned: x.x != null && x.y != null,
         shots: (x.images || []).length,
         marks: (x.images || []).reduce(function (t, im) { return t + ((im.spots || []).length); }, 0),
-        docs: (x.docs || []).length
+        docs: (x.docs || []).length,
+        panos: (x.panos || []).length
       };
     })
   };
@@ -4607,6 +5210,10 @@ function whatChanged(was, now) {
     if (b.docs !== x.docs) {
       out.push((x.docs > b.docs ? plural(x.docs - b.docs, 'drawing') + ' added to '
                                 : plural(b.docs - x.docs, 'drawing') + ' removed from ') + name);
+    }
+    if ((b.panos || 0) !== (x.panos || 0)) {
+      out.push((x.panos > (b.panos || 0) ? plural(x.panos - (b.panos || 0), '360° view') + ' added to '
+                                         : plural((b.panos || 0) - x.panos, '360° view') + ' removed from ') + name);
     }
     if (b.words !== x.words) out.push(name + ' was rewritten');
     if (b.money !== x.money) out.push('the figures for ' + name + ' were changed');
@@ -4679,7 +5286,7 @@ function saveLocal() {
   try {
     var light = JSON.parse(JSON.stringify(S));
     light.plates.forEach(function (p) { p.src = ''; });
-    light.spaces.forEach(function (s) { s.images = []; s.docs = []; });
+    light.spaces.forEach(function (s) { s.images = []; s.docs = []; s.panos = []; });
     /* dropped entirely rather than emptied — a row with no picture left behind
        is a row you have to delete by hand next time the tool opens */
     light.documents = [];
@@ -5119,6 +5726,9 @@ function portalLoad() {
       });
       var last = (d.activity || [])[0];
       if (last) S.lastEdit = { by: last.by || 'the import script', at: last.at };
+      /* a reader’s page is a reader’s from its first drawing: the editor’s cards
+         are never on show to them, so their pictures are never asked for */
+      if (!d.canEdit) document.body.classList.add('is-reading');
       boot();
       portalSay(d.canEdit ? 'Open · version ' + d.version : 'Reading · version ' + d.version);
       return me.then(function (who) {
@@ -5179,6 +5789,7 @@ function newPictures(st) {
   (st.spaces || []).forEach(function (s) {
     (s.images || []).forEach(function (im) { see(im, 'src'); });
     (s.docs || []).forEach(function (d) { see(d, 'src'); });
+    (s.panos || []).forEach(function (pn) { see(pn, 'src'); });
   });
   (st.materials || []).forEach(function (m) { see(m, 'sample'); });
   return found;
@@ -5186,19 +5797,28 @@ function newPictures(st) {
 
 function sendPictures() {
   var list = newPictures(S);
-  return list.reduce(function (chain, pic, n) {
-    return chain.then(function () {
-      portalSay('Sending pictures · ' + (n + 1) + ' of ' + list.length);
-      return portalSend('/api/decks/' + PORTAL.id + '/images', 'POST', JSON.stringify({ src: pic.src }))
-        .then(function (res) {
-          if (!res.ok || !res.data.url) {
-            throw new Error((res.data.error || 'A picture could not be sent.') + ' The deck was not saved.');
-          }
-          /* only where it is still that picture — it may have been swapped meanwhile */
-          pic.at.forEach(function (a) { if (a[0][a[1]] === pic.src) a[0][a[1]] = res.data.url; });
-        });
-    });
-  }, Promise.resolve());
+  var total = list.length, sent = 0, at = 0, failed = null;
+  if (!total) return Promise.resolve();
+  portalSay('Sending pictures · 0 of ' + total);
+  /* three at a time: one after another, a dozen renders on an office line was
+     the better part of a minute of watching a counter */
+  function lane() {
+    if (failed || at >= total) return Promise.resolve();
+    var pic = list[at++];
+    return portalSend('/api/decks/' + PORTAL.id + '/images', 'POST', JSON.stringify({ src: pic.src }))
+      .then(function (res) {
+        if (!res.ok || !res.data.url) {
+          throw new Error((res.data.error || 'A picture could not be sent.') + ' The deck was not saved.');
+        }
+        /* only where it is still that picture — it may have been swapped meanwhile */
+        pic.at.forEach(function (a) { if (a[0][a[1]] === pic.src) a[0][a[1]] = res.data.url; });
+        sent += 1;
+        portalSay('Sending pictures · ' + sent + ' of ' + total);
+        return lane();
+      })
+      .catch(function (e) { failed = failed || e; throw failed; });
+  }
+  return Promise.all([lane(), lane(), lane()]);
 }
 
 function portalSave() {
@@ -5232,7 +5852,9 @@ function portalSave() {
     .then(function () {
       portalSay('Saving…');
       return portalSend('/api/decks/' + PORTAL.id, 'PUT', JSON.stringify({
-        state: S, version: PORTAL.version, did: did, what: 'saved',
+        /* not the logo: the tool carries it and puts it back on every open, and
+           inside the deck it was 97 KB of the 136 KB every reader waited for */
+        state: Object.assign({}, S, { logo: '' }), version: PORTAL.version, did: did, what: 'saved',
         name: S.project.name || 'Untitled deck',
         projectCode: S.project.code || null,
         stage: S.project.stage === 'execution' ? 'execution' : 'concept'
@@ -5343,11 +5965,15 @@ $('#bPreview').addEventListener('click', function () {
   window.scrollTo(0, 0);
 });
 $('#bFullClose').addEventListener('click', function () { document.body.classList.remove('preview-full'); });
-$('#bFullPrint').addEventListener('click', function () { window.print(); });
+$('#bFullPrint').addEventListener('click', function () {
+  window.EssentiaDeck.printReady($('#fullpane')).then(function () { window.print(); });
+});
 $('#bPrint').addEventListener('click', function () {
   window.EssentiaDeck.mount($('#fullpane'), S);
   document.body.classList.add('preview-full');
-  setTimeout(function () { window.print(); }, 120);
+  window.EssentiaDeck.printReady($('#fullpane')).then(function () {
+    setTimeout(function () { window.print(); }, 120);
+  });
 });
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
