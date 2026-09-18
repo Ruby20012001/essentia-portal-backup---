@@ -258,8 +258,13 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
         </div>
 
         {/* The person lens — the WIO board's team chips. Vishakha's name first
-            (the whole team), then each designer with a dot for their heat. */}
-        {!own && tab !== "setup" && tab !== "reminders" ? (
+            (the whole team), then each designer with a dot for their heat.
+
+            Not on Dashboard: that page carries a ring per designer which is
+            itself the filter, so the chips repeated the same choice twice over
+            (Monica, 18 Sep: "Lavika n all wo sab htado"). Every other tab reads
+            names and dates, and still needs them. */}
+        {!own && tab !== "dashboard" && tab !== "setup" && tab !== "reminders" ? (
           <div className="mb-5 flex flex-wrap items-center gap-2">
             <span className="font-body text-[11px] font-light uppercase tracking-[0.14em] text-muted">
               Designer

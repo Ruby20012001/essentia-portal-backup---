@@ -48,19 +48,34 @@ export default async function DesignTrackerPage() {
   return (
     <div>
       <div className="mb-6">
-        <PageTitle teamName={board.settings.teamName} />
+        <PageTitle
+          teamName={board.settings.teamName}
+          headName={board.people.find((p) => p.role === "head")?.name}
+        />
       </div>
       <DesignTrackerBoard initial={board} />
     </div>
   );
 }
 
-function PageTitle({ teamName }: { teamName?: string }) {
+/**
+ * The page's own title. Whose board this is comes first and large — it is read
+ * across a room, off a shared screen (Monica, 18 Sep: "Vishakha's dashboard
+ * bada bada"). The screen code and what it measures drop to the line beneath,
+ * where they are still available but no longer the headline.
+ *
+ * `headName` is absent on the error paths, which render before the board is
+ * known; the tracker's own name stands in then.
+ */
+function PageTitle({ teamName, headName }: { teamName?: string; headName?: string }) {
   return (
     <div>
-      <h1 className="mb-1 font-heading text-4xl text-white">Design Activity Tracker</h1>
+      <h1 className="mb-1 font-heading text-5xl leading-tight text-white md:text-6xl">
+        {headName ? `${headName}'s Dashboard` : "Design Activity Tracker"}
+      </h1>
       <p className="font-body text-sm font-light text-label">
-        S4c · Every project against the activity chart — what is late, and whom it depends on
+        S4c · Design Activity Tracker — every project against the activity chart, what is late,
+        and whom it depends on
         {teamName ? ` · ${teamName}` : ""}
       </p>
     </div>

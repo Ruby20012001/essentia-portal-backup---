@@ -42,7 +42,7 @@ export function ChangePassword() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded border border-cream/25 px-3 py-1 font-body text-[11px] font-bold text-cream/80 transition-colors hover:border-cream/60 hover:text-cream"
+        className="rounded border border-brand-ink/25 px-3 py-1 font-body text-[11px] font-bold text-brand-ink/80 transition-colors hover:border-brand-ink/60 hover:text-brand-ink"
       >
         Reset password
       </button>

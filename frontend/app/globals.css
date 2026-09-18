@@ -42,6 +42,14 @@
     --c-navy: 59 91 168;
     --c-amber: 168 137 92;
     --c-amber-deep: 198 160 106;
+
+    /* The chrome — header bar and sidebar. Its own pair rather than the
+       espresso/cream constants, because those two also mean "white text on a
+       coloured button" and "the sign-in photograph", which must not move when
+       the chrome does. In dark it is exactly what it always was. */
+    --c-brand: 0 0 0;
+    --c-brand-ink: 255 255 255;
+    --c-brand-line: 0 0 0;
   }
 
   [data-theme="light"] {
@@ -72,6 +80,24 @@
     --c-navy: 42 68 133;
     --c-amber: 138 108 66;
     --c-amber-deep: 122 94 56;
+
+    /* Light means light all the way to the edges (Monica, 18 Sep: "pure
+       tracker light me chahiye"). The chrome was black in both themes, which
+       left the sidebar's own labels — text-secondary, a dark grey — sitting on
+       black and barely legible. White chrome over the warm canvas fixes the
+       contrast rather than working around it; a hairline keeps the two apart
+       now that they no longer differ by brightness alone. */
+    --c-brand: 255 255 255;
+    --c-brand-ink: 26 24 22;
+    --c-brand-line: 227 224 219;
+  }
+
+  /* One wordmark file, both themes. logo-dark.png is white with a transparent
+     ground, so on the light chrome it has to be inverted to stay visible —
+     brightness(0) flattens every channel to black and leaves the alpha alone.
+     Replace this with logo-light.png when the official black file arrives. */
+  [data-theme="light"] .brand-mark {
+    filter: brightness(0);
   }
 
   html {

@@ -41,8 +41,17 @@ const config: Config = {
         warning: "rgb(var(--c-warning) / <alpha-value>)",
         error: "rgb(var(--c-error) / <alpha-value>)",
 
-        // The brand bar stays dark in both themes. It carries the white
-        // wordmark, and a logo that disappears in one theme is not a theme.
+        // The brand bar follows the theme. The wordmark is why it could not
+        // before — one white PNG, invisible on a pale bar — so the light theme
+        // inverts it in CSS, the fallback public/brand/README.md already
+        // specifies while logo-light.png is missing.
+        brand: "rgb(var(--c-brand) / <alpha-value>)",
+        "brand-ink": "rgb(var(--c-brand-ink) / <alpha-value>)",
+        "brand-line": "rgb(var(--c-brand-line) / <alpha-value>)",
+
+        // Unchanged, and deliberately still constants: text-cream is "white on
+        // a coloured button" in ~20 places, and the sign-in page is espresso
+        // over a photograph whatever the theme is doing.
         espresso: "#000000",
         cream: "#FFFFFF",
 

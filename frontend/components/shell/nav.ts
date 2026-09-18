@@ -90,6 +90,14 @@ export function visibleNav(mode: PortalMode = portalMode()): NavGroup[] {
   if (mode === "full") return NAV;
   return NAV.map((group) => ({
     ...group,
-    items: group.items.filter((item) => isRouteAllowed(item.href, mode)),
+    items: group.items
+      .filter((item) => isRouteAllowed(item.href, mode))
+      // On the design deployment the tracker IS the whole portal, so the one
+      // entry behind the ☰ is read as "the dashboard", not as one tracker
+      // among several (Monica, 18 Sep: "3 lines me to dashboard likha ho").
+      // Only here: in full mode /dashboard already owns that word.
+      .map((item) =>
+        item.href === "/design-tracker" ? { ...item, label: "Dashboard" } : item,
+      ),
   })).filter((group) => group.items.length > 0);
 }

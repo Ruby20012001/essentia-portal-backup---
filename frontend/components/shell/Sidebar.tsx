@@ -7,7 +7,7 @@ import { NavGroups } from "@/components/shell/NavGroups";
  */
 export function Sidebar() {
   return (
-    <aside className="hidden w-64 shrink-0 flex-col gap-6 overflow-y-auto bg-espresso px-4 py-6 md:flex">
+    <aside className="hidden w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-brand-line bg-brand px-4 py-6 md:flex">
       <NavGroups />
     </aside>
   );

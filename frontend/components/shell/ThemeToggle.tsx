@@ -53,7 +53,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       onClick={() => choose(theme === "light" ? "dark" : "light")}
       title={label}
       aria-label={label}
-      className={`inline-flex h-7 w-7 items-center justify-center rounded border border-cream/20 text-cream/70 transition-colors hover:bg-cream/10 hover:text-cream disabled:opacity-40 ${className}`}
+      className={`inline-flex h-7 w-7 items-center justify-center rounded border border-brand-ink/20 text-brand-ink/70 transition-colors hover:bg-brand-ink/10 hover:text-brand-ink disabled:opacity-40 ${className}`}
     >
       {/* Sun when the page is dark (what you would switch to), moon when it is
           light. The icon names the destination, not the current state — that is

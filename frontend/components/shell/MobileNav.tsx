@@ -50,7 +50,7 @@ export function MobileNav() {
             onClick={() => setOpen(false)}
             className="absolute inset-0 bg-black/70"
           />
-          <div className="relative flex h-full w-64 max-w-[85vw] flex-col gap-6 overflow-y-auto bg-espresso px-4 py-6">
+          <div className="relative flex h-full w-64 max-w-[85vw] flex-col gap-6 overflow-y-auto border-r border-brand-line bg-brand px-4 py-6">
             <div className="flex items-center justify-between px-3">
               <span className="font-body text-[10px] font-bold uppercase tracking-[0.22em] text-muted">
                 Menu

@@ -20,8 +20,8 @@ export function UserMenu({ user }: { user: SessionUser }) {
   return (
     <div className="flex items-center gap-4">
       <div className="text-right">
-        <p className="font-body text-xs font-bold text-cream">{user.name}</p>
-        <p className="font-body text-[10px] font-light text-cream/60">
+        <p className="font-body text-xs font-bold text-brand-ink">{user.name}</p>
+        <p className="font-body text-[10px] font-light text-brand-ink/60">
           {LEVEL_LABEL[user.accessLevel]}
         </p>
       </div>
@@ -44,7 +44,7 @@ export function UserMenu({ user }: { user: SessionUser }) {
             setBusy(false);
           }
         }}
-        className="rounded border border-cream/25 px-3 py-1 font-body text-[11px] font-bold text-cream/80 transition-colors hover:border-cream/60 hover:text-cream disabled:opacity-50"
+        className="rounded border border-brand-ink/25 px-3 py-1 font-body text-[11px] font-bold text-brand-ink/80 transition-colors hover:border-brand-ink/60 hover:text-brand-ink disabled:opacity-50"
       >
         {busy ? "…" : "Sign out"}
       </button>
