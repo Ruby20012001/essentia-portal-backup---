@@ -27,7 +27,10 @@ type Banner = { tone: "error" | "success"; message: string };
 export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
   const [board, setBoard] = useState(initial);
   // A designer comes here to update, so that is where they land.
-  const [tab, setTab] = useState<Tab>(initial.viewer.scope === "own" ? "update" : "dashboard");
+  /* A designer still lands where the work is, but that is Projects now that
+     ✓ Update has no tab — landing on a tab nobody can navigate back to would
+     strand them the moment they left it. Vishakha opens on the Dashboard. */
+  const [tab, setTab] = useState<Tab>(initial.viewer.scope === "own" ? "projects" : "dashboard");
   const [banner, setBanner] = useState<Banner | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   /**
@@ -162,10 +165,17 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
   const mine = forPerson(lens.projects, person);
   const selected = board.people.find((p) => p.id === person) ?? null;
 
+  /* Dashboard is not among them. It is where the page opens and it is reached
+     again from the nav beside the ☰, so a tab for it was a second door into the
+     room you were already standing in (Monica, 18 Sep). It is still a Tab — the
+     view, the print header and the escape from Setup all go on naming it. */
   const tabs: { key: Tab; label: string; badge?: number }[] = [
-    { key: "dashboard", label: "Dashboard" },
     { key: "today", label: "Today" },
-    { key: "update", label: "✓ Update", badge: mine.filter((p) => p.heat !== "DONE").length },
+    /* ✓ Update has no tab either (Monica, 18 Sep: "update htado"). Marking work
+       done did not go with it: Projects → Details still carries "Done today"
+       against every activity, which is the path the board had before the quick
+       one-button card existed. The view itself is left wired up below, so the
+       tab is one line to put back. */
     { key: "projects", label: "Projects", badge: mine.filter((p) => p.heat !== "DONE").length },
     { key: "delays", label: "Delays", badge: mine.filter((p) => p.heat === "HOT").length },
     ...(board.can.manage
@@ -175,7 +185,8 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
         ]
       : []),
   ];
-  const label = tabs.find((t) => t.key === tab)?.label ?? "";
+  // Dashboard has no tab, so the printed sheet names it from here instead.
+  const label = tabs.find((t) => t.key === tab)?.label ?? (tab === "dashboard" ? "Dashboard" : "");
 
   return (
     <div id="print-area" data-mode="view">
@@ -232,13 +243,18 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
             </button>
           ))}
 
-          <span className="ml-auto py-2.5 font-body text-xs font-light text-muted">
+          {/* The date and the two save buttons are one group, so when the row
+              runs out of width they wrap together and stay to the right. Left
+              to themselves they broke apart, and the buttons landed under the
+              tabs looking like a second row of them. */}
+          <span className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+          <span className="py-2.5 font-body text-xs font-light text-muted">
             Read against <span className="font-bold text-secondary">{board.settings.today}</span>
             {board.settings.pinned ? " (pinned)" : ""}
           </span>
 
           {board.can.export ? (
-            <span className="ml-3 flex items-center gap-2">
+            <span className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => void saveImage()}
@@ -255,6 +271,7 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
               </button>
             </span>
           ) : null}
+          </span>
         </div>
 
         {/* The person lens — the WIO board's team chips. Vishakha's name first
