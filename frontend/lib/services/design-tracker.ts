@@ -100,6 +100,34 @@ async function resolveViewer(user: SessionUser): Promise<DesignViewer> {
   };
 }
 
+/**
+ * Does this person run the design board — the head, or an admin?
+ *
+ * The same rule as the board's own `can.manage`, but as a plain boolean that
+ * never throws. resolveViewer() refuses somebody who is not on the design team
+ * with an error, which is right inside the tracker and wrong for the shell:
+ * the shell asks this on every page render, including for people who have
+ * nothing to do with design, and an exception there would take the whole page
+ * down rather than hide a link.
+ *
+ * Fails closed. A database blip hides the link rather than showing it to
+ * somebody it was deliberately taken away from.
+ */
+export async function isDesignManager(user: SessionUser | null): Promise<boolean> {
+  if (!user?.id) return false;
+  if (user.accessLevel === "L0" || user.accessLevel === "L1") return true;
+  try {
+    const rows = await query<{ one: number }>(
+      `SELECT 1 AS one FROM ee.design_tracker_people
+        WHERE user_id = $1 AND is_active AND role = 'head' LIMIT 1`,
+      [user.id],
+    );
+    return rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 async function requireManager(user: SessionUser): Promise<DesignViewer> {
   const viewer = await resolveViewer(user);
   if (viewer.scope !== "all") {

@@ -9,11 +9,21 @@ import { visibleNav } from "@/components/shell/nav";
  * drawer so the two can never drift apart. `onNavigate` lets the drawer close
  * itself when a destination is chosen.
  */
-export function NavGroups({ onNavigate }: { onNavigate?: () => void }) {
+export function NavGroups({
+  onNavigate,
+  canSeeDecks = true,
+  decks = [],
+}: {
+  onNavigate?: () => void;
+  /** Decided on the server, where the viewer is known — see visibleNav. */
+  canSeeDecks?: boolean;
+  /** Listed under Concept decks. Empty for anybody who cannot see them. */
+  decks?: { id: string; name: string }[];
+}) {
   const pathname = usePathname();
   // Filtered by launch mode: a tracker-only deployment lists the tracker and
   // nothing else, rather than six headings over screens it does not serve.
-  const groups = visibleNav();
+  const groups = visibleNav(undefined, canSeeDecks, decks);
 
   return (
     <>
@@ -40,6 +50,33 @@ export function NavGroups({ onNavigate }: { onNavigate?: () => void }) {
                   >
                     {item.label}
                   </Link>
+
+                  {/* The decks under Concept decks — indented, one per line,
+                      and each its own destination. The parent stays a link of
+                      its own: it is still the page that lists every deck. */}
+                  {item.children && item.children.length > 0 ? (
+                    <ul className="mt-0.5 space-y-0.5 border-l border-line pl-2 ml-3">
+                      {item.children.map((child) => {
+                        const on = pathname === child.href;
+                        return (
+                          <li key={child.href}>
+                            <Link
+                              href={child.href}
+                              onClick={onNavigate}
+                              aria-current={on ? "page" : undefined}
+                              className={`block rounded px-3 py-1.5 font-body text-[13px] transition-colors ${
+                                on
+                                  ? "bg-selected font-normal text-white"
+                                  : "font-light text-muted hover:bg-hover hover:text-white"
+                              }`}
+                            >
+                              {child.label}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : null}
                 </li>
               );
             })}

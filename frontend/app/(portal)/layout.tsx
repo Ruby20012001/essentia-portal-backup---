@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { Header } from "@/components/shell/Header";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { getSession } from "@/lib/auth/session";
+import { portalMode } from "@/lib/portal-mode";
+import { isDesignManager } from "@/lib/services/design-tracker";
+import { listDecks } from "@/lib/services/decks";
 
 /**
  * Every portal page requires a session. This server-side check is the real
@@ -16,11 +19,35 @@ export default async function PortalLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
+  /* Concept decks is offered to whoever runs the design board, and to nobody
+     else (Monica, 18 Sep). Asked only on the design deployment: in full mode
+     the entry belongs to everybody, and the question would be a database round
+     trip added to every page render for an answer that is always yes. */
+  const canSeeDecks =
+    portalMode() === "tracker" ? await isDesignManager(session.user) : true;
+
+  /* The decks go under the entry in the nav, one per line. Fetched only for
+     somebody who is offered them at all, and only on this deployment — and a
+     failure is a shorter menu, never a page that will not load. */
+  const decks = canSeeDecks && portalMode() === "tracker"
+    ? await listDecks(session.user)
+        .then((rows) =>
+          rows
+            .map((d) => ({ id: d.id, name: d.name }))
+            /* By name, not by when it was last touched. listDecks answers
+               newest-first, which is right for the decks page and wrong for a
+               menu: the order would rearrange itself every time somebody saved,
+               and a menu you have to re-read is worse than a long one. */
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        )
+        .catch(() => [])
+    : [];
+
   return (
     <div className="flex h-screen flex-col">
-      <Header user={session.user} />
+      <Header user={session.user} canSeeDecks={canSeeDecks} decks={decks} />
       <div className="flex min-h-0 flex-1">
-        <Sidebar />
+        <Sidebar canSeeDecks={canSeeDecks} decks={decks} />
         <main className="min-w-0 flex-1 overflow-y-auto bg-canvas px-4 py-6 sm:px-6 md:px-10 md:py-8">
           {children}
         </main>

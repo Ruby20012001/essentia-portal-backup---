@@ -9,7 +9,13 @@ import { NavGroups } from "@/components/shell/NavGroups";
  * drawer. Self-contained: the trigger and the panel share local state, so no
  * state has to cross the server/client boundary in the shell.
  */
-export function MobileNav() {
+export function MobileNav({
+  canSeeDecks,
+  decks,
+}: {
+  canSeeDecks: boolean;
+  decks: { id: string; name: string }[];
+}) {
   const [open, setOpen] = useState(false);
 
   // Escape closes; while open the page behind must not scroll.
@@ -66,7 +72,7 @@ export function MobileNav() {
                 </svg>
               </button>
             </div>
-            <NavGroups onNavigate={() => setOpen(false)} />
+            <NavGroups onNavigate={() => setOpen(false)} canSeeDecks={canSeeDecks} decks={decks} />
           </div>
         </div>
       ) : null}

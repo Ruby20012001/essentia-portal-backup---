@@ -6,8 +6,26 @@ import { isRouteAllowed, portalMode, type PortalMode } from "@/lib/portal-mode";
  * every role lands on its own dashboard and drills from a priority signal;
  * role-based filtering of this list arrives with the auth module.
  */
-export type NavItem = { label: string; href: string; screen: string };
+export type NavItem = {
+  label: string;
+  href: string;
+  screen: string;
+  /** Listed under the entry, indented — see NavGroups. */
+  children?: { label: string; href: string }[];
+};
 export type NavGroup = { label: string; items: NavItem[] };
+
+/**
+ * "Lavika — concept deck" is "Lavika" in a 256px column.
+ *
+ * The decks are named for whoever keeps them, and in the sidebar the words
+ * after the dash are the same on every line — so they cost width and say
+ * nothing. The full name stays on the /decks page, and on the deck itself.
+ */
+function deckShortName(name: string): string {
+  const cut = name.split(/\s+[—–-]\s+/)[0]?.trim();
+  return cut && cut.length > 1 ? cut : name;
+}
 
 export const NAV: NavGroup[] = [
   {
@@ -86,12 +104,48 @@ export const NAV: NavGroup[] = [
  * by middleware.ts, which Vercel bundles for the Edge runtime, and pulling this
  * file's constant in there made the Edge bundle unresolvable.
  */
-export function visibleNav(mode: PortalMode = portalMode()): NavGroup[] {
+/**
+ * @param canSeeDecks Whether this viewer gets the Concept decks entry. Only
+ *   whoever runs the design board does — Vishakha (Monica, 18 Sep: "tracker ka
+ *   access sirf Vishakha ke paas hai edit ka, to wo enter kregi to concept deck
+ *   bhi unhe show ho ske"). This hides the ENTRY, not the decks: the four
+ *   designers are on ee.concept_deck_editors and go on making decks through
+ *   /deck-login exactly as before. Taking the feature away from them would be
+ *   a different change, and would stop work that is running today.
+ */
+export function visibleNav(
+  mode: PortalMode = portalMode(),
+  canSeeDecks = true,
+  decks: { id: string; name: string }[] = [],
+): NavGroup[] {
   if (mode === "full") return NAV;
   return NAV.map((group) => ({
     ...group,
     items: group.items
       .filter((item) => isRouteAllowed(item.href, mode))
+      .filter((item) => item.href !== "/decks" || canSeeDecks)
+      /* The decks themselves, under the entry that leads to them (Monica,
+         18 Sep: "ek ke neeche ek — Lavika, Ritu, aise"). One per designer, so
+         the board she opens every morning is also the way into each of them,
+         without a list page in between. Read from the decks that exist rather
+         than a written-out list of names: a deck renamed, added or archived
+         then shows here on its own. */
+      .map((item) =>
+        item.href === "/decks" && decks.length > 0
+          ? {
+              ...item,
+              children: decks.map((d) => ({
+                label: deckShortName(d.name),
+                href: `/deck/${d.id}`,
+              })),
+            }
+          : item,
+      )
+      // The WIO → PIO Tracker is not the design team's board and does not
+      // belong in their menu (Monica, 18 Sep: "mere link me wio tracker nhi
+      // ana chahiye"). Hidden from the nav only — /wio-tracker stays a live
+      // route, so anybody holding the link, and /board, are untouched.
+      .filter((item) => item.href !== "/wio-tracker")
       // On the design deployment the tracker IS the whole portal, so the one
       // entry behind the ☰ is read as "the dashboard", not as one tracker
       // among several (Monica, 18 Sep: "3 lines me to dashboard likha ho").

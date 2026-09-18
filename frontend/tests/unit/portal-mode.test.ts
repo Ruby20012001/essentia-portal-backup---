@@ -89,9 +89,42 @@ describe("tracker mode — one screen", () => {
 describe("tracker mode — the nav", () => {
   const groups = visibleNav(TRACKER);
 
-  it("lists the tracker", () => {
+  it("lists the design tracker, under the name the menu gives it", () => {
+    const items = groups.flatMap((g) => g.items);
+    const design = items.find((i) => i.href === "/design-tracker");
+    expect(design).toBeDefined();
+    // On this deployment the design tracker IS the portal, so the menu calls
+    // it Dashboard rather than naming a tracker the reader is already inside.
+    expect(design?.label).toBe("Dashboard");
+  });
+
+  it("offers Concept decks only to whoever runs the design board", () => {
+    // Monica, 18 Sep: the tracker's edit access is Vishakha's, and the decks
+    // entry goes with it. Everybody else's menu simply does not carry it.
+    const forHead = visibleNav(TRACKER, true).flatMap((g) => g.items.map((i) => i.href));
+    const forDesigner = visibleNav(TRACKER, false).flatMap((g) => g.items.map((i) => i.href));
+    expect(forHead).toContain("/decks");
+    expect(forDesigner).not.toContain("/decks");
+
+    // The ENTRY is hidden, not the feature: the four designers are on
+    // ee.concept_deck_editors and reach their decks through /deck-login. If
+    // this ever becomes false, their deck work has been taken away by accident.
+    expect(isRouteAllowed("/decks", TRACKER)).toBe(true);
+    expect(isRouteAllowed("/deck-login", TRACKER)).toBe(true);
+
+    // Everything else is unchanged by the flag — it must gate one entry, not
+    // quietly become a second mode.
+    expect(forDesigner).toEqual(forHead.filter((h) => h !== "/decks"));
+  });
+
+  it("keeps the WIO → PIO Tracker out of the menu but still serves it", () => {
+    // Hidden, not closed (Monica, 18 Sep: "mere link me wio tracker nhi ana
+    // chahiye"). The design team has no access to that board, so offering it
+    // in their menu only led to a refusal — but the WIO team's own links, and
+    // /board, must keep working, which means the route stays open.
     const hrefs = groups.flatMap((g) => g.items.map((i) => i.href));
-    expect(hrefs).toContain("/wio-tracker");
+    expect(hrefs).not.toContain("/wio-tracker");
+    expect(isRouteAllowed("/wio-tracker", TRACKER)).toBe(true);
   });
 
   it("drops groups that would render as an empty heading", () => {
