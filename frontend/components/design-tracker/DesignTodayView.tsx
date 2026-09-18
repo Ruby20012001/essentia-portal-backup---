@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { DesignAvatar } from "@/components/design-tracker/DesignAvatar";
 import { BigNumber, Columns, Gauge, Treemap } from "@/components/design-tracker/DesignCharts";
 import { Donut } from "@/components/design-tracker/DesignDonut";
 import {
@@ -315,9 +316,10 @@ export function DesignTodayView({
                         className="flex items-center gap-2 font-bold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-amber-deep"
                       >
                         <span className={`inline-block h-2.5 w-2.5 rounded-full ${row.heat ? HEAT_DOT[row.heat] : "bg-line"}`} />
+                        <DesignAvatar name={row.name} size={26} />
                         {row.name}
                       </button>
-                      <span className="ml-[18px] block text-[11px] font-light text-muted">{row.title}</span>
+                      <span className="ml-[52px] block text-[11px] font-light text-muted">{row.title}</span>
                     </td>
                     <Count n={row.counts.running} />
                     <Count n={row.counts.hot} tone="text-alert" />
@@ -460,7 +462,12 @@ export function DesignTodayView({
                         </td>
                         {person === null ? (
                           <td className="whitespace-nowrap px-3 py-2.5 font-light text-secondary">
-                            <button type="button" onClick={() => onPerson(p.designerId)} className="hover:text-ink">
+                            <button
+                              type="button"
+                              onClick={() => onPerson(p.designerId)}
+                              className="flex items-center gap-1.5 hover:text-ink"
+                            >
+                              <DesignAvatar name={p.designer} size={22} />
                               {p.designer}
                             </button>
                           </td>

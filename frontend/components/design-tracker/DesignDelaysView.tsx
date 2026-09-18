@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { DesignAvatar } from "@/components/design-tracker/DesignAvatar";
 import { HeatPill, ProjectBreakdown } from "@/components/design-tracker/HeatPill";
 import type { DesignBoard } from "@/lib/services/design-tracker";
 import { forPerson, personRows } from "@/lib/services/design-tracker-logic";
@@ -81,7 +82,10 @@ export function DesignDelaysView({
         return (
           <section key={row.id} className="mb-8">
             <div className="mb-2 flex flex-wrap items-baseline gap-3">
-              <h2 className="font-heading text-2xl text-white">{row.name}</h2>
+              <h2 className="flex items-center gap-2 font-heading text-2xl text-white">
+                <DesignAvatar name={row.name} size={30} />
+                {row.name}
+              </h2>
               <span className="font-body text-sm font-light text-muted">
                 {row.counts.hot} {row.counts.hot === 1 ? "project" : "projects"} late · {row.counts.lateActivities} late{" "}
                 {row.counts.lateActivities === 1 ? "activity" : "activities"}

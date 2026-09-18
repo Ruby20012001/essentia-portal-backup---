@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { DesignAvatar } from "@/components/design-tracker/DesignAvatar";
 import { Donut, Ring } from "@/components/design-tracker/DesignDonut";
 import { DayBadge, HEAT_DOT, HEAT_MEANING, HeatPill } from "@/components/design-tracker/HeatPill";
 import type { DesignBoard } from "@/lib/services/design-tracker";
@@ -246,7 +247,10 @@ export function DesignDashboardView({
                         centre={`${d.hot}/${d.projects}`}
                         title={`${d.name}: ${d.hot} of ${d.projects} projects late`}
                       />
-                      <span className="mt-1.5 truncate font-body text-[13px] font-bold text-ink">{d.name}</span>
+                      <span className="mt-1.5 flex items-center gap-1.5 font-body text-[13px] font-bold text-ink">
+                        <DesignAvatar name={d.name} size={20} />
+                        <span className="truncate">{d.name}</span>
+                      </span>
                       <span className="font-body text-[11px] font-light text-muted">
                         {d.total === 0
                           ? "nothing late"
@@ -367,7 +371,12 @@ export function DesignDashboardView({
                     </td>
                     {person === null ? (
                       <td className="whitespace-nowrap px-3 py-2.5 font-light text-secondary">
-                        <button type="button" onClick={() => onPerson(p.designerId)} className="hover:text-ink">
+                        <button
+                          type="button"
+                          onClick={() => onPerson(p.designerId)}
+                          className="flex items-center gap-1.5 hover:text-ink"
+                        >
+                          <DesignAvatar name={p.designer} size={22} />
                           {p.designer}
                         </button>
                       </td>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { DesignAvatar } from "@/components/design-tracker/DesignAvatar";
 import {
   ConfirmButton,
   HEAT_CLASS,
@@ -229,8 +230,15 @@ function Card({
       <div className="px-5 pb-4 pl-6 pt-4">
         <div className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <h3 className="font-heading text-xl text-white">{p.name}</h3>
-          <span className="font-body text-xs font-light text-muted">
-            {[showDesigner ? p.designer : null, p.client].filter(Boolean).join(" · ")}
+          <span className="flex items-center gap-1.5 font-body text-xs font-light text-muted">
+            {showDesigner ? (
+              <>
+                <DesignAvatar name={p.designer} size={20} />
+                {p.designer}
+                {p.client ? " · " : ""}
+              </>
+            ) : null}
+            {p.client}
           </span>
           <span className="ml-auto whitespace-nowrap font-body text-xs text-muted">
             {p.day !== null ? `Day ${p.day} / ${p.lastDay} · ` : ""}

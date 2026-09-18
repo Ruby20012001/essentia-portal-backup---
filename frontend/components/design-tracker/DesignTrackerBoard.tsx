@@ -8,6 +8,7 @@ import { DesignRemindersView } from "@/components/design-tracker/DesignReminders
 import { DesignSetupView } from "@/components/design-tracker/DesignSetupView";
 import { DesignTodayView } from "@/components/design-tracker/DesignTodayView";
 import { DesignUpdateView } from "@/components/design-tracker/DesignUpdateView";
+import { DesignAvatar } from "@/components/design-tracker/DesignAvatar";
 import { HEAT_DOT, typeChangeMessage } from "@/components/design-tracker/HeatPill";
 import type { DesignBoard } from "@/lib/services/design-tracker";
 import { forPerson, forSegment, personRows, type Segment } from "@/lib/services/design-tracker-logic";
@@ -277,6 +278,7 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
                 <PersonChip
                   key={row.id}
                   label={row.name}
+                  face={row.name}
                   count={row.counts.running}
                   dot={row.heat ? HEAT_DOT[row.heat] : undefined}
                   active={person === row.id}
@@ -398,12 +400,15 @@ function PersonChip({
   count,
   active,
   dot,
+  face,
   onClick,
 }: {
   label: string;
   count: number;
   active: boolean;
   dot?: string;
+  /** A designer's chip carries her face; "all" and the type chips do not. */
+  face?: string;
   onClick: () => void;
 }) {
   return (
@@ -415,7 +420,8 @@ function PersonChip({
       }`}
     >
       {dot ? <span className={`mr-2 inline-block h-2 w-2 rounded-full ${dot}`} /> : null}
-      {label}
+      {face ? <DesignAvatar name={face} size={18} /> : null}
+      <span className={face ? "ml-1.5" : ""}>{label}</span>
       <span className="ml-2 font-light text-muted">{count === 0 ? "—" : count}</span>
     </button>
   );
