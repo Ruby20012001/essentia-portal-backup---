@@ -1,7 +1,8 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { MetricCard } from "@/components/dashboard/MetricCard";
+import { BigNumber, Columns, Gauge, Treemap } from "@/components/design-tracker/DesignCharts";
+import { Donut } from "@/components/design-tracker/DesignDonut";
 import {
   DayBadge,
   HEAT_DOT,
@@ -52,6 +53,82 @@ export function DesignTodayView({
   );
   const [open, setOpen] = useState<string | null>(null);
 
+  // ── what the visuals above the tables are made of ──────────────────
+
+  /** Activities recorded done in each of the last six months. */
+  const byMonth = (() => {
+    const out: { key: string; label: string; count: number }[] = [];
+    const [y, m] = [Number(settings.today.slice(0, 4)), Number(settings.today.slice(5, 7))];
+    for (let back = 5; back >= 0; back--) {
+      const d = new Date(Date.UTC(y, m - 1 - back, 1));
+      const key = d.toISOString().slice(0, 7);
+      out.push({
+        key,
+        label: d.toLocaleString("en", { month: "short", timeZone: "UTC" }),
+        count: projects.reduce(
+          (n, p) => n + p.activities.filter((a) => a.doneOn?.startsWith(key)).length,
+          0,
+        ),
+      });
+    }
+    return out;
+  })();
+
+  /** The treemap: a column per designer, a box per project, sized by days late. */
+  const treemap = board.people
+    .map((d) => {
+      const items = running
+        .filter((p) => p.designerId === d.id)
+        // A project that is not late still has to be visible, so it counts 1.
+        .map((p) => ({
+          key: p.id,
+          label: p.name,
+          value: Math.max(1, p.delayDays),
+          tone: HEAT_BG[p.heat],
+          title: `${p.name} — ${p.delayDays > 0 ? `${p.delayDays} days late at ${p.causedBy?.task}` : HEAT_MEANING[p.heat].toLowerCase()}`,
+          onClick: () => onPerson(d.id),
+        }))
+        .sort((a, b) => b.value - a.value);
+      return {
+        key: d.id,
+        label: d.name,
+        value: items.reduce((n, i) => n + i.value, 0),
+        items,
+        onClick: () => onPerson(d.id),
+      };
+    })
+    .filter((g) => g.items.length > 0)
+    .sort((a, b) => b.value - a.value);
+
+  /** Days late by dependency: the top five, the rest folded into "other". */
+  const dependencySlices = (() => {
+    const map = new Map<string, number>();
+    for (const p of running) {
+      for (const a of p.late) map.set(a.dependsOn, (map.get(a.dependsOn) ?? 0) + (a.daysLate ?? 0));
+    }
+    const sorted = [...map.entries()].sort((a, b) => b[1] - a[1]);
+    const top = sorted.slice(0, 5);
+    const rest = sorted.slice(5).reduce((n, [, v]) => n + v, 0);
+    // One hue, stepped — this is magnitude, not identity, so no new colours.
+    const steps = ["text-alert", "text-alert/80", "text-alert/60", "text-alert/45", "text-alert/30"];
+    const dots = ["bg-alert", "bg-alert/80", "bg-alert/60", "bg-alert/45", "bg-alert/30"];
+    const slices = top.map(([name, days], i) => ({
+      key: name,
+      label: name,
+      value: days,
+      tone: steps[i]!,
+      dot: dots[i]!,
+    }));
+    if (rest > 0) {
+      slices.push({ key: "other", label: "everybody else", value: rest, tone: "text-line-strong", dot: "bg-line-strong" });
+    }
+    return slices;
+  })();
+  const dependencyTotal = dependencySlices.reduce((n, s) => n + s.value, 0);
+
+  const doneActivities = running.reduce((n, p) => n + p.doneCount, 0);
+  const applicableActivities = running.reduce((n, p) => n + p.applicableCount, 0);
+
   return (
     <div>
       {/* Whose page this is. */}
@@ -86,15 +163,90 @@ export function DesignTodayView({
         </div>
       </section>
 
-      <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <MetricCard label="Running projects" value={String(counts.running)} />
-        <HeatCard heat="HOT" value={counts.hot} sub="an activity is late" />
-        <HeatCard heat="WARM" value={counts.warm} sub={`due within ${settings.warmWithin}d`} />
-        <HeatCard heat="COLD" value={counts.cold} sub="on time" />
-        <MetricCard label="Late activities" value={String(counts.lateActivities)} sub="across running projects" />
-        <MetricCard label="Waiting on the client" value={String(counts.clientLate)} sub="of the late activities" />
-        <MetricCard label="No start date" value={String(counts.notTracked)} sub="not on the clock" />
-        <MetricCard label="Done" value={String(counts.done)} />
+      {/* The page as a board of visuals (Monica, 18 Sep, with a Power BI page
+          for reference): work done month by month, the projects as a treemap,
+          then who the delay waits on, how far the team has got, and the two
+          numbers that lead. Every mark says its own value. */}
+      <div className="mb-8 grid gap-4 lg:grid-cols-12">
+        <Panel className="lg:col-span-6" title="Activities completed, month by month">
+          <Columns
+            columns={byMonth.map((m) => ({
+              key: m.key,
+              label: m.label,
+              value: m.count,
+              tone: "bg-forest",
+              title: `${m.count} activities recorded done in ${m.label}`,
+            }))}
+          />
+        </Panel>
+
+        <Panel
+          className="lg:col-span-6"
+          title="Every project, by how far behind it is"
+          note="Bigger means later. Colour is its status — click one for that designer."
+        >
+          {treemap.length === 0 ? (
+            <Empty>No running projects.</Empty>
+          ) : (
+            <Treemap groups={treemap} />
+          )}
+        </Panel>
+
+        <Panel className="lg:col-span-4" title="Who the delay is waiting on" note="Share of all the days late.">
+          {dependencySlices.length === 0 ? (
+            <Empty>Nothing is late.</Empty>
+          ) : (
+            <div className="flex flex-wrap items-center gap-4">
+              <Donut
+                slices={dependencySlices}
+                total={dependencyTotal}
+                centreValue={dependencyTotal}
+                centreLabel="days late"
+              />
+              <ul className="min-w-[8rem] flex-1 space-y-1">
+                {dependencySlices.map((s) => (
+                  <li key={s.key} className="flex items-center gap-2 font-body text-[12px]">
+                    <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${s.dot}`} />
+                    <span className="truncate text-secondary">{s.label}</span>
+                    <span className="ml-auto font-bold text-ink">{s.value}d</span>
+                    <span className="w-9 text-right font-light text-muted">
+                      {Math.round((s.value / dependencyTotal) * 100)}%
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Panel>
+
+        <Panel className="lg:col-span-4" title="How much of the work is done" note="Activities done, across every running project.">
+          <Gauge
+            value={doneActivities}
+            max={Math.max(1, applicableActivities)}
+            tone={counts.hot > 0 ? "text-alert" : "text-forest"}
+            centre={`${Math.round((doneActivities / Math.max(1, applicableActivities)) * 100)}%`}
+            centreSub="done"
+            minLabel="0"
+            maxLabel={String(applicableActivities)}
+            title={`${doneActivities} of ${applicableActivities} activities done`}
+          />
+        </Panel>
+
+        <div className="grid gap-4 lg:col-span-4">
+          <BigNumber
+            value={counts.lateActivities}
+            label="Late activities"
+            tone={counts.lateActivities > 0 ? "text-alert" : "text-white"}
+            sub={`${counts.clientLate} waiting on the client`}
+          />
+          <BigNumber
+            value={counts.running}
+            label="Running projects"
+            sub={`${counts.hot} late · ${counts.warm} due soon · ${counts.cold} on time${
+              counts.notTracked > 0 ? ` · ${counts.notTracked} no start date` : ""
+            }`}
+          />
+        </div>
       </div>
 
       {/* The finding, said out loud — which projects, whose, and why. */}
@@ -480,5 +632,42 @@ function SegmentSplit({ projects }: { projects: ComputedProject[] }) {
         })}
       </div>
     </section>
+  );
+}
+
+/** The block colour for a heat — the fill of a treemap box. */
+const HEAT_BG: Record<Heat, string> = {
+  HOT: "bg-alert",
+  WARM: "bg-warning",
+  COLD: "bg-navy",
+  DONE: "bg-forest",
+  "NOT TRACKED": "bg-line-strong",
+};
+
+function Panel({
+  title,
+  note,
+  className,
+  children,
+}: {
+  title: string;
+  note?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={`rounded-lg border border-line bg-card px-5 py-4 ${className ?? ""}`}>
+      <h3 className="font-heading text-lg text-white">{title}</h3>
+      {note ? <p className="mb-3 font-body text-xs font-light text-muted">{note}</p> : <div className="mb-3" />}
+      {children}
+    </section>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded border border-dashed border-line-strong px-4 py-6 text-center font-body text-sm font-light text-muted">
+      {children}
+    </p>
   );
 }
