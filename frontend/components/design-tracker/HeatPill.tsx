@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import {
   activitiesSkippedByType,
   type ActivityState,
@@ -83,6 +86,92 @@ export function typeChangeMessage(
     .join(" and ")} ${skipped.length === 1 ? "is" : "are"} taken off its chart — ${
     activities.length - skipped.length
   } activities instead of ${activities.length}.`;
+}
+
+/**
+ * A button that asks before it acts — in the page, not in a browser dialog.
+ *
+ * `window.confirm` is SUPPRESSED inside the desktop app's window: it returns
+ * false in a millisecond without ever showing anything, so every button behind
+ * one silently did nothing (Monica, 18 Sep: "ye cross work ni krre"). Nothing
+ * here may depend on confirm(), alert() or prompt() again.
+ *
+ * First press turns the button into "<question> Yes / No". Anywhere else, or
+ * No, puts it back.
+ */
+export function ConfirmButton({
+  label,
+  question,
+  className,
+  disabled,
+  title,
+  onConfirm,
+}: {
+  label: string;
+  question: string;
+  className: string;
+  disabled?: boolean;
+  title?: string;
+  onConfirm: () => void;
+}) {
+  const [asking, setAsking] = useState(false);
+
+  useEffect(() => {
+    if (!asking) return;
+    const away = () => setAsking(false);
+    // A click anywhere else, or Escape, means "no".
+    const key = (e: KeyboardEvent) => e.key === "Escape" && setAsking(false);
+    document.addEventListener("click", away);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("click", away);
+      document.removeEventListener("keydown", key);
+    };
+  }, [asking]);
+
+  if (!asking) {
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        title={title}
+        onClick={(e) => {
+          e.stopPropagation();
+          setAsking(true);
+        }}
+        className={className}
+      >
+        {label}
+      </button>
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded border border-amber-deep/60 bg-amber-deep/10 px-2 py-1 font-body text-xs"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <span className="font-light text-secondary">{question}</span>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => {
+          setAsking(false);
+          onConfirm();
+        }}
+        className="rounded bg-forest px-2 py-0.5 font-bold text-white transition-colors hover:bg-forest/90 disabled:opacity-50"
+      >
+        Yes
+      </button>
+      <button
+        type="button"
+        onClick={() => setAsking(false)}
+        className="rounded border border-line-strong bg-canvas px-2 py-0.5 font-bold text-secondary transition-colors hover:bg-hover"
+      >
+        No
+      </button>
+    </span>
+  );
 }
 
 export const inputClass =

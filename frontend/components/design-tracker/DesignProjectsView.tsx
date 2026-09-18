@@ -3,6 +3,7 @@
 import { Fragment, useMemo, useState } from "react";
 import {
   ActivityBadge,
+  ConfirmButton,
   DayBadge,
   HEAT_DOT,
   HEAT_MEANING,
@@ -462,16 +463,13 @@ function ProjectDetail({
 
       {manage ? (
         <div className="mt-4 flex border-t border-line pt-3">
-          <button
-            type="button"
+          <ConfirmButton
+            label="Remove from the board"
+            question={`Remove ${p.name} and everything recorded on it?`}
             disabled={busy}
-            onClick={() => {
-              if (window.confirm(`Remove ${p.name} and its activity record from the board?`)) onDelete(p.id, p.name);
-            }}
+            onConfirm={() => onDelete(p.id, p.name)}
             className="ml-auto rounded border border-alert/40 px-2.5 py-1 font-body text-[12px] font-bold text-alert transition-colors hover:bg-alert/10 disabled:opacity-50"
-          >
-            Remove from the board
-          </button>
+          />
         </div>
       ) : null}
     </div>

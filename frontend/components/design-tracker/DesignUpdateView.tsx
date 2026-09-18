@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
+  ConfirmButton,
   HEAT_CLASS,
   HEAT_DOT,
   HEAT_MEANING,
@@ -97,7 +98,6 @@ export function DesignUpdateView({
    * taken back tomorrow, by the person who made it, without opening anything.
    */
   const undone = async (p: ComputedProject, a: ComputedActivity) => {
-    if (!window.confirm(`Put "${a.task}" back to not done on ${p.name}?`)) return;
     if (await onMarkDone(p.id, [a.id], null)) remember(p.id, null);
   };
 
@@ -328,18 +328,13 @@ function Card({
                 {now?.state === "HOT" ? "Also late" : "Late"} · {otherLate.length}
               </p>
               {allLate.length > 1 ? (
-                <button
-                  type="button"
+                <ConfirmButton
+                  label={`✓ All ${allLate.length} late are done`}
+                  question={`Mark all ${allLate.length} done today?`}
                   disabled={busy}
-                  onClick={() => {
-                    if (window.confirm(`Mark all ${allLate.length} late activities on ${p.name} done today?`)) {
-                      onDone(allLate);
-                    }
-                  }}
+                  onConfirm={() => onDone(allLate)}
                   className="ml-auto rounded border border-forest/50 px-2.5 py-1 font-body text-xs font-bold text-forest transition-colors hover:bg-forest/10 disabled:opacity-50"
-                >
-                  ✓ All {allLate.length} late are done
-                </button>
+                />
               ) : null}
             </div>
             <ul className="divide-y divide-line rounded border border-line">
@@ -391,15 +386,14 @@ function Card({
                       {a.state === "Done late" && a.daysLate ? ` · ${a.daysLate} days late` : ""}
                     </span>
                   </div>
-                  <button
-                    type="button"
+                  <ConfirmButton
+                    label="✗"
+                    question="Not done?"
                     disabled={busy}
                     title="Put this back to not done"
-                    onClick={() => onUndone(a)}
+                    onConfirm={() => onUndone(a)}
                     className="shrink-0 rounded border border-line-strong bg-canvas px-2.5 py-1 font-body text-xs font-bold text-secondary transition-colors hover:border-alert/50 hover:text-alert disabled:opacity-50"
-                  >
-                    ✗
-                  </button>
+                  />
                 </li>
               ))}
             </ul>

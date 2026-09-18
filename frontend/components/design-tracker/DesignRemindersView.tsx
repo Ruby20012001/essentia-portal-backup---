@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { inputClass, labelClass } from "@/components/design-tracker/HeatPill";
+import { ConfirmButton, inputClass, labelClass } from "@/components/design-tracker/HeatPill";
 import { whenText } from "@/lib/services/design-reminders-logic";
 import type { ReminderPreview, RunResult } from "@/lib/services/design-reminders";
 
@@ -198,11 +198,12 @@ export function DesignRemindersView() {
               If the reminders ran now, against {data.today}. Nobody with nothing late or due gets a message.
             </p>
           </div>
-          <button
-            type="button"
+          <ConfirmButton
+            label="Send today's now"
+            question={`Send to ${pending.length} ${pending.length === 1 ? "person" : "people"}?`}
             disabled={busy || !s.remindersOn || pending.length === 0}
-            onClick={() => {
-              if (!window.confirm(`Send today's reminders now to ${pending.length} ${pending.length === 1 ? "person" : "people"}? Each person gets them once a day.`)) return;
+            className="rounded bg-forest px-4 py-2 font-body text-sm font-bold text-white transition-colors hover:bg-forest/90 disabled:opacity-50"
+            onConfirm={() => {
               void send("POST", "/api/design-tracker/reminders", undefined, (r) => {
                 const run = r as RunResult;
                 if (!run.ran) return run.reason ?? "Nothing was sent.";
@@ -211,10 +212,7 @@ export function DesignRemindersView() {
                   : `Sent to ${run.sent.map((x) => x.to).join(", ")}.`;
               });
             }}
-            className="rounded bg-forest px-4 py-2 font-body text-sm font-bold text-white transition-colors hover:bg-forest/90 disabled:opacity-50"
-          >
-            Send today&rsquo;s now
-          </button>
+          />
         </div>
 
         {data.messages.length === 0 ? (
