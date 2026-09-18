@@ -244,7 +244,12 @@ function Card({
                 value=""
                 disabled={busy}
                 onChange={(e) => e.target.value && onSetType(e.target.value)}
-                className="rounded border border-warning/50 bg-warning/5 px-2 py-1 font-body text-xs text-ink focus:border-amber-deep focus:outline-none disabled:opacity-50"
+                // The background must be OPAQUE. A translucent one (bg-warning/5)
+                // is what the open list is painted with, so in dark mode the
+                // Residential / Commercial list came out invisible — white text
+                // on nothing (Monica, 18 Sep: "black krne k baad update me res
+                // comm list ni dikhri").
+                className="rounded border border-warning/60 bg-canvas px-2 py-1 font-body text-xs text-ink focus:border-amber-deep focus:outline-none disabled:opacity-50"
               >
                 <option value="">Pick a type…</option>
                 <optgroup label="🏠 Residential">
