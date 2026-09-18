@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Donut, Ring } from "@/components/design-tracker/DesignDonut";
 import { DayBadge, HEAT_DOT, HEAT_MEANING, HeatPill } from "@/components/design-tracker/HeatPill";
 import type { DesignBoard } from "@/lib/services/design-tracker";
 import { forPerson, type Heat } from "@/lib/services/design-tracker-logic";
@@ -26,6 +27,15 @@ type Focus =
   | { kind: "heat"; heat: Heat }
   | { kind: "designer"; id: string; name: string }
   | { kind: "dependency"; name: string };
+
+/** The arc/ring colour for a heat — the same tokens as the dots, as text-* so SVG can use currentColor. */
+const HEAT_TEXT: Record<Heat, string> = {
+  HOT: "text-alert",
+  WARM: "text-warning",
+  COLD: "text-navy",
+  DONE: "text-forest",
+  "NOT TRACKED": "text-line-strong",
+};
 
 const HEAT_ORDER: Heat[] = ["HOT", "WARM", "COLD", "NOT TRACKED"];
 const HEAT_WORD: Record<Heat, string> = {
@@ -158,72 +168,100 @@ export function DesignDashboardView({
           {running.length === 0 ? (
             <Empty>No running projects.</Empty>
           ) : (
-            <>
-              <div className="flex h-9 w-full gap-[2px] overflow-hidden rounded">
+            <div className="flex flex-wrap items-center gap-6">
+              <Donut
+                total={running.length}
+                centreValue={running.length}
+                centreLabel="running"
+                slices={byHeat.map((r) => ({
+                  key: r.heat,
+                  label: HEAT_WORD[r.heat],
+                  value: r.count,
+                  tone: HEAT_TEXT[r.heat],
+                  dimmed: focus.kind === "heat" && focus.heat !== r.heat,
+                  onClick: () =>
+                    setFocus(
+                      focus.kind === "heat" && focus.heat === r.heat
+                        ? { kind: "none" }
+                        : { kind: "heat", heat: r.heat },
+                    ),
+                }))}
+              />
+              <ul className="min-w-[9rem] flex-1 space-y-1.5">
                 {byHeat.map((r) => (
-                  <button
-                    key={r.heat}
-                    type="button"
-                    title={`${r.count} ${HEAT_WORD[r.heat]}`}
-                    onClick={() =>
-                      setFocus(
-                        focus.kind === "heat" && focus.heat === r.heat
-                          ? { kind: "none" }
-                          : { kind: "heat", heat: r.heat },
-                      )
-                    }
-                    style={{ flexGrow: r.count }}
-                    // A number on a pale grey segment must not be white — it wears ink there.
-                    className={`flex items-center justify-center font-body text-xs font-bold transition-opacity hover:opacity-90 ${
-                      r.heat === "NOT TRACKED" ? "text-ink" : "text-cream"
-                    } ${
-                      HEAT_DOT[r.heat]
-                    } ${focus.kind === "heat" && focus.heat !== r.heat ? "opacity-40" : ""}`}
-                  >
-                    {r.count}
-                  </button>
+                  <li key={r.heat}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFocus(
+                          focus.kind === "heat" && focus.heat === r.heat
+                            ? { kind: "none" }
+                            : { kind: "heat", heat: r.heat },
+                        )
+                      }
+                      className={`flex w-full items-center gap-2 rounded px-1.5 py-1 font-body text-[13px] transition-colors hover:bg-hover ${
+                        focus.kind === "heat" && focus.heat === r.heat ? "bg-hover" : ""
+                      }`}
+                    >
+                      <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${HEAT_DOT[r.heat]}`} />
+                      <span className="text-secondary">{HEAT_WORD[r.heat]}</span>
+                      <span className="ml-auto font-bold text-ink">{r.count}</span>
+                      <span className="w-10 text-right font-light text-muted">
+                        {Math.round((r.count / running.length) * 100)}%
+                      </span>
+                    </button>
+                  </li>
                 ))}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
-                {byHeat.map((r) => (
-                  <span key={r.heat} className="flex items-center gap-1.5 font-body text-xs font-light text-secondary">
-                    <span className={`inline-block h-2.5 w-2.5 rounded-full ${HEAT_DOT[r.heat]}`} />
-                    {HEAT_WORD[r.heat]} <span className="font-bold text-ink">{r.count}</span>
-                  </span>
-                ))}
-              </div>
-            </>
+              </ul>
+            </div>
           )}
         </Panel>
 
-        {/* ── late activities by designer ──────────────────────────── */}
+        {/* ── each designer as a ring: how much of their work is late ── */}
         <Panel
-          title="Late activities by designer"
-          note="Solid — held by us. Lines — waiting on the client. Click a name for their projects."
+          title="Each designer"
+          note="The ring is how many of their projects are late. Click a name for their projects."
         >
           {byDesigner.length === 0 ? (
             <Empty>Nobody has a running project.</Empty>
           ) : (
-            <BarRows
-              max={Math.max(1, ...byDesigner.map((d) => d.total))}
-              rows={byDesigner.map((d) => ({
-                key: d.id,
-                label: d.name,
-                value: d.total,
-                parts: [
-                  { value: d.internal, pattern: false, title: `${d.internal} held by us` },
-                  { value: d.client, pattern: true, title: `${d.client} waiting on the client` },
-                ],
-                sub: `${d.projects} running${d.hot > 0 ? ` · ${d.hot} late` : ""}`,
-                active: focus.kind === "designer" && focus.id === d.id,
-                onClick: () =>
-                  setFocus(
-                    focus.kind === "designer" && focus.id === d.id
-                      ? { kind: "none" }
-                      : { kind: "designer", id: d.id, name: d.name },
-                  ),
-              }))}
-            />
+            <ul className="flex flex-wrap gap-4">
+              {byDesigner.map((d) => {
+                const active = focus.kind === "designer" && focus.id === d.id;
+                return (
+                  <li key={d.id}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFocus(active ? { kind: "none" } : { kind: "designer", id: d.id, name: d.name })
+                      }
+                      className={`flex w-[7.5rem] flex-col items-center rounded-lg px-2 py-2 transition-colors hover:bg-hover ${
+                        active ? "bg-hover" : ""
+                      }`}
+                    >
+                      <Ring
+                        value={d.hot}
+                        total={Math.max(1, d.projects)}
+                        tone={d.hot > 0 ? "text-alert" : "text-navy"}
+                        centre={`${d.hot}/${d.projects}`}
+                        title={`${d.name}: ${d.hot} of ${d.projects} projects late`}
+                      />
+                      <span className="mt-1.5 truncate font-body text-[13px] font-bold text-ink">{d.name}</span>
+                      <span className="font-body text-[11px] font-light text-muted">
+                        {d.total === 0
+                          ? "nothing late"
+                          : `${d.total} late ${d.total === 1 ? "activity" : "activities"}`}
+                      </span>
+                      {d.client > 0 ? (
+                        <span className="font-body text-[11px] font-light text-warning">
+                          {d.client} waiting on the client
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </Panel>
       </div>
@@ -258,35 +296,37 @@ export function DesignDashboardView({
           )}
         </Panel>
 
-        {/* ── how far each project has got ─────────────────────────── */}
-        <Panel title="How far each project has got" note={`Day by day, out of the chart's ${running[0]?.lastDay ?? 238}.`}>
+        {/* ── each project as a ring: how much of its chart is done ─── */}
+        <Panel title="How far each project has got" note="The ring is the share of its activities already done.">
           {shown.length === 0 ? (
             <Empty>Nothing to show.</Empty>
           ) : (
-            <ul className="space-y-2.5">
+            <ul className="flex flex-wrap gap-4">
               {shown.slice(0, 8).map((p) => (
-                <li key={p.id}>
-                  <div className="mb-1 flex items-baseline gap-2 font-body text-xs">
-                    <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${HEAT_DOT[p.heat]}`} title={HEAT_MEANING[p.heat]} />
-                    <span className="truncate text-ink">{p.name}</span>
-                    <span className="ml-auto whitespace-nowrap font-light text-muted">
-                      {p.day !== null ? `day ${p.day} / ${p.lastDay}` : "no start date"}
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded bg-line-strong/70" title={`${p.doneCount} of ${p.applicableCount} activities done`}>
-                    <div
-                      className={`h-full rounded ${HEAT_DOT[p.heat]}`}
-                      style={{ width: `${Math.min(100, Math.round((p.doneCount / Math.max(1, p.applicableCount)) * 100))}%` }}
-                    />
-                  </div>
-                  <p className="mt-0.5 font-body text-[11px] font-light text-muted">
-                    {p.doneCount}/{p.applicableCount} activities done
-                    {p.causedBy ? ` · ${p.delayDays}d late at ${p.causedBy.task}` : ""}
-                  </p>
+                <li key={p.id} className="flex w-[7.5rem] flex-col items-center px-1">
+                  <Ring
+                    value={p.doneCount}
+                    total={Math.max(1, p.applicableCount)}
+                    tone={HEAT_TEXT[p.heat]}
+                    centre={`${Math.round((p.doneCount / Math.max(1, p.applicableCount)) * 100)}%`}
+                    sub={`${p.doneCount}/${p.applicableCount}`}
+                    title={`${p.name}: ${p.doneCount} of ${p.applicableCount} activities done${
+                      p.causedBy ? `, ${p.delayDays} days late at ${p.causedBy.task}` : ""
+                    }`}
+                  />
+                  <span className="mt-1.5 flex items-center gap-1.5 text-center">
+                    <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${HEAT_DOT[p.heat]}`} title={HEAT_MEANING[p.heat]} />
+                    <span className="truncate font-body text-[12px] text-ink">{p.name}</span>
+                  </span>
+                  <span className="font-body text-[11px] font-light text-muted">
+                    {p.day !== null ? `day ${p.day} / ${p.lastDay}` : "no start date"}
+                  </span>
                 </li>
               ))}
               {shown.length > 8 ? (
-                <li className="font-body text-xs font-light text-muted">and {shown.length - 8} more below</li>
+                <li className="self-center font-body text-xs font-light text-muted">
+                  and {shown.length - 8} more below
+                </li>
               ) : null}
             </ul>
           )}
