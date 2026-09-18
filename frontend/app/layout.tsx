@@ -20,45 +20,43 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  /* The design deployment is light, full stop (Monica, 18 Sep: "pure tracker
-     light me chahiye"). It is read off a shared screen in a lit room, and a
-     visitor whose laptop happens to prefer dark should not be shown a
-     different board from the one it was designed against. The full portal
-     keeps the choice. */
-  const locked = portalMode() === "tracker";
+  /* The design deployment OPENS light and keeps the switch (Monica, 18 Sep:
+     first "pure tracker light me chahiye", then "isme dark light mode add
+     kro"). Those are not in conflict — the first is about what a visitor is
+     shown before anyone touches anything, the second about being allowed to
+     change it. So tracker mode only moves the fallback: no stored choice means
+     light rather than whatever the laptop happens to prefer, because the board
+     is read off a shared screen in a lit room. A person who picks dark keeps
+     dark. The full portal still follows the system. */
+  const defaultTheme = portalMode() === "tracker" ? "light" : "dark";
 
   return (
     // The server cannot know which theme this browser last chose, so the
     // attribute it renders and the one the script below sets can differ for a
     // tick. That is the whole point of the script, and the warning about it is
-    // noise here rather than a bug. When the theme is locked there is nothing
-    // to differ about, so the server renders the final answer.
-    <html lang="en" data-theme={locked ? "light" : "dark"} suppressHydrationWarning>
+    // noise here rather than a bug.
+    <html lang="en" data-theme={defaultTheme} suppressHydrationWarning>
       <head>
-        {/* Runs before anything paints. Without it the page would render dark,
-            then jump to light a frame later — the flash every theme toggle is
-            judged by. It reads the stored choice, falls back to the system
-            setting, and writes the attribute the CSS variables key off.
+        {/* Runs before anything paints. Without it the page would render one
+            theme and jump to the other a frame later — the flash every theme
+            toggle is judged by. It reads the stored choice, falls back to this
+            deployment's default, and writes the attribute the CSS variables
+            key off.
 
             Deliberately tiny and inline: a separate file would be a request the
-            first paint has to wait for, which is the thing being avoided.
-
-            Skipped entirely when the theme is locked: the attribute is already
-            right, and a stored 'dark' from some earlier visit must not be
-            allowed to override it. */}
-        {locked ? null : (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `(function(){try{
+            first paint has to wait for, which is the thing being avoided. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{
   var t = localStorage.getItem('essentia-theme');
   if (t !== 'light' && t !== 'dark') {
-    t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    t = ${JSON.stringify(defaultTheme)} === 'light' ? 'light'
+      : (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   }
   document.documentElement.setAttribute('data-theme', t);
 }catch(e){}})();`,
-            }}
-          />
-        )}
+          }}
+        />
       </head>
       <body
         className={`${lato.variable} bg-canvas font-body font-light text-ink antialiased`}
