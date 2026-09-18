@@ -840,6 +840,8 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
           <div class="card-in">
             <div id="spaces"></div>
             <button class="btn btn--ghost btn--sm" id="bAddSpace">+ Add space</button>
+            <button class="btn btn--ghost btn--sm" id="bFillSpaces">+ Add pictures, one per space</button>
+            <button class="btn btn--ghost btn--sm" id="bPlaceAll">+ Number them on the plan</button>
             <div class="totals" style="margin-top:14px">
               <div class="totals-n" id="tCount">0 spaces</div>
               <div class="totals-s" id="tSub">none marked on the plan</div>
@@ -4680,6 +4682,15 @@ function renderSpaces() {
 
 /* ── pin placer ────────────────────────────────────────────────────────── */
 var placerIdx = -1;
+/* "Number them on the plan" walks every unnumbered space in turn — see the
+   click handler on #placerCanvas. */
+var placeAll = false;
+function firstUnpinned() {
+  for (var i = 0; i < (S.spaces || []).length; i++) {
+    if (typeof S.spaces[i].x !== 'number') return i;
+  }
+  return -1;
+}
 function openPlacer(i) {
   var sp = S.spaces[i];
   var plate = S.plates[sp.plate || 0];
@@ -4784,6 +4795,22 @@ $('#placerCanvas').addEventListener('click', function (e) {
   }
   live.style.left = (x * 100) + '%'; live.style.top = (y * 100) + '%';
   paint();
+
+  /* Straight on to the next unnumbered space, if this was "number them all".
+     Fifteen rooms was fifteen separate trips through the placer before; now it
+     is fifteen taps without leaving the plan. The pause is so the pin that was
+     just dropped is actually seen before the drawing redraws for the next. */
+  if (placeAll) {
+    var next = firstUnpinned();
+    if (next >= 0) { setTimeout(function () { openPlacer(next); }, 260); }
+    else {
+      placeAll = false;
+      $('#placer').removeAttribute('data-open');
+      placerIdx = -1;
+      renderAll();
+      toast('Every space is on the plan now. Tap a number in the deck to open that room.');
+    }
+  }
 });
 $('#bClearPin').addEventListener('click', function () {
   if (placerIdx < 0) return;
@@ -4792,7 +4819,20 @@ $('#bClearPin').addEventListener('click', function () {
   paint();
 });
 document.querySelectorAll('[data-close-placer]').forEach(function (b) {
-  b.addEventListener('click', function () { $('#placer').removeAttribute('data-open'); placerIdx = -1; renderAll(); });
+  b.addEventListener('click', function () {
+    placeAll = false;   /* closing by hand ends the walk, it does not pause it */
+    $('#placer').removeAttribute('data-open'); placerIdx = -1; renderAll();
+  });
+});
+
+$('#bPlaceAll').addEventListener('click', function () {
+  var plate = S.plates[0];
+  if (!plate || !plate.src) { toast('Attach the plan first — the numbers go on it.'); return; }
+  if (!(S.spaces || []).length) { toast('Add the pictures first — each one becomes a space to number.'); return; }
+  var next = firstUnpinned();
+  if (next < 0) { toast('Every space is already numbered on the plan.'); return; }
+  placeAll = true;
+  openPlacer(next);
 });
 
 /* ── paste ────────────────────────────────────────────────────────────────
@@ -5550,6 +5590,69 @@ $('#bAddSpace').addEventListener('click', function () {
   var last = rows[rows.length - 1];
   if (last) { last.scrollIntoView({ block: 'center' }); var f = last.querySelector('input[data-k="name"]'); if (f) f.focus(); }
 });
+/* ------------------------------------------------------------------
+   MANY PICTURES AT ONCE, INTO THE CARDS THEMSELVES.
+
+   A render had only one way in: the + on a single space card, one picture at
+   a time, fifteen times. So a designer with a folder of renders did the
+   obvious thing — dropped them all somewhere — and they landed as a heap that
+   the deck's own format never took up (Monica, 18 Sep: "photo set ho is
+   format me", "upload ho to format apne aap bane").
+
+   Pictures are handed out in card order to the spaces that are still empty.
+   When the pictures run out, the rest of the cards stay as they were; when the
+   CARDS run out, a new space is made for each picture left — which is what
+   makes this work on a deck that has no spaces yet at all. Naming them is
+   still the designer's, because only they know which room is which.
+   ------------------------------------------------------------------ */
+$('#bFillSpaces').addEventListener('click', function () {
+  var btn = this;
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.multiple = true;
+  inp.onchange = function () {
+    var files = Array.prototype.slice.call(inp.files || [])
+      .filter(function (f) { return /^image\//.test(f.type); });
+    if (!files.length) return;
+    var label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Adding…';
+    Promise.all(files.map(function (f) { return importImage(f, 1600, 0.86, false); }))
+      .then(function (ims) {
+        var made = 0;
+        ims.forEach(function (im) {
+          /* the first card still showing "No visual yet" — array order is the
+             order they are drawn in, so this fills left to right */
+          var sp = (S.spaces || []).filter(function (x) {
+            return !(x.images && x.images.length);
+          })[0];
+          if (!sp) {
+            sp = { id: uid(), include: true, name: '', floor: (S.plates[0] || {}).label || '',
+              dims: '', area: '', estimate: '', includes: '', summary: '', body: '', quote: '',
+              plate: 0, x: null, y: null, images: [], docs: [] };
+            S.spaces.push(sp);
+            made++;
+          }
+          sp.images = sp.images || [];
+          sp.images.push({ src: im.src, w: im.w, h: im.h });
+        });
+        renderAll();
+        btn.disabled = false;
+        btn.textContent = label;
+        toast(ims.length + (ims.length === 1 ? ' picture set' : ' pictures set') +
+          (made ? ' — ' + made + ' new space(s) made. Name them, and pin them on the plan.'
+                : ' into the spaces. Check each one is the right room.'));
+      })
+      .catch(function (e) {
+        btn.disabled = false;
+        btn.textContent = label;
+        toast(e.message || 'Those pictures could not be read.');
+      });
+  };
+  inp.click();
+});
+
 $('#bSample').addEventListener('click', function () { S = sample(); boot(); toast('IREO Corridors sample loaded — attach the plan and the renders.'); });
 $('#bBlank').addEventListener('click', function () { S = blank(S.type); boot(); toast('New blank deck.'); });
 $('#bBackup').addEventListener('click', function () {
@@ -5730,6 +5833,9 @@ function portalLoad() {
          are never on show to them, so their pictures are never asked for */
       if (!d.canEdit) document.body.classList.add('is-reading');
       boot();
+      /* Whatever this deck already holds is saved by definition — it just came
+         off the server. Only what is added from here is worth warning about. */
+      forgetUnsavedBaseline();
       portalSay(d.canEdit ? 'Open · version ' + d.version : 'Reading · version ' + d.version);
       return me.then(function (who) {
         if (d.canEdit) portalWho(who);
@@ -5909,6 +6015,87 @@ backupRestore();
     try { localStorage.setItem(WHO_KEY, el.value.trim()); } catch (e) { /* nothing to do */ }
   });
 }());
+
+/* ------------------------------------------------------------------
+   PICTURES THAT HAVE NOT GONE UP YET.
+
+   In the portal a picture is uploaded on save and its data: URI is swapped
+   for the /api/decks/<id>/images/<slot> address it now lives at. So a src
+   still beginning with data: is one the server has never seen.
+
+   That mattered quietly and badly: the browser draft deliberately drops every
+   picture (it cannot hold them), so somebody who attached renders and closed
+   the tab without saving lost them with nothing said — the deck reopened on
+   the sample and read as though the pictures had vanished. Monica, 18 Sep:
+   "pictures were already available".
+
+   Two warnings, because one was not enough: a line on the page while it is
+   still fixable, and the browser's own prompt at the moment of leaving.
+   ------------------------------------------------------------------ */
+function dataPictures() {
+  var out = [];
+  var take = function (v) { if (typeof v === 'string' && v.indexOf('data:image/') === 0) out.push(v); };
+  take(S.logo);
+  (S.plates || []).forEach(function (p) { if (p) take(p.src); });
+  (S.documents || []).forEach(function (d) { if (d) take(d.src); });
+  (S.spaces || []).forEach(function (s) {
+    (s.images || []).forEach(function (im) { if (im) take(im.src); });
+    (s.docs || []).forEach(function (d) { if (d) take(d.src); });
+  });
+  return out;
+}
+
+/* The sample deck ships with its floor plan embedded, so a freshly opened tool
+   already holds data: pictures that nobody added and nobody expects to save.
+   Warning about those would put a red line on the screen before the first
+   click. So what the deck was born with is remembered and discounted — by the
+   picture itself, not by a count, so that replacing the sample's plan with a
+   real one still counts as something to save. */
+var bornWith = null;
+function unsavedPictures() {
+  if (!PORTAL) return 0;              /* opened from disk: nothing uploads, and
+                                         the file itself is the save */
+  if (!bornWith) return 0;            /* before boot has settled, say nothing */
+  var n = 0;
+  dataPictures().forEach(function (src) { if (!bornWith.has(src)) n++; });
+  return n;
+}
+
+function showUnsavedPictures() {
+  var bar = document.getElementById('picWarn');
+  var n = unsavedPictures();
+  if (!n) { if (bar) bar.remove(); return; }
+  if (!bar) {
+    bar = document.createElement('p');
+    bar.id = 'picWarn';
+    bar.style.cssText = 'margin:8px 0 0;padding:8px 12px;border-left:3px solid #c0392b;' +
+      'background:rgba(192,57,43,.08);font-size:12px;line-height:1.5';
+    var row = document.querySelector('.toolrow');
+    if (row && row.parentNode) row.parentNode.insertBefore(bar, row.nextSibling);
+    else document.body.insertBefore(bar, document.body.firstChild);
+  }
+  bar.textContent = n + (n === 1 ? ' picture is' : ' pictures are') +
+    ' not saved yet. Press Save — the browser does not keep pictures, so closing this tab loses them.';
+}
+
+window.addEventListener('beforeunload', function (e) {
+  if (!unsavedPictures()) return;
+  /* The text is the browser's own these days; what matters is that something
+     is asked at all rather than the tab closing silently. */
+  e.preventDefault();
+  e.returnValue = '';
+  return '';
+});
+
+/* Cheap enough to just watch: the count is a walk over the deck's own state,
+   and it has to notice pictures arriving by drop, by paste and by file dialog
+   without each of those having to remember to call it. The first tick is what
+   sets the baseline, once boot has put the sample — or the loaded deck — in
+   place; a deck arriving later from the server resets it, so its own pictures
+   are not mistaken for new ones. */
+setTimeout(function () { bornWith = new Set(dataPictures()); }, 0);
+function forgetUnsavedBaseline() { bornWith = new Set(dataPictures()); }
+setInterval(showUnsavedPictures, 1500);
 
 $('#bSave').addEventListener('click', function () {
   if (PORTAL) { portalSave(); return; }
