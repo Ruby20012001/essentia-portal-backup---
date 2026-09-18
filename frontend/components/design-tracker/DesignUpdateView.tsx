@@ -23,6 +23,9 @@ type Pressed = { activityIds: string[]; label: string; what: "done" | "skipped" 
 /** Late activities listed before "show the rest". */
 const SHOW_LATE = 4;
 
+/** Done activities listed before "show the rest". */
+const SHOW_DONE = 3;
+
 /**
  * Update — the shortcut (Monica, 17 Sep 2026: going to a name, opening a
  * project and ticking activities one by one was too much).
@@ -88,6 +91,16 @@ export function DesignUpdateView({
     }
   };
 
+  /**
+   * Putting one activity back to not-done, from the card's own Done list.
+   * Undo only lives as long as the page is open; this is how a mistake is
+   * taken back tomorrow, by the person who made it, without opening anything.
+   */
+  const undone = async (p: ComputedProject, a: ComputedActivity) => {
+    if (!window.confirm(`Put "${a.task}" back to not done on ${p.name}?`)) return;
+    if (await onMarkDone(p.id, [a.id], null)) remember(p.id, null);
+  };
+
   const skip = async (p: ComputedProject, a: ComputedActivity) => {
     if (await onSkip(p.id, a.id, true)) {
       remember(p.id, { activityIds: [a.id], label: a.task, what: "skipped" });
@@ -110,7 +123,8 @@ export function DesignUpdateView({
         <p className="font-body text-sm font-light text-secondary">
           <span className="font-bold text-ink">How to update:</span> each card shows what is due now. Finished it?
           Press <span className="font-bold text-forest">✓ Done</span> — the card moves to the next activity. Pressed
-          by mistake? Press <span className="font-bold text-ink">Undo</span>.
+          by mistake? Press <span className="font-bold text-ink">Undo</span> — or later, press{" "}
+          <span className="font-bold text-ink">✗</span> in the card&rsquo;s <span className="font-bold text-ink">Done</span> list.
         </p>
         <input
           type="search"
@@ -140,6 +154,7 @@ export function DesignUpdateView({
               types={board.types}
               onSetType={(code) => onSetType(p.id, code)}
               onDone={(acts) => void done(p, acts)}
+              onUndone={(a) => void undone(p, a)}
               onSkip={(a) => void skip(p, a)}
               onUndo={() => void undo(p)}
             />
@@ -161,6 +176,7 @@ function Card({
   types,
   onSetType,
   onDone,
+  onUndone,
   onSkip,
   onUndo,
 }: {
@@ -174,10 +190,19 @@ function Card({
   types: DesignProjectType[];
   onSetType: (typeCode: string) => void;
   onDone: (acts: ComputedActivity[]) => void;
+  onUndone: (a: ComputedActivity) => void;
   onSkip: (a: ComputedActivity) => void;
   onUndo: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
+  const [showAllDone, setShowAllDone] = useState(false);
+  /**
+   * What has been marked done lately, newest first — today's at the top. The
+   * card's own way back: Undo dies with the page, this does not.
+   */
+  const doneRecent = p.activities
+    .filter((a) => a.doneOn)
+    .sort((a, b) => (b.doneOn! < a.doneOn! ? -1 : b.doneOn! > a.doneOn! ? 1 : b.position - a.position));
   // The activities this project's type took off its chart — named on the card.
   const skippedByType = p.activities.filter((a) => a.notApplicable && a.remark === NO_PLOT_REMARK);
   const now = p.current;
@@ -345,6 +370,46 @@ function Card({
                 className="mt-1.5 font-body text-xs font-light text-muted underline decoration-line-strong underline-offset-2 hover:text-ink"
               >
                 {showAll ? "Show fewer" : `Show ${otherLate.length - SHOW_LATE} more`}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {doneRecent.length > 0 ? (
+          <div className="mt-3">
+            <p className="mb-1.5 font-body text-[10.5px] font-bold uppercase tracking-[0.14em] text-forest">
+              Done · press ✗ if it was not actually done
+            </p>
+            <ul className="divide-y divide-line rounded border border-line">
+              {(showAllDone ? doneRecent : doneRecent.slice(0, SHOW_DONE)).map((a) => (
+                <li key={a.id} className="flex items-center gap-3 px-3 py-2">
+                  <span className="shrink-0 font-body text-[13px] text-forest">✓</span>
+                  <div className="min-w-0 flex-1 font-body text-[13px]">
+                    <span className="text-secondary">{a.task}</span>
+                    <span className="block text-[11px] font-light text-muted">
+                      {a.doneOn === today ? "done today" : `done ${a.doneOn}`}
+                      {a.state === "Done late" && a.daysLate ? ` · ${a.daysLate} days late` : ""}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    title="Put this back to not done"
+                    onClick={() => onUndone(a)}
+                    className="shrink-0 rounded border border-line-strong bg-canvas px-2.5 py-1 font-body text-xs font-bold text-secondary transition-colors hover:border-alert/50 hover:text-alert disabled:opacity-50"
+                  >
+                    ✗
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {doneRecent.length > SHOW_DONE ? (
+              <button
+                type="button"
+                onClick={() => setShowAllDone((v) => !v)}
+                className="mt-1.5 font-body text-xs font-light text-muted underline decoration-line-strong underline-offset-2 hover:text-ink"
+              >
+                {showAllDone ? "Show fewer" : `Show ${doneRecent.length - SHOW_DONE} more`}
               </button>
             ) : null}
           </div>
