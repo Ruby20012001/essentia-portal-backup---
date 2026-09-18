@@ -6,6 +6,7 @@ import { DesignDelaysView } from "@/components/design-tracker/DesignDelaysView";
 import { DesignProjectsView } from "@/components/design-tracker/DesignProjectsView";
 import { DesignRemindersView } from "@/components/design-tracker/DesignRemindersView";
 import { DesignSetupView } from "@/components/design-tracker/DesignSetupView";
+import { DesignTeamView } from "@/components/design-tracker/DesignTeamView";
 import { DesignTodayView } from "@/components/design-tracker/DesignTodayView";
 import { DesignUpdateView } from "@/components/design-tracker/DesignUpdateView";
 import { DesignAvatar } from "@/components/design-tracker/DesignAvatar";
@@ -13,7 +14,15 @@ import { HEAT_DOT, typeChangeMessage } from "@/components/design-tracker/HeatPil
 import type { DesignBoard } from "@/lib/services/design-tracker";
 import { forPerson, forSegment, personRows, type Segment } from "@/lib/services/design-tracker-logic";
 
-type Tab = "dashboard" | "today" | "update" | "projects" | "delays" | "reminders" | "setup";
+type Tab =
+  | "dashboard"
+  | "today"
+  | "team"
+  | "update"
+  | "projects"
+  | "delays"
+  | "reminders"
+  | "setup";
 type Banner = { tone: "error" | "success"; message: string };
 
 /**
@@ -170,7 +179,12 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
      room you were already standing in (Monica, 18 Sep). It is still a Tab — the
      view, the print header and the escape from Setup all go on naming it. */
   const tabs: { key: Tab; label: string; badge?: number }[] = [
-    { key: "today", label: "Today" },
+    /* "What's new", not "Today" (Monica, 18 Sep). The page was never a diary of
+       the day — it is where the board says what has moved and what is stuck,
+       which is what somebody opening it is actually after. The Tab key stays
+       "today" so no saved view or print header has to be migrated. */
+    { key: "today", label: "What's new" },
+    { key: "team", label: "Team performance" },
     /* ✓ Update has no tab either (Monica, 18 Sep: "update htado"). Marking work
        done did not go with it: Projects → Details still carries "Done today"
        against every activity, which is the path the board had before the quick
@@ -281,7 +295,11 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
             itself the filter, so the chips repeated the same choice twice over
             (Monica, 18 Sep: "Lavika n all wo sab htado"). Every other tab reads
             names and dates, and still needs them. */}
-        {!own && tab !== "dashboard" && tab !== "setup" && tab !== "reminders" ? (
+        {!own &&
+        tab !== "dashboard" &&
+        tab !== "team" &&
+        tab !== "setup" &&
+        tab !== "reminders" ? (
           <div className="mb-5 flex flex-wrap items-center gap-2">
             <span className="font-body text-[11px] font-light uppercase tracking-[0.14em] text-muted">
               Designer
@@ -334,6 +352,8 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
         {tab === "today" ? (
           <DesignTodayView board={lens} person={person} onPerson={showPerson} />
         ) : null}
+
+        {tab === "team" ? <DesignTeamView board={lens} onPerson={showPerson} /> : null}
 
         {tab === "update" ? (
           <DesignUpdateView

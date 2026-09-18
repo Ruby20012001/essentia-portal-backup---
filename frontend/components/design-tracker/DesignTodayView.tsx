@@ -2,8 +2,7 @@
 
 import { Fragment, useState } from "react";
 import { DesignAvatar } from "@/components/design-tracker/DesignAvatar";
-import { BigNumber, Columns, Gauge, Treemap } from "@/components/design-tracker/DesignCharts";
-import { Donut } from "@/components/design-tracker/DesignDonut";
+import { BigNumber, Gauge, Treemap } from "@/components/design-tracker/DesignCharts";
 import {
   DayBadge,
   HEAT_DOT,
@@ -56,24 +55,6 @@ export function DesignTodayView({
 
   // ── what the visuals above the tables are made of ──────────────────
 
-  /** Activities recorded done in each of the last six months. */
-  const byMonth = (() => {
-    const out: { key: string; label: string; count: number }[] = [];
-    const [y, m] = [Number(settings.today.slice(0, 4)), Number(settings.today.slice(5, 7))];
-    for (let back = 5; back >= 0; back--) {
-      const d = new Date(Date.UTC(y, m - 1 - back, 1));
-      const key = d.toISOString().slice(0, 7);
-      out.push({
-        key,
-        label: d.toLocaleString("en", { month: "short", timeZone: "UTC" }),
-        count: projects.reduce(
-          (n, p) => n + p.activities.filter((a) => a.doneOn?.startsWith(key)).length,
-          0,
-        ),
-      });
-    }
-    return out;
-  })();
 
   /** The treemap: a column per designer, a box per project, sized by days late. */
   const treemap = board.people
@@ -101,31 +82,109 @@ export function DesignTodayView({
     .filter((g) => g.items.length > 0)
     .sort((a, b) => b.value - a.value);
 
-  /** Days late by dependency: the top five, the rest folded into "other". */
-  const dependencySlices = (() => {
-    const map = new Map<string, number>();
+  /**
+   * Who is sitting on the team's work — counted in TASKS off the activity
+   * chart, which is the unit the chart itself uses and the one a designer
+   * chases in.
+   *
+   * It used to total the days late instead, and that number misled: ten tasks
+   * overdue at the same time added to "228 days late" on a board whose worst
+   * project was fifty days behind. Nobody is 228 days behind anything. A count
+   * of tasks cannot be read that way, and "the oldest has waited 50 days" says
+   * the urgency without inventing a quantity.
+   *
+   * A task naming two teams counts under both — it really is sitting with both
+   * of them — so these do not sum to the number of late tasks, and the panel
+   * says so rather than inviting the addition.
+   */
+  const waitingOn = (() => {
+    type Row = {
+      team: string;
+      tasks: number;
+      oldestDays: number;
+      oldestTask: string;
+      oldestProject: string;
+    };
+    const map = new Map<string, Row>();
     for (const p of running) {
-      for (const a of p.late) map.set(a.dependsOn, (map.get(a.dependsOn) ?? 0) + (a.daysLate ?? 0));
+      for (const a of p.late) {
+        for (const team of teamsWaitedOn(a.dependsOn)) {
+          const row =
+            map.get(team) ??
+            { team, tasks: 0, oldestDays: -1, oldestTask: "", oldestProject: "" };
+          row.tasks += 1;
+          if ((a.daysLate ?? 0) > row.oldestDays) {
+            row.oldestDays = a.daysLate ?? 0;
+            row.oldestTask = a.task;
+            row.oldestProject = p.name;
+          }
+          map.set(team, row);
+        }
+      }
     }
-    const sorted = [...map.entries()].sort((a, b) => b[1] - a[1]);
-    const top = sorted.slice(0, 5);
-    const rest = sorted.slice(5).reduce((n, [, v]) => n + v, 0);
-    // One hue, stepped — this is magnitude, not identity, so no new colours.
-    const steps = ["text-alert", "text-alert/80", "text-alert/60", "text-alert/45", "text-alert/30"];
-    const dots = ["bg-alert", "bg-alert/80", "bg-alert/60", "bg-alert/45", "bg-alert/30"];
-    const slices = top.map(([name, days], i) => ({
-      key: name,
-      label: name,
-      value: days,
-      tone: steps[i]!,
-      dot: dots[i]!,
-    }));
-    if (rest > 0) {
-      slices.push({ key: "other", label: "everybody else", value: rest, tone: "text-line-strong", dot: "bg-line-strong" });
-    }
-    return slices;
+    return [...map.values()]
+      .sort((a, b) => b.tasks - a.tasks || b.oldestDays - a.oldestDays)
+      .slice(0, 5);
   })();
-  const dependencyTotal = dependencySlices.reduce((n, s) => n + s.value, 0);
+  const mostTasks = Math.max(1, ...waitingOn.map((r) => r.tasks));
+
+  /**
+   * What has actually moved — the page's namesake (Monica, 18 Sep: "what's new
+   * me daalna bhi naam se related, kya kya naya ayega usme").
+   *
+   * Renaming the tab was not enough on its own: a board that always shows the
+   * same standing totals is not "what's new" whatever it is called. These are
+   * the four kinds of change somebody coming back after a few days needs, each
+   * read fresh off the dates rather than stored, so nothing here can go stale:
+   * work ticked off, work that has just slipped, work about to fall due, and
+   * projects that have only now started running.
+   *
+   * A week is the window because the team looks at this on Mondays and after a
+   * site visit — a day would show almost nothing, a month would stop being news.
+   */
+  const NEWS_DAYS = 7;
+  const since = isoShift(settings.today, -NEWS_DAYS);
+  const news = (() => {
+    const finished: NewsItem[] = [];
+    const slipped: NewsItem[] = [];
+    const dueNext: NewsItem[] = [];
+    const started: NewsItem[] = [];
+
+    for (const p of projects) {
+      if (p.startDate && p.startDate > since && p.startDate <= settings.today) {
+        started.push({ key: p.id, project: p.name, designer: p.designer, task: "Project started", when: p.startDate });
+      }
+      for (const a of p.activities) {
+        if (a.doneOn && a.doneOn > since && a.doneOn <= settings.today) {
+          finished.push({ key: `${p.id}:${a.id}`, project: p.name, designer: p.designer, task: a.task, when: a.doneOn });
+        }
+      }
+      // Slipped INSIDE the window: anything older was already late last week
+      // and is not news — it is on the red list above.
+      for (const a of p.late) {
+        const d = a.daysLate ?? 0;
+        if (d > 0 && d <= NEWS_DAYS) {
+          slipped.push({ key: `${p.id}:${a.id}`, project: p.name, designer: p.designer, task: a.task, when: a.dueDate ?? "", days: d });
+        }
+      }
+      for (const a of p.dueSoon) {
+        const d = a.daysToDue ?? 0;
+        if (d >= 0 && d <= NEWS_DAYS) {
+          dueNext.push({ key: `${p.id}:${a.id}`, project: p.name, designer: p.designer, task: a.task, when: a.dueDate ?? "", days: d });
+        }
+      }
+    }
+    const newestFirst = (a: NewsItem, b: NewsItem) => b.when.localeCompare(a.when);
+    const soonestFirst = (a: NewsItem, b: NewsItem) => (a.days ?? 0) - (b.days ?? 0);
+    return {
+      finished: finished.sort(newestFirst),
+      slipped: slipped.sort((a, b) => (a.days ?? 0) - (b.days ?? 0)),
+      dueNext: dueNext.sort(soonestFirst),
+      started: started.sort(newestFirst),
+    };
+  })();
+  const nothingNew =
+    news.finished.length + news.slipped.length + news.dueNext.length + news.started.length === 0;
 
   const doneActivities = running.reduce((n, p) => n + p.doneCount, 0);
   const applicableActivities = running.reduce((n, p) => n + p.applicableCount, 0);
@@ -164,26 +223,113 @@ export function DesignTodayView({
         </div>
       </section>
 
+      {/* The answer in words, and first (Monica, 18 Sep: "non technical wale ko
+          aram se samajh aa jaye"). Everything under it is this same paragraph
+          drawn — so somebody who does not read charts can stop here and still
+          know what today needs. It used to sit below the visuals, which meant
+          the plainest thing on the page was the last thing reached. */}
+      {hot.length > 0 ? (
+        <div className="mb-4 rounded-lg border-l-4 border-alert bg-alert/5 px-5 py-4">
+          <p className="mb-2 font-body text-base font-bold text-alert">
+            {hot.length} of {counts.running} {counts.running === 1 ? "project" : "projects"}{" "}
+            {hot.length === 1 ? "is" : "are"} running late.
+          </p>
+          <ul className="space-y-1.5 font-body text-sm font-light text-ink">
+            {hot.slice(0, 4).map((p) => (
+              <li key={p.id}>
+                <span className="font-bold">{p.name}</span>
+                {person === null ? ` (${p.designer})` : ""} is{" "}
+                <span className="font-bold">
+                  {p.delayDays} {p.delayDays === 1 ? "day" : "days"} late
+                </span>
+                , waiting on {p.causedBy?.dependsOn}.{" "}
+                <span className="text-muted">Stuck at: {p.causedBy?.task}.</span>
+              </li>
+            ))}
+            {hot.length > 4 ? (
+              <li className="text-muted">
+                and {hot.length - 4} more — see the Delays tab.
+              </li>
+            ) : null}
+          </ul>
+        </div>
+      ) : null}
+
+      {counts.notTracked > 0 ? (
+        <div className="mb-4 rounded-lg border-l-4 border-warning bg-warning/5 px-5 py-3">
+          <p className="font-body text-sm font-light text-ink">
+            <span className="font-bold text-warning">
+              {counts.notTracked} {counts.notTracked === 1 ? "project has" : "projects have"} no start
+              date.
+            </span>{" "}
+            Nothing can be late until a project has a start date, so{" "}
+            {counts.notTracked === 1 ? "it is" : "they are"} not counted above. Add the date on the
+            Projects tab.
+          </p>
+        </div>
+      ) : null}
+
+      {/* The tab's namesake: what has moved in the last week. */}
+      <section className="mb-8 rounded-lg border border-line bg-card px-5 py-4">
+        <h2 className="font-heading text-2xl text-white">What&rsquo;s new</h2>
+        <p className="mb-4 font-body text-sm font-light text-muted">
+          Everything that has changed since {shortDate(since)} — ticked off, slipped, or coming up.
+        </p>
+        {nothingNew ? (
+          <p className="font-body text-sm font-light text-muted">
+            Nothing has moved in the last {NEWS_DAYS} days — nothing ticked off, nothing newly late,
+            nothing falling due this week.
+          </p>
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2">
+            <NewsList
+              title="Finished"
+              tone="text-forest"
+              items={news.finished}
+              say={(i) => `done ${shortDate(i.when)}`}
+            />
+            <NewsList
+              title="Just went late"
+              tone="text-alert"
+              items={news.slipped}
+              say={(i) => `${i.days} ${i.days === 1 ? "day" : "days"} over, due ${shortDate(i.when)}`}
+            />
+            <NewsList
+              title="Due this week"
+              tone="text-warning"
+              items={news.dueNext}
+              say={(i) =>
+                i.days === 0 ? "due today" : `due ${shortDate(i.when)}, in ${i.days} ${i.days === 1 ? "day" : "days"}`
+              }
+            />
+            <NewsList
+              title="Just started"
+              tone="text-navy"
+              items={news.started}
+              say={(i) => `started ${shortDate(i.when)}`}
+            />
+          </div>
+        )}
+      </section>
+
+      <p className="mb-8 font-body text-sm font-light text-muted">
+        The pictures below say the same thing, drawn.
+      </p>
+
       {/* The page as a board of visuals (Monica, 18 Sep, with a Power BI page
           for reference): work done month by month, the projects as a treemap,
           then who the delay waits on, how far the team has got, and the two
           numbers that lead. Every mark says its own value. */}
       <div className="mb-8 grid gap-4 lg:grid-cols-12">
-        <Panel className="lg:col-span-6" title="Activities completed, month by month">
-          <Columns
-            columns={byMonth.map((m) => ({
-              key: m.key,
-              label: m.label,
-              value: m.count,
-              tone: "bg-forest",
-              title: `${m.count} activities recorded done in ${m.label}`,
-            }))}
-          />
-        </Panel>
+        {/* The month-by-month column chart stood here. Gone (Monica, 18 Sep:
+            "ye month wala htado"): on a page that is now explicitly about the
+            last seven days, a six-month history was answering a question
+            nobody had come to this tab to ask. The Finished list above covers
+            the same ground for the window that matters. */}
 
         <Panel
-          className="lg:col-span-6"
-          title="Every project, by how far behind it is"
+          className="lg:col-span-12"
+          title="Which projects are furthest behind"
           note="Bigger means later. Colour is its status — click one for that designer."
         >
           {treemap.length === 0 ? (
@@ -193,26 +339,57 @@ export function DesignTodayView({
           )}
         </Panel>
 
-        <Panel className="lg:col-span-4" title="Who the delay is waiting on" note="Share of all the days late.">
-          {dependencySlices.length === 0 ? (
+        <Panel
+          className="lg:col-span-4"
+          title="Who we are waiting for"
+          note="Tasks off the chart that are overdue, by whose desk they are on. A task waiting on two teams shows under both."
+        >
+          {waitingOn.length === 0 ? (
             <Empty>Nothing is late.</Empty>
           ) : (
-            <div className="flex flex-wrap items-center gap-4">
-              <Donut
-                slices={dependencySlices}
-                total={dependencyTotal}
-                centreValue={dependencyTotal}
-                centreLabel="days late"
-              />
-              <ul className="min-w-[8rem] flex-1 space-y-1">
-                {dependencySlices.map((s) => (
-                  <li key={s.key} className="flex items-center gap-2 font-body text-[12px]">
-                    <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${s.dot}`} />
-                    <span className="truncate text-secondary">{s.label}</span>
-                    <span className="ml-auto font-bold text-ink">{s.value}d</span>
-                    <span className="w-9 text-right font-light text-muted">
-                      {Math.round((s.value / dependencyTotal) * 100)}%
-                    </span>
+            /* Bars, not a circle (Monica, 18 Sep: "who the delay is hard to
+               understand for them"). A donut asks the reader to judge one arc
+               against another and then convert that to a quantity; bars off a
+               common baseline are read by length alone, which is the comparison
+               people make accurately without being taught. The sentence above
+               says the finding outright, so the picture confirms rather than
+               sets homework. Name over bar, not beside it — this panel is a
+               third of the row wide and team names do not fit alongside. */
+            <div>
+              <p className="mb-4 font-body text-sm font-light text-ink">
+                <span className="font-bold">{waitingOn[0]!.team}</span> has the most of our work —{" "}
+                <span className="font-bold">
+                  {waitingOn[0]!.tasks} {waitingOn[0]!.tasks === 1 ? "task" : "tasks"}
+                </span>
+                , the oldest waiting{" "}
+                <span className="font-bold">
+                  {waitingOn[0]!.oldestDays} {waitingOn[0]!.oldestDays === 1 ? "day" : "days"}
+                </span>
+                .
+              </p>
+              <ul className="space-y-3">
+                {waitingOn.map((r, i) => (
+                  <li key={r.team}>
+                    <div className="flex items-baseline justify-between gap-2 font-body text-[12px]">
+                      <span className="truncate text-secondary">{r.team}</span>
+                      <span className="whitespace-nowrap font-bold text-ink">
+                        {r.tasks} {r.tasks === 1 ? "task" : "tasks"}
+                      </span>
+                    </div>
+                    <div className="mt-1 h-2.5 w-full overflow-hidden rounded-sm bg-hover">
+                      {/* Against the longest bar rather than a total, so the
+                          smaller teams stay a visible length instead of a
+                          sliver nobody can compare. */}
+                      <div
+                        className={`h-full rounded-sm ${BAR_STEP[i] ?? "bg-alert/30"}`}
+                        style={{ width: `${Math.max(3, (r.tasks / mostTasks) * 100)}%` }}
+                      />
+                    </div>
+                    {/* Which one to chase, named. "Oldest" is the task that has
+                        waited longest, not the biggest pile. */}
+                    <p className="mt-1 font-body text-[11px] font-light text-muted">
+                      oldest {r.oldestDays}d · {r.oldestTask} ({r.oldestProject})
+                    </p>
                   </li>
                 ))}
               </ul>
@@ -220,7 +397,11 @@ export function DesignTodayView({
           )}
         </Panel>
 
-        <Panel className="lg:col-span-4" title="How much of the work is done" note="Activities done, across every running project.">
+        <Panel
+          className="lg:col-span-4"
+          title="How much is finished"
+          note="Steps ticked off, across every running project."
+        >
           <Gauge
             value={doneActivities}
             max={Math.max(1, applicableActivities)}
@@ -250,131 +431,17 @@ export function DesignTodayView({
         </div>
       </div>
 
-      {/* The finding, said out loud — which projects, whose, and why. */}
-      {hot.length > 0 ? (
-        <div className="mb-8 rounded-lg border-l-4 border-alert bg-alert/5 px-5 py-3">
-          <p className="font-body text-sm font-light text-ink">
-            <span className="font-bold text-alert">
-              {hot.length} {hot.length === 1 ? "project is" : "projects are"} late.
-            </span>{" "}
-            {hot.slice(0, 4).map((p, i) => (
-              <Fragment key={p.id}>
-                {i > 0 ? " · " : ""}
-                <span className="font-bold">{p.name}</span>
-                {person === null ? ` (${p.designer})` : ""} — {p.delayDays}d late at{" "}
-                {p.causedBy?.task}, depends on {p.causedBy?.dependsOn}
-              </Fragment>
-            ))}
-            {hot.length > 4 ? ` · and ${hot.length - 4} more on the Delays tab` : ""}.
-          </p>
-        </div>
-      ) : null}
-
-      {counts.notTracked > 0 ? (
-        <div className="mb-8 rounded-lg border-l-4 border-warning bg-warning/5 px-5 py-3">
-          <p className="font-body text-sm font-light text-ink">
-            <span className="font-bold text-warning">
-              {counts.notTracked} {counts.notTracked === 1 ? "project has" : "projects have"} no start date.
-            </span>{" "}
-            The chart counts from day 0, so they cannot be late — they are simply untracked. Add the start date
-            on the Projects tab.
-          </p>
-        </div>
-      ) : null}
-
-      {/* Vishakha's list — only on the whole-team page. */}
-      {person === null && board.viewer.scope === "all" ? (
-        <section className="mb-10">
-          <h2 className="mb-1 font-heading text-2xl text-white">
-            {head ? `${head.name}'s team` : "The team"}
-          </h2>
-          <p className="mb-3 font-body text-sm font-light text-muted">
-            Pick a name to see their projects. &ldquo;Holding them up&rdquo; is their hottest project, the activity
-            that is late on it, and whom that activity depends on.
-          </p>
-          <div className="overflow-x-auto rounded-lg border border-line">
-            <table className="w-full text-left font-body text-[13.5px]">
-              <thead>
-                <tr className="bg-surface text-[11px] uppercase tracking-[0.12em] text-secondary">
-                  <th className="px-4 py-2.5 font-bold">Designer</th>
-                  <th className="px-4 py-2.5 text-right font-bold">Running</th>
-                  <HeatTh heat="HOT" />
-                  <HeatTh heat="WARM" />
-                  <HeatTh heat="COLD" />
-                  <th className="px-4 py-2.5 text-right font-bold">Done</th>
-                  <th className="px-4 py-2.5 font-bold">Holding them up</th>
-                  <th className="px-4 py-2.5 font-bold" data-print="hide" />
-                </tr>
-              </thead>
-              <tbody>
-                {team.map((row) => (
-                  <tr key={row.id} className="border-t border-line bg-card align-top transition-colors hover:bg-hover">
-                    <td className="px-4 py-2.5">
-                      <button
-                        type="button"
-                        onClick={() => onPerson(row.id)}
-                        className="flex items-center gap-2 font-bold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-amber-deep"
-                      >
-                        <span className={`inline-block h-2.5 w-2.5 rounded-full ${row.heat ? HEAT_DOT[row.heat] : "bg-line"}`} />
-                        <DesignAvatar name={row.name} size={26} />
-                        {row.name}
-                      </button>
-                      <span className="ml-[52px] block text-[11px] font-light text-muted">{row.title}</span>
-                    </td>
-                    <Count n={row.counts.running} />
-                    <Count n={row.counts.hot} tone="text-alert" />
-                    <Count n={row.counts.warm} tone="text-warning" />
-                    <Count n={row.counts.cold} tone="text-navy" />
-                    <Count n={row.counts.done} />
-                    <td className="px-4 py-2.5 font-light text-secondary">
-                      {row.worst && row.worst.heat === "HOT" && row.worst.causedBy ? (
-                        <>
-                          <span className="font-bold text-ink">{row.worst.name}</span> —{" "}
-                          <span className="font-bold text-alert">{row.worst.delayDays}d late</span> at{" "}
-                          {row.worst.causedBy.task}
-                          <span className="block text-[11px] text-muted">
-                            depends on {row.worst.causedBy.dependsOn}
-                            {row.worst.causedBy.dependsOnClient ? " · client" : ""}
-                          </span>
-                        </>
-                      ) : row.worst && row.worst.heat === "WARM" ? (
-                        <>
-                          <span className="font-bold text-ink">{row.worst.name}</span> —{" "}
-                          <span className="text-warning">{row.worst.dueSoon[0]?.task} due {row.worst.dueSoon[0]?.dueDate}</span>
-                        </>
-                      ) : row.counts.running === 0 ? (
-                        <span className="text-muted">no running projects</span>
-                      ) : row.worst?.heat === "NOT TRACKED" ? (
-                        <span className="text-warning">
-                          {row.worst.name} — no start date, not on the clock
-                        </span>
-                      ) : (
-                        <span className="text-muted">nothing late</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-right" data-print="hide">
-                      <button
-                        type="button"
-                        onClick={() => onPerson(row.id)}
-                        className="whitespace-nowrap rounded border border-line-strong bg-canvas px-2.5 py-1.5 font-body text-xs font-bold text-secondary transition-colors hover:bg-hover"
-                      >
-                        Projects
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ) : null}
+      {/* The per-designer table used to sit here. It is the Team performance
+          tab now (Monica, 18 Sep) — the same facts, a card each, and one fewer
+          long table on a page that was already repeating itself. */}
 
       <SegmentSplit projects={projects} />
 
       <section className="mb-10">
-        <h2 className="mb-1 font-heading text-2xl text-white">Who is holding what</h2>
+        <h2 className="mb-1 font-heading text-2xl text-white">Who we are waiting for, in full</h2>
         <p className="mb-3 font-body text-sm font-light text-muted">
-          Late activities, by whom the chart says they depend on — the RESPONSIBILITY column read against today.
+          The same people as the circle above, with the numbers behind it. Who a step waits on comes from the
+          activity chart&rsquo;s own RESPONSIBILITY column.
         </p>
         {holding.length === 0 ? (
           <p className="rounded-lg border border-dashed border-line-strong bg-card px-6 py-6 text-center font-body text-sm font-light text-muted">
@@ -413,11 +480,13 @@ export function DesignTodayView({
 
       <section>
         <h2 className="mb-1 font-heading text-2xl text-white">
-          {selected ? `${selected.name}'s projects, hottest first` : "Every running project, hottest first"}
+          {selected
+            ? `${selected.name}'s projects, worst first`
+            : "Every running project, worst first"}
         </h2>
         <p className="mb-3 font-body text-sm font-light text-muted">
-          Open a project for the detail — every late activity by name, and whom it depends on. Read against{" "}
-          {settings.today}.
+          Press Details on any row to see every late step by name, and who each one is waiting on. Read
+          against {settings.today}.
         </p>
         {running.length === 0 ? (
           <p className="rounded-lg border border-dashed border-line-strong bg-card px-6 py-8 text-center font-body text-sm font-light text-secondary">
@@ -547,6 +616,104 @@ export function DesignTodayView({
         )}
       </section>
     </div>
+  );
+}
+
+/** One hue, stepped — this is magnitude, not identity, so no new colours. */
+const BAR_STEP = ["bg-alert", "bg-alert/80", "bg-alert/60", "bg-alert/45", "bg-alert/30"];
+
+type NewsItem = {
+  key: string;
+  project: string;
+  designer: string;
+  task: string;
+  /** The date the change happened, or the date it is due. */
+  when: string;
+  /** Days late, or days until due, depending on the list. */
+  days?: number;
+};
+
+/**
+ * An ISO date, moved by whole days. UTC throughout, because these dates are
+ * plain calendar days off the chart — giving them a local time zone is how a
+ * date silently becomes the day before.
+ */
+function isoShift(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** "18 Sep" — the chart's dates said the way the team says them. */
+function shortDate(iso: string): string {
+  if (!iso) return "";
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
+/** One block of the What's new list. Renders nothing when it has nothing. */
+function NewsList({
+  title,
+  tone,
+  items,
+  say,
+}: {
+  title: string;
+  tone: string;
+  items: NewsItem[];
+  say: (i: NewsItem) => string;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <p className={`mb-1.5 font-body text-[11px] font-bold uppercase tracking-[0.14em] ${tone}`}>
+        {title} · {items.length}
+      </p>
+      <ul className="space-y-1">
+        {items.slice(0, 6).map((i) => (
+          <li key={i.key} className="font-body text-[13px] font-light text-ink">
+            <span className="font-bold">{i.task}</span>{" "}
+            <span className="text-muted">
+              — {i.project} ({i.designer}) · {say(i)}
+            </span>
+          </li>
+        ))}
+        {items.length > 6 ? (
+          <li className="font-body text-[12px] font-light text-muted">
+            and {items.length - 6} more
+          </li>
+        ) : null}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * The teams a late task is waiting on, as names a person would say out loud.
+ *
+ * The activity chart's RESPONSIBILITY column frequently names several at once,
+ * with the job in brackets — "CRM (follow up) · Procurement (hiring, work
+ * order) · Architecture (drawing coordination)". Taken whole, that whole string
+ * became one entry in the legend: unreadable, and the same team appeared again
+ * under every other combination it took part in. Split on the separators and
+ * with the bracket dropped, CRM is CRM wherever it turns up.
+ *
+ * The bracketed part is not lost to the reader — it is still on the row in
+ * "Who we are waiting for, in full", where there is width for it.
+ */
+function teamsWaitedOn(dependsOn: string): string[] {
+  return (
+    dependsOn
+      // The bracket goes FIRST. "Procurement (hiring, work order)" carries a
+      // comma of its own, so splitting before stripping tore the name in half
+      // and left "Procurement (hiring" in the legend.
+      .replace(/\s*\([^)]*\)/g, "")
+      .split(/\s*(?:[·&,/]|\band\b)\s*/i)
+      .map((t) => t.trim())
+      .filter(Boolean)
   );
 }
 
