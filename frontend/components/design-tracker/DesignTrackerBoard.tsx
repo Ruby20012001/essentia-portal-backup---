@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { DesignDashboardView } from "@/components/design-tracker/DesignDashboardView";
 import { DesignDelaysView } from "@/components/design-tracker/DesignDelaysView";
 import { DesignProjectsView } from "@/components/design-tracker/DesignProjectsView";
 import { DesignRemindersView } from "@/components/design-tracker/DesignRemindersView";
@@ -11,7 +12,7 @@ import { HEAT_DOT, typeChangeMessage } from "@/components/design-tracker/HeatPil
 import type { DesignBoard } from "@/lib/services/design-tracker";
 import { forPerson, forSegment, personRows, type Segment } from "@/lib/services/design-tracker-logic";
 
-type Tab = "today" | "update" | "projects" | "delays" | "reminders" | "setup";
+type Tab = "dashboard" | "today" | "update" | "projects" | "delays" | "reminders" | "setup";
 type Banner = { tone: "error" | "success"; message: string };
 
 /**
@@ -25,7 +26,7 @@ type Banner = { tone: "error" | "success"; message: string };
 export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
   const [board, setBoard] = useState(initial);
   // A designer comes here to update, so that is where they land.
-  const [tab, setTab] = useState<Tab>(initial.viewer.scope === "own" ? "update" : "today");
+  const [tab, setTab] = useState<Tab>(initial.viewer.scope === "own" ? "update" : "dashboard");
   const [banner, setBanner] = useState<Banner | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   /**
@@ -142,7 +143,7 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
 
   const showPerson = (id: string | null) => {
     setPerson(id);
-    if (tab === "setup" || tab === "reminders") setTab("today");
+    if (tab === "setup" || tab === "reminders") setTab("dashboard");
   };
 
   /**
@@ -161,6 +162,7 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
   const selected = board.people.find((p) => p.id === person) ?? null;
 
   const tabs: { key: Tab; label: string; badge?: number }[] = [
+    { key: "dashboard", label: "Dashboard" },
     { key: "today", label: "Today" },
     { key: "update", label: "✓ Update", badge: mine.filter((p) => p.heat !== "DONE").length },
     { key: "projects", label: "Projects", badge: mine.filter((p) => p.heat !== "DONE").length },
@@ -299,6 +301,10 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
               />
             ))}
           </div>
+        ) : null}
+
+        {tab === "dashboard" ? (
+          <DesignDashboardView board={lens} person={person} onPerson={showPerson} />
         ) : null}
 
         {tab === "today" ? (
