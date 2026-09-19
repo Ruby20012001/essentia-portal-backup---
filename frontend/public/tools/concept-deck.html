@@ -4504,6 +4504,17 @@ function renderSpaces() {
   var run = 0;
   host.innerHTML =
     '<datalist id="spaceNames">' + list.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>' +
+    /* WITH NO SPACES THIS PANEL WAS BLANK, and the only drop target on the
+       whole page was the one marked "documents" — so renders went in there,
+       became document pages, and got no number, no area and no estimate. That
+       is what "picture upload karne pe no. kyun nahi aa raha" was (Monica,
+       19 Sep). The spaces now say where they go, in the space they occupy. */
+    (S.spaces.length === 0
+      ? '<div class="drop" tabindex="0" data-drop-spaces>' +
+          'Click, drop or paste the renders here — one space is made for each, ' +
+          'numbered 01, 02, 03…<br><small>Signed drawings and estimate pages go ' +
+          'in Upload documents, above.</small></div>'
+      : '') +
     S.spaces.map(function (s, i) {
       var pinned = typeof s.x === 'number' && typeof s.y === 'number';
       var nImg = (s.images || []).length;
@@ -4666,6 +4677,22 @@ function renderSpaces() {
   host.querySelectorAll('[data-down]').forEach(function (b) {
     b.addEventListener('click', function () { var i = +b.getAttribute('data-down'); var a = S.spaces; a.splice(i + 1, 0, a.splice(i, 1)[0]); renderAll(); });
   });
+  /* The renders' way in, standing where the spaces will be. Same routine as
+     the button above the list, so there is one behaviour to keep right. */
+  host.querySelectorAll('[data-drop-spaces]').forEach(function (d) {
+    d.addEventListener('click', function () {
+      var inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+      inp.onchange = function () { picturesIntoSpaces(inp.files, d); };
+      inp.click();
+    });
+    d.addEventListener('dragover', function (e) { e.preventDefault(); d.classList.add('over'); });
+    d.addEventListener('dragleave', function () { d.classList.remove('over'); });
+    d.addEventListener('drop', function (e) {
+      e.preventDefault(); d.classList.remove('over'); picturesIntoSpaces(e.dataTransfer.files, d);
+    });
+  });
+
   host.querySelectorAll('[data-pin]').forEach(function (b) {
     b.addEventListener('click', function () { openPlacer(+b.getAttribute('data-pin')); });
   });
@@ -4826,7 +4853,14 @@ function openPlacer(i) {
   var plate = S.plates[sp.plate || 0];
   if (!plate || !plate.src) { toast('Attach the plan for this floor first.'); return; }
   placerIdx = i;
-  $('#placerTitle').textContent = (sp.name || 'Untitled space') + ' — ' + (plate.label || 'plan');
+  /* The number leads. Walking a deck of unnamed spaces, the title read
+     "Untitled space" every time, so there was no way to tell whether you were
+     placing 01 or 09 — and the number is the whole point of the pin. */
+  /* pad2 lives inside the deck viewer's own scope, not this one. */
+  var no = (i + 1 < 10 ? '0' : '') + (i + 1);
+  $('#placerTitle').textContent = no + ' · ' + (sp.name || 'not named yet') +
+    ' — ' + (plate.label || 'plan') +
+    (placeAll ? '  (tap where it is; ' + (i + 1) + ' of ' + S.spaces.length + ')' : '');
   var c = $('#placerCanvas');
   c.innerHTML = '<img src="' + plate.src + '" alt="">' +
     S.spaces.map(function (o, k) {
@@ -5758,16 +5792,27 @@ $('#bAddSpace').addEventListener('click', function () {
    makes this work on a deck that has no spaces yet at all. Naming them is
    still the designer's, because only they know which room is which.
    ------------------------------------------------------------------ */
+/* One route in, whichever way the pictures arrive — the button, or the zone
+   that stands where the spaces will be. */
+function picturesIntoSpaces(fileList, btn) {
+  var files = Array.prototype.slice.call(fileList || [])
+    .filter(function (f) { return /^image\//.test(f.type); });
+  if (!files.length) return;
+  fillSpacesWith(files, btn);
+}
+
 $('#bFillSpaces').addEventListener('click', function () {
   var btn = this;
   var inp = document.createElement('input');
   inp.type = 'file';
   inp.accept = 'image/*';
   inp.multiple = true;
-  inp.onchange = function () {
-    var files = Array.prototype.slice.call(inp.files || [])
-      .filter(function (f) { return /^image\//.test(f.type); });
-    if (!files.length) return;
+  inp.onchange = function () { picturesIntoSpaces(inp.files, btn); };
+  inp.click();
+});
+
+function fillSpacesWith(files, btn) {
+  {
     var label = btn.textContent;
     btn.disabled = true;
     btn.textContent = 'Adding…';
@@ -5802,9 +5847,8 @@ $('#bFillSpaces').addEventListener('click', function () {
         btn.textContent = label;
         toast(e.message || 'Those pictures could not be read.');
       });
-  };
-  inp.click();
-});
+  }
+}
 
 $('#bSample').addEventListener('click', function () { S = sample(); boot(); toast('IREO Corridors sample loaded — attach the plan and the renders.'); });
 $('#bBlank').addEventListener('click', function () { S = blank(S.type); boot(); toast('New blank deck.'); });
