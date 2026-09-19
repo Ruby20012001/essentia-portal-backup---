@@ -152,6 +152,42 @@ export function DesignTeamView({
                   )}
                 </div>
 
+                {/* WHAT THEY ARE ACTUALLY CARRYING, BY NAME (Monica, 19 Sep:
+                    "in logo ki project list bhi honi chahiye isme").
+
+                    The card counted their work and named the one project in
+                    the most trouble, which answers "is anything wrong" but not
+                    "what is she on". Worst first, because that is the order the
+                    board sorts by and the order a head reads in. */}
+                {running > 0 ? (
+                  <div className="mt-3 border-t border-line pt-3">
+                    <p className="mb-1.5 font-body text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+                      their projects · {running}
+                    </p>
+                    <ul className="space-y-1">
+                      {mine(board, row.id).map((p) => (
+                        <li
+                          key={p.id}
+                          className="flex items-baseline gap-2 font-body text-[12px] font-light"
+                        >
+                          <span
+                            className={`mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${HEAT_DOT[p.heat]}`}
+                            title={HEAT_MEANING[p.heat]}
+                          />
+                          <span className="truncate text-ink">{p.name}</span>
+                          <span className="ml-auto whitespace-nowrap text-muted">
+                            {p.heat === "HOT"
+                              ? `${p.delayDays}d late`
+                              : p.day === null
+                                ? "no start date"
+                                : `day ${p.day}`}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
                 {/* Share of the busiest person's load — the one comparison
                     across cards that is honestly about the designer. */}
                 <p className="mt-3 font-body text-[10px] font-light uppercase tracking-[0.12em] text-muted">
