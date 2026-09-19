@@ -1611,7 +1611,13 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       }).join('') + '</div>' +
       /* on the page itself, so nothing has to be tapped first to find them */
       '<div class="deck-actions deck-actions--page">' +
-        '<button class="deck-btn deck-btn--solid" data-jpg-all>Save all spaces as images</button>' +
+        /* The pictures' way in, standing with the cards they go into. It was
+           only in the editor's Spaces panel, which is a separate column with
+           its own scroll — so somebody looking straight at the empty cards had
+           no way in from there but the small + on each one, fifteen times
+           (Monica, 19 Sep: "mujhe is format me pictures chahiye"). */
+        '<button class="deck-btn deck-btn--solid" data-fill-spaces>Add pictures to these spaces</button>' +
+        '<button class="deck-btn" data-jpg-all>Save all spaces as images</button>' +
         '<button class="deck-btn" data-pdf-all>Save the whole deck as PDF</button>' +
         /* the same two that sit inside a room, out here as well, because the
            drawing is asked for as often from the grid as from a space */
@@ -3796,7 +3802,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       if (locked && e.target.closest('[data-add],[data-add-space],[data-add-space-doc],' +
           '[data-add-plate],[data-del-plate],[data-mark],[data-spot-x],[data-save-self],' +
           '[data-edit-toggle],[data-thumb-up],[data-del-space],[data-add-pano],' +
-          '[data-drop-pic],[data-drop-doc]')) { return; }
+          '[data-drop-pic],[data-drop-doc],[data-fill-spaces]')) { return; }
 
       var dropDoc = e.target.closest('[data-drop-doc]');
       if (dropDoc) {
@@ -3825,6 +3831,47 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
         /* reopening is how addToSpace redraws too — the panel and the card
            behind it are both stale now */
         (el.__deckOpen || open)(dpId);
+        return;
+      }
+
+      /* Many pictures, handed out to the cards in the order they are drawn —
+         the first card still reading "No visual yet" takes the first picture.
+         When the cards run out a space is made for what is left, so this also
+         builds a deck that has none. */
+      var fillAll = e.target.closest('[data-fill-spaces]');
+      if (fillAll) {
+        var fBtn = fillAll;
+        var fInp = document.createElement('input');
+        fInp.type = 'file'; fInp.accept = 'image/*'; fInp.multiple = true;
+        fInp.onchange = function () {
+          var list = Array.prototype.slice.call(fInp.files || [])
+            .filter(function (f) { return /^image\//.test(f.type); });
+          if (!list.length) return;
+          var fLabel = ownText(fBtn);
+          fBtn.disabled = true; fBtn.textContent = 'Adding…';
+          Promise.all(list.map(function (f) { return importInto(f, 1500, 0.82); }))
+            .then(function (ims) {
+              state.spaces = state.spaces || [];
+              ims.forEach(function (im) {
+                var target = state.spaces.filter(function (x) {
+                  return x.include !== false && !(x.images && x.images.length);
+                })[0];
+                if (!target) {
+                  target = { id: 'sp' + Date.now() + Math.random().toString(36).slice(2, 6),
+                    include: true, name: '', floor: (state.plates[0] || {}).label || '',
+                    dims: '', area: '', estimate: '', includes: '', summary: '', body: '',
+                    quote: '', plate: 0, x: null, y: null, images: [], docs: [] };
+                  state.spaces.push(target);
+                }
+                target.images = target.images || [];
+                target.images.push({ src: im.src, w: im.w, h: im.h });
+              });
+              fBtn.disabled = false; fBtn.textContent = fLabel;
+              el.dispatchEvent(new CustomEvent('deck:changed', { bubbles: true }));
+              paint();
+            }, function () { fBtn.disabled = false; fBtn.textContent = fLabel; });
+        };
+        fInp.click();
         return;
       }
 
