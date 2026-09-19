@@ -117,6 +117,18 @@ describe("tracker mode — the nav", () => {
     expect(forDesigner).toEqual(forHead.filter((h) => h !== "/decks"));
   });
 
+  it("serves the designers' own links, and never lists them", () => {
+    // Monica, 19 Sep: the four reach their board by a link instead of a
+    // password (db/053). The route has to be served or every link 404s...
+    expect(isRouteAllowed("/my-tracker", TRACKER)).toBe(true);
+    expect(isRouteAllowed("/my-tracker/abc123", TRACKER)).toBe(true);
+
+    // ...and it must never appear in the menu. A link is one person's way in;
+    // a menu entry would offer it to whoever is already looking at the board.
+    const hrefs = groups.flatMap((g) => g.items.map((i) => i.href));
+    expect(hrefs).not.toContain("/my-tracker");
+  });
+
   it("keeps the WIO → PIO Tracker out of the menu but still serves it", () => {
     // Hidden, not closed (Monica, 18 Sep: "mere link me wio tracker nhi ana
     // chahiye"). The design team has no access to that board, so offering it
