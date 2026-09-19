@@ -396,6 +396,7 @@ button.deck-chip:hover{background:var(--wash);border-color:var(--ink)}
 .deck-actions{display:none;flex-wrap:wrap;gap:8px;margin:22px 0 0;padding-top:18px;border-top:1px solid var(--rule)}
 .js-on .deck-actions{display:flex}
 .deck-actions--page{margin-top:30px}
+.deck-actions--foot{margin:26px 0 30px}
 .deck-btn{font:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
   padding:11px 16px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink);
   cursor:pointer;transition:background-color .15s,border-color .15s}
@@ -2582,7 +2583,11 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
     });
   }
 
-  function spaceCard(state, s) {
+  /* asPng: the same card, encoded losslessly. A render on a flat card is
+     mostly smooth gradients, which JPEG does well and small — PNG is offered
+     because a client sometimes wants the file to put into something else, and
+     is the bigger file for it. */
+  function spaceCard(state, s, asPng) {
     var p = state.project || {};
     var W = CARD.w, PAD = CARD.pad, CW = W - PAD * 2;
 
@@ -2754,7 +2759,7 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
         var o = out.getContext('2d');
         o.fillStyle = CARD.paper; o.fillRect(0, 0, out.width, out.height);
         o.drawImage(tall, 0, 0);
-        return out.toDataURL('image/jpeg', 0.9);
+        return out.toDataURL(asPng ? 'image/png' : 'image/jpeg', 0.9);
       });
   }
 
@@ -2882,6 +2887,22 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       /* the last thing read, so it is given room rather than tucked away */
       (p.closing ? '<p class="deck-closing">' + esc(p.closing) + '</p>' : '') +
       '<span class="deck-stamp">' + esc(stampOf(state)) + '</span>' +
+
+      /* TAKING THE DECK AWAY, AT THE END OF IT (Monica, 19 Sep).
+         These existed only at the foot of the spaces grid, which is a third of
+         the way down — so somebody who had read to the end had to scroll back
+         up to save what they had just read. The end of a document is where a
+         person asks for a copy. Same handlers, so there is one behaviour and
+         not a second set to keep in step. */
+      '<div class="deck-actions deck-actions--foot">' +
+        '<button class="deck-btn deck-btn--solid" data-pdf-all>Save as PDF</button>' +
+        '<button class="deck-btn" data-jpg-all>Save every space as JPG</button>' +
+        '<button class="deck-btn" data-png-all>Save every space as PNG</button>' +
+        /* live(state), not spaces — the footer is built on its own, without the
+           grid's local list to hand. */
+        (live(state).some(function (x) { return String(x.estimate || '').trim(); })
+          ? '<a class="deck-btn" href="#estimate">The estimate — size, area, amount</a>' : '') +
+      '</div>' +
       /* quiet, at the foot, where a client will not trip over it */
       '<div class="deck-edit">' +
         '<button class="deck-btn deck-btn--sm" data-edit-toggle>Add a document</button>' +
@@ -3590,9 +3611,9 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       return true;
     }
 
-    function cardName(s) {
+    function cardName(s, asPng) {
       var p = state.project || {};
-      return slugify(p.code || p.name) + '-' + s.no + '-' + slugify(s.name) + '.jpg';
+      return slugify(p.code || p.name) + '-' + s.no + '-' + slugify(s.name) + (asPng ? '.png' : '.jpg');
     }
 
     /* On a phone this hands the picture straight to the share sheet, which is
@@ -3640,7 +3661,9 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
     }
 
     /* every space as its own picture, one at a time — a browser refuses a burst */
-    function saveAllJpg(btn) {
+    /* One walk, either encoding — a second copy of this loop would be a second
+       place for "Saving 3 of 15…" to drift out of step. */
+    function saveAllCards(btn, asPng) {
       var label = ownText(btn), i = 0;
       btn.disabled = true;
       (function next() {
@@ -3650,12 +3673,14 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
         }
         var sp = spaces[i++];
         btn.textContent = 'Saving ' + i + ' of ' + spaces.length + '…';
-        spaceCard(state, sp).then(function (uri) {
-          saveDataUri(cardName(sp), uri);
+        spaceCard(state, sp, asPng).then(function (uri) {
+          saveDataUri(cardName(sp, asPng), uri);
           setTimeout(next, 450);
         }, function () { setTimeout(next, 120); });
       })();
     }
+    function saveAllJpg(btn) { saveAllCards(btn, false); }
+    function saveAllPng(btn) { saveAllCards(btn, true); }
 
     /* A 360 view goes with the space it is of, the way its renders do — added
        from the space itself, where the person holding it is already looking. */
@@ -3858,6 +3883,8 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       }
       var all = e.target.closest('[data-jpg-all]');
       if (all) { saveAllJpg(all); return; }
+      var allPng = e.target.closest('[data-png-all]');
+      if (allPng) { saveAllPng(allPng); return; }
       var sh = e.target.closest('[data-share-one]');
       if (sh) { shareSpace(sh.getAttribute('data-share-one'), sh); return; }
       var loc = e.target.closest('[data-locate]');
