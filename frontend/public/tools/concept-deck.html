@@ -122,7 +122,11 @@
 .deck-card-add:hover,.deck-card-add:focus-visible,
 .deck-plate-add:hover,.deck-plate-add:focus-visible,
 .deck-dwg-add:hover,.deck-dwg-add:focus-visible{opacity:1;background:var(--ink);outline:none}
-@media print{.deck-card-add,.deck-plate-add,.deck-dwg-add,.deck-more,.deck-card-est{display:none}}
+.deck-dwg-del{position:absolute;right:30px;top:0;width:30px;height:30px;border:0;padding:0;
+  background:rgba(0,0,0,.66);color:#fff;font:inherit;font-size:17px;line-height:1;cursor:pointer;
+  opacity:.85;transition:opacity .15s,background .15s}
+.deck-dwg-del:hover,.deck-dwg-del:focus-visible{opacity:1;background:#c0392b;outline:none}
+@media print{.deck-card-add,.deck-plate-add,.deck-dwg-add,.deck-dwg-del,.deck-more,.deck-card-est{display:none}}
 .deck-more{display:block;width:100%;margin-top:12px;padding:13px;border:1px dashed var(--rule-strong);
   background:transparent;color:var(--soft);font:inherit;font-size:11px;letter-spacing:.14em;
   text-transform:uppercase;cursor:pointer;transition:color .15s,border-color .15s}
@@ -589,7 +593,8 @@ body.deck-locked .deck-edit,
 body.deck-locked .deck-thumb--add,
 body.deck-locked .deck-card-add,
 body.deck-locked .deck-plate-add,
-body.deck-locked .deck-dwg-add{display:none !important}
+body.deck-locked .deck-dwg-add,
+body.deck-locked .deck-dwg-del{display:none !important}
 body.is-reading .panes{grid-template-columns:1fr}
 /* as wide as the screen gives it, not as wide as its widest table: with only auto
    margins the pane grew to fit its content, and a phone got a page it had to pan */
@@ -1633,11 +1638,21 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       '<h2>' + (docs.length === 1 ? 'The document this is built on.'
                                     : 'The ' + docs.length + ' documents this is built on.') + '</h2>' +
       docs.map(function (d, k) {
+        /* The real place in state.documents, which is not k: docs above is
+           filtered to the ones that have a picture. Removing by k would take
+           out the wrong row the moment an empty one exists. data-doc keeps its
+           own numbering, because other code reads it. */
+        var realIdx = (state.documents || []).indexOf(d);
         return '<figure class="deck-dwg">' +
           '<img loading="lazy" decoding="async" data-doc="' + k + '" src="' + d.src + '" alt="' +
             esc(d.label || 'Document') + '">' +
           '<button class="deck-dwg-add" data-add="documents"' +
             ' title="Add another document" aria-label="Add another document">+</button>' +
+          /* Beside the +, for the same reason the space panel has one: this is
+             where a wrong document is looked at (Monica, 19 Sep: "isme remove
+             nahi hai"). Removing was possible only in the editor's own list. */
+          '<button class="deck-dwg-del" data-drop-doc="' + realIdx + '"' +
+            ' title="Remove this document" aria-label="Remove this document">&times;</button>' +
           '<figcaption>' + esc(d.label || 'Document') +
             (d.date ? ' · ' + esc(d.date) : '') + '</figcaption>' +
         '</figure>';
@@ -3757,7 +3772,17 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
       if (locked && e.target.closest('[data-add],[data-add-space],[data-add-space-doc],' +
           '[data-add-plate],[data-del-plate],[data-mark],[data-spot-x],[data-save-self],' +
           '[data-edit-toggle],[data-thumb-up],[data-del-space],[data-add-pano],' +
-          '[data-drop-pic]')) { return; }
+          '[data-drop-pic],[data-drop-doc]')) { return; }
+
+      var dropDoc = e.target.closest('[data-drop-doc]');
+      if (dropDoc) {
+        var ddi = +dropDoc.getAttribute('data-drop-doc');
+        if (!state.documents || !state.documents[ddi]) return;
+        state.documents.splice(ddi, 1);
+        el.dispatchEvent(new CustomEvent('deck:changed', { bubbles: true }));
+        paint();
+        return;
+      }
 
       /* The big picture in the open panel is the space's first — that is the
          one being called wrong, so that is the one this takes out. The next
