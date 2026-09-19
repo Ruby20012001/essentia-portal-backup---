@@ -1519,13 +1519,12 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
   function planHtml(state) {
     var plates = (state.plates || []).filter(function (pl) { return pl.src; });
     var spaces = live(state);
-    if (!plates.length) {
-      return '<section class="deck-sec"><span class="deck-eyebrow">01 The plan</span>' +
-        '<h2>Every marked space opens.</h2>' +
-        '<div class="deck-plate deck-plate--empty"><span>Layout not attached yet. ' +
-        'The plan is the interface — drop the plan sheet into the tool to make the spaces tappable.</span></div>' +
-        '</section>';
-    }
+    /* No plan, no plan chapter. It used to stand there as an empty grey panel
+       telling the reader the layout was missing — which is a note to the
+       designer, printed in the client's document. A deck of renders alone is a
+       deck; it simply opens at the spaces (Monica, 19 Sep). The editor still
+       offers Plates, and the gate still says a plan would make them tappable. */
+    if (!plates.length) return '';
     var tabs = plates.length > 1
       ? '<div class="deck-floors" role="tablist">' + plates.map(function (pl, i) {
           return '<button class="deck-floorbtn" role="tab" data-plate="' + i + '" aria-selected="' +
@@ -5144,15 +5143,29 @@ function gates() {
   out.push({ ok: !!(p.headline || '').trim(), msg: 'Cover headline set.',
     bad: 'Cover headline missing. The client sees this first.' });
 
+  /* THE PLAN IS NO LONGER COMPULSORY (Monica, 19 Sep: "plans to baad me upload
+     krne hain hi nahi").
+
+     It was a hard gate because the plan is how a client finds a room — tap the
+     number, the room opens. That is still the better deck, and the line below
+     says so. But plenty of work goes out as renders alone, and a deck that
+     cannot publish at all is worse than one without a plan.
+
+     Pinning stays compulsory ONLY where a plan exists: half the spaces on the
+     drawing and half adrift is the one state that reads as broken, and that is
+     a real error rather than a way of working. */
   var withPlan = S.plates.filter(function (pl) { return pl.src; });
-  out.push({ ok: withPlan.length > 0, msg: withPlan.length + ' plan sheet' + (withPlan.length > 1 ? 's' : '') + ' attached.',
-    bad: 'Layout not attached. The plan is the interface; the deck cannot publish without it.' });
+  out.push({ ok: true,
+    msg: withPlan.length > 0
+      ? withPlan.length + ' plan sheet' + (withPlan.length > 1 ? 's' : '') + ' attached.'
+      : 'No plan — the deck reads as a list of spaces. Attach one to make them tappable.' });
 
   out.push({ ok: on.length > 0, msg: on.length + ' spaces marked.',
-    bad: 'No spaces added. Mark at least one space on the layout.' });
+    bad: 'No spaces added. Add a picture and a space is made for it.' });
 
-  var unpinned = on.filter(function (s) { return typeof s.x !== 'number'; });
-  out.push({ ok: unpinned.length === 0, msg: 'Every space sits on the plan.',
+  var unpinned = withPlan.length > 0 ? on.filter(function (s) { return typeof s.x !== 'number'; }) : [];
+  out.push({ ok: unpinned.length === 0,
+    msg: withPlan.length > 0 ? 'Every space sits on the plan.' : 'No plan to pin the spaces to.',
     bad: unpinned.length + ' space(s) not pinned to the layout: ' + names(unpinned) + '. Every marked space must sit on the plan.' });
 
   var noImg = on.filter(function (s) { return !(s.images || []).length; });
