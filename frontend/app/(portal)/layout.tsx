@@ -3,7 +3,7 @@ import { Header } from "@/components/shell/Header";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { getSession } from "@/lib/auth/session";
 import { portalMode } from "@/lib/portal-mode";
-import { isDesignManager, listDesignTeamForNav } from "@/lib/services/design-tracker";
+import { isDesignManager } from "@/lib/services/design-tracker";
 import { listDecks } from "@/lib/services/decks";
 
 /**
@@ -43,15 +43,11 @@ export default async function PortalLayout({
         .catch(() => [])
     : [];
 
-  /* The design team under the tracker, the way the decks sit under theirs.
-     Head only, and only on this deployment — same reasons as the decks above. */
-  const team = portalMode() === "tracker" ? await listDesignTeamForNav(session.user) : [];
-
   return (
     <div className="flex h-screen flex-col">
-      <Header user={session.user} canSeeDecks={canSeeDecks} decks={decks} team={team} />
+      <Header user={session.user} canSeeDecks={canSeeDecks} decks={decks} />
       <div className="flex min-h-0 flex-1">
-        <Sidebar canSeeDecks={canSeeDecks} decks={decks} team={team} />
+        <Sidebar canSeeDecks={canSeeDecks} decks={decks} />
         <main className="min-w-0 flex-1 overflow-y-auto bg-canvas px-4 py-6 sm:px-6 md:px-10 md:py-8">
           {children}
         </main>
