@@ -9,6 +9,7 @@ import {
   heatCounts,
   holdingByDependency,
   personRows,
+  refusedProjectFields,
   type DesignActivity,
   type DesignPerson,
   type DesignProjectInput,
@@ -274,5 +275,38 @@ describe("project types (db/051)", () => {
     expect(forSegment(board, "commercial").map((p) => p.id)).toEqual(["b"]);
     expect(forSegment(board, "residential").map((p) => p.id)).toEqual(["a"]);
     expect(forSegment(board, null)).toHaveLength(3);
+  });
+});
+
+describe("who may change what about a project", () => {
+  // Whether the project is theirs at all is settled against the database before
+  // this is asked; these are the fields, given that it is.
+  const ALL_FIELDS = [
+    "name", "client", "location", "designerId", "typeCode",
+    "startDate", "completedOn", "notes",
+  ];
+
+  it("lets a designer run their own project", () => {
+    // Monica, 19 Sep: "log tracker me apne project edit kre". The start date is
+    // the one that matters most — without it a project is off the clock and
+    // invisible to the very board meant to catch it, and the designer is who
+    // knows when work began.
+    const mine = ALL_FIELDS.filter((f) => f !== "designerId");
+    expect(refusedProjectFields("own", mine)).toEqual([]);
+  });
+
+  it("will not let a designer hand the project to somebody else", () => {
+    // Not editing your own project — giving work away, or taking someone's,
+    // and the person losing it would never see it coming.
+    expect(refusedProjectFields("own", ["designerId"])).toEqual(["designerId"]);
+    expect(refusedProjectFields("own", ["startDate", "designerId"])).toEqual(["designerId"]);
+  });
+
+  it("refuses nothing to whoever runs the board", () => {
+    expect(refusedProjectFields("all", ALL_FIELDS)).toEqual([]);
+  });
+
+  it("says nothing about an empty change", () => {
+    expect(refusedProjectFields("own", [])).toEqual([]);
   });
 });

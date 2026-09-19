@@ -11,6 +11,7 @@ import {
   heatCounts,
   holdingByDependency,
   personRows,
+  refusedProjectFields,
   type ComputedProject,
   type DependencyRow,
   type DesignActivity,
@@ -608,14 +609,28 @@ export async function updateDesignProject(
 ): Promise<void> {
   const viewer = await requireProjectEditor(user, id);
 
-  // A designer writes notes. Who owns it, when it started and when it is done
-  // move the numbers Vishakha reads, so they are hers to change.
-  const managerOnly = (["name", "client", "location", "designerId", "typeCode", "startDate", "completedOn"] as const)
-    .filter((k) => patch[k] !== undefined);
-  if (viewer.scope !== "all" && managerOnly.length > 0) {
+  /* A designer runs their own project (Monica, 19 Sep: "log tracker me apne
+     project edit kre"). requireProjectEditor above has already refused anybody
+     reaching for a project that is not theirs, so what is left to decide is
+     which fields, not whose.
+
+     Everything is theirs except WHO IT BELONGS TO. The start date, the type,
+     the client, when it finished — these are facts the designer holds first
+     and Vishakha learns from them; making her the only one who could enter
+     them is what left projects sitting with no start date, off the clock and
+     invisible to the very board meant to catch them.
+
+     designerId stays hers. Changing that is not editing your own project, it
+     is handing work to somebody else or taking theirs — a different act, and
+     one the person losing the project would never see coming.
+
+     None of this is quiet: every change here writes an audit row, and those
+     are read back onto Vishakha's dashboard. */
+  const refused = refusedProjectFields(viewer.scope, Object.keys(patch));
+  if (refused.length > 0) {
     throw new DesignAccessError(
       user,
-      "Only Vishakha can change a project's name, type, designer, start or completion — you can write its notes.",
+      "Only Vishakha can move a project to a different designer. Everything else about your own project is yours to change.",
     );
   }
 

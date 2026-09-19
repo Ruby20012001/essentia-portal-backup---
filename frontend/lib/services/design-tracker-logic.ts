@@ -510,3 +510,28 @@ export function teamsWaitedOn(dependsOn: string): string[] {
       .filter(Boolean)
   );
 }
+
+/**
+ * Fields of a project this viewer may not change.
+ *
+ * A designer runs their own project — its start date, its type, its client,
+ * when it finished. Those are facts they hold first, and requiring Vishakha to
+ * enter them is what left projects sitting with no start date, off the clock
+ * and invisible to the board meant to catch them.
+ *
+ * Who a project BELONGS to is the exception. Changing that is not editing your
+ * own project — it is handing work to somebody else, or taking theirs, and the
+ * person losing it would never see it coming.
+ *
+ * Whether the project is theirs at all is decided before this, against the
+ * database; this only answers which fields, given that it is.
+ */
+export const REASSIGN_FIELD = "designerId";
+
+export function refusedProjectFields(
+  scope: "all" | "own",
+  patchKeys: readonly string[],
+): string[] {
+  if (scope === "all") return [];
+  return patchKeys.filter((k) => k === REASSIGN_FIELD);
+}
