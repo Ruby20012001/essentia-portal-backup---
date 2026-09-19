@@ -43,10 +43,10 @@ export function DesignTrackerBoard({
 }) {
   const [board, setBoard] = useState(initial);
   // A designer comes here to update, so that is where they land.
-  /* A designer still lands where the work is, but that is Projects now that
-     ✓ Update has no tab — landing on a tab nobody can navigate back to would
-     strand them the moment they left it. Vishakha opens on the Dashboard. */
-  const [tab, setTab] = useState<Tab>(initial.viewer.scope === "own" ? "projects" : "dashboard");
+  /* A designer opens on ✓ Update — the card per project with one Done, which
+     is what she came to do. Vishakha opens on the Dashboard, which is what she
+     came to read. */
+  const [tab, setTab] = useState<Tab>(initial.viewer.scope === "own" ? "update" : "dashboard");
   const [banner, setBanner] = useState<Banner | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   /**
@@ -218,11 +218,25 @@ export function DesignTrackerBoard({
        "Vishakha ke alawa baki kisi me team performance hatana hai, wo to bas
        edit or report wale hain"). */
     ...(board.can.manage ? [{ key: "team" as const, label: "Team performance" }] : []),
-    /* ✓ Update has no tab either (Monica, 18 Sep: "update htado"). Marking work
-       done did not go with it: Projects → Details still carries "Done today"
-       against every activity, which is the path the board had before the quick
-       one-button card existed. The view itself is left wired up below, so the
-       tab is one line to put back. */
+    /* ✓ Update comes back, but only for whoever records work (Monica, 19 Sep:
+       "un ke portal me option rakhna usi ke according, or Vishakha view wala
+       hai bs").
+
+       It was taken out on 18 Sep — "update htado" — said while looking at
+       Vishakha's board, where it is indeed noise: she reads the board, she
+       does not tick it. But it is the designers' one control, a card per
+       project and a single Done, and taking it from them left the people who
+       actually do the work opening a project, expanding it and finding the row
+       by hand. It belongs in their portal and nowhere else. */
+    ...(board.can.edit
+      ? [
+          {
+            key: "update" as const,
+            label: "✓ Update",
+            badge: mine.filter((p) => p.heat !== "DONE").length,
+          },
+        ]
+      : []),
     { key: "projects", label: "Projects", badge: mine.filter((p) => p.heat !== "DONE").length },
     { key: "delays", label: "Delays", badge: mine.filter((p) => p.heat === "HOT").length },
     ...(board.can.manage
@@ -393,7 +407,9 @@ export function DesignTrackerBoard({
           <DesignTeamView board={lens} onPerson={showPerson} />
         ) : null}
 
-        {tab === "update" ? (
+        {/* Gated twice, like Team performance: the tab is not offered to a
+            reader, and the view is not drawn for one either. */}
+        {tab === "update" && board.can.edit ? (
           <DesignUpdateView
             board={lens}
             person={person}
