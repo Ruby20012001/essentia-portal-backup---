@@ -129,6 +129,29 @@ describe("tracker mode — the nav", () => {
     expect(hrefs).not.toContain("/my-tracker");
   });
 
+  it("lists the design team under the tracker, each opening their own", () => {
+    // Monica, 19 Sep: "jaise concept ka bana hai aise hi" — the team under the
+    // board the way the decks sit under theirs.
+    const team = [
+      { id: "p1", name: "Lavika" },
+      { id: "p2", name: "Ritu" },
+    ];
+    const dash = visibleNav(TRACKER, true, [], team)
+      .flatMap((g) => g.items)
+      .find((i) => i.href === "/design-tracker");
+    expect(dash?.children).toEqual([
+      { label: "Lavika", href: "/design-tracker?person=p1" },
+      { label: "Ritu", href: "/design-tracker?person=p2" },
+    ]);
+
+    // A designer is given no team list — it would be a row of boards she
+    // cannot open — and the entry is then a plain link, not a heading.
+    const plain = visibleNav(TRACKER, true, [], [])
+      .flatMap((g) => g.items)
+      .find((i) => i.href === "/design-tracker");
+    expect(plain?.children).toBeUndefined();
+  });
+
   it("keeps the WIO → PIO Tracker out of the menu but still serves it", () => {
     // Hidden, not closed (Monica, 18 Sep: "mere link me wio tracker nhi ana
     // chahiye"). The design team has no access to that board, so offering it

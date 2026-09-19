@@ -117,6 +117,7 @@ export function visibleNav(
   mode: PortalMode = portalMode(),
   canSeeDecks = true,
   decks: { id: string; name: string }[] = [],
+  team: { id: string; name: string }[] = [],
 ): NavGroup[] {
   if (mode === "full") return NAV;
   return NAV.map((group) => ({
@@ -152,7 +153,22 @@ export function visibleNav(
       // Only here: in full mode /dashboard already owns that word.
       .map((item) =>
         item.href === "/design-tracker"
-          ? { ...item, label: "Dashboard" }
+          ? {
+              ...item,
+              label: "Dashboard",
+              /* The team under the board, the way the decks sit under theirs.
+                 Each opens the tracker already narrowed to that person, so
+                 "what is Ritu on" is one click rather than a board, a tab and
+                 a chip (Monica, 19 Sep). */
+              ...(team.length > 0
+                ? {
+                    children: team.map((p) => ({
+                      label: p.name,
+                      href: `/design-tracker?person=${encodeURIComponent(p.id)}`,
+                    })),
+                  }
+                : {}),
+            }
           : item,
       ),
   })).filter((group) => group.items.length > 0);
