@@ -212,7 +212,12 @@ export function DesignTrackerBoard({
        which is what somebody opening it is actually after. The Tab key stays
        "today" so no saved view or print header has to be migrated. */
     { key: "today", label: "What's new" },
-    { key: "team", label: "Team performance" },
+    /* Team performance is the head's page. A designer is sent only her own
+       projects, so it drew a single card — herself, measured against nobody —
+       under a heading about a team she could not see (Monica, 19 Sep:
+       "Vishakha ke alawa baki kisi me team performance hatana hai, wo to bas
+       edit or report wale hain"). */
+    ...(board.can.manage ? [{ key: "team" as const, label: "Team performance" }] : []),
     /* ✓ Update has no tab either (Monica, 18 Sep: "update htado"). Marking work
        done did not go with it: Projects → Details still carries "Done today"
        against every activity, which is the path the board had before the quick
@@ -381,7 +386,12 @@ export function DesignTrackerBoard({
           <DesignTodayView board={lens} person={person} onPerson={showPerson} />
         ) : null}
 
-        {tab === "team" ? <DesignTeamView board={lens} onPerson={showPerson} /> : null}
+        {/* Gated twice on purpose: hiding the tab stops it being pressed, this
+            stops it being rendered at all if the tab is ever reached by some
+            other road. */}
+        {tab === "team" && board.can.manage ? (
+          <DesignTeamView board={lens} onPerson={showPerson} />
+        ) : null}
 
         {tab === "update" ? (
           <DesignUpdateView
