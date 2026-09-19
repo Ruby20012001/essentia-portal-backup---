@@ -4252,6 +4252,31 @@ function sample() {
 
 
 
+/**
+ * Square feet out of a written size, or '' when it cannot be read.
+ *
+ * The chart writes rooms as 10'-10" x 12'-10". Two feet-and-inches numbers
+ * multiplied, rounded to whole square feet — which is how the sample's own
+ * areas were arrived at, and they come back exactly: 139, 44, 142, 470, 18.
+ *
+ * Anything that is not two measurements returns nothing rather than a guess.
+ * "8'-9" wide" is one dimension and describes a passage, not a rectangle; a
+ * number invented there would flow into the estimate and out to a client.
+ */
+function areaFromDims(text) {
+  var vals = [];
+  String(text || '').replace(
+    /(\d+(?:\.\d+)?)\s*'\s*(?:-?\s*(\d+(?:\.\d+)?)\s*")?/g,
+    function (whole, feet, inches) {
+      vals.push(parseFloat(feet) + (inches ? parseFloat(inches) / 12 : 0));
+      return whole;
+    },
+  );
+  if (vals.length !== 2) return '';
+  var sq = Math.round(vals[0] * vals[1]);
+  return sq > 0 ? String(sq) : '';
+}
+
 /* ── image import — downscaled in the browser, never uploaded ───────────── */
 function importImage(file, maxEdge, quality, wantPng) {
   return new Promise(function (resolve, reject) {
@@ -4585,6 +4610,30 @@ function renderSpaces() {
     var i = +el.getAttribute('data-i'), k = el.getAttribute('data-k');
     el.addEventListener('input', function () {
       S.spaces[i][k] = el.value;
+
+      /* The size is the only one of these a designer reads off a drawing. Area
+         is arithmetic on it, and the estimate is arithmetic on the area — but
+         both had to be typed, so a space with its size filled in still showed
+         no area, no estimate, and no row in the priced list (Monica, 19 Sep:
+         "size area estimate har corner ka, area x rate k basis pr budget bi
+         aaye"). Typing the size now fills the area, live() turns that into the
+         estimate at the project's rate, and the total follows.
+
+         Only into an EMPTY area: a figure somebody typed is a measured one and
+         outranks a calculated one, the same way a typed estimate already wins
+         over the rate. Clearing the size clears only what was derived. */
+      if (k === 'dims') {
+        var sp = S.spaces[i];
+        var derived = areaFromDims(el.value);
+        if (!String(sp.area || '').trim() || sp.areaDerived) {
+          if (derived) { sp.area = derived; sp.areaDerived = true; }
+          else if (sp.areaDerived) { sp.area = ''; delete sp.areaDerived; }
+          var areaBox = host.querySelector('[data-k="area"][data-i="' + i + '"]');
+          if (areaBox) areaBox.value = sp.area || '';
+        }
+      }
+      /* Typing over the area by hand makes it measured, not derived. */
+      if (k === 'area') delete S.spaces[i].areaDerived;
       var w = el.closest('.f');
       if (w && w.querySelector('.f-err')) {
         var h = vocabHits(el.value);
