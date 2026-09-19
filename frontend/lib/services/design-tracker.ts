@@ -58,6 +58,18 @@ export type DesignBoard = {
   viewer: DesignViewer;
   /** manage = add/delete projects, retune the chart, Setup. edit = tick activities. */
   can: { manage: boolean; edit: boolean; export: boolean };
+  /** Who did what, newest first. Only for whoever runs the board. */
+  activity: DesignActivityEntry[];
+};
+
+/** One thing somebody did to the board, said in a line. */
+export type DesignActivityEntry = {
+  id: string;
+  at: string;
+  who: string;
+  /** Already worded for a reader — see sayAudit. */
+  what: string;
+  project: string | null;
 };
 
 class DesignAccessError extends PermissionError {
@@ -317,6 +329,62 @@ export async function loadWholeDesignBoard(): Promise<{
   };
 }
 
+/**
+ * Who did what on the board — read back out of audit.log.
+ *
+ * Nothing new is recorded for this: every route through this file already
+ * writes an audit row naming the person, the action and what changed. The
+ * trail was simply never read back, so Vishakha could see that a project had
+ * moved but not who moved it (Monica, 19 Sep: "jo bhi project edit krenge ya
+ * kaam krenge, wo Vishakha mam k dashboard pr activity show hogi").
+ *
+ * Manager only, and it fails quiet: a dashboard that will not load because the
+ * history could not be read is worse than a dashboard with no history on it.
+ */
+const AUDIT_WORDS: Record<string, string> = {
+  DESIGN_PROJECT_CREATED: "added the project",
+  DESIGN_PROJECT_UPDATED: "changed the project",
+  DESIGN_PROJECT_DELETED: "removed the project",
+  DESIGN_ACTIVITY_MARKED: "ticked off a task",
+  DESIGN_ACTIVITIES_MARKED: "ticked off several tasks",
+  DESIGN_CHART_RETUNED: "retuned the activity chart",
+  DESIGN_TRACKER_SETTINGS_UPDATED: "changed the board's settings",
+};
+
+async function listDesignActivity(limit = 30): Promise<DesignActivityEntry[]> {
+  try {
+    const rows = await query<{
+      id: string;
+      created_at: string;
+      action: string;
+      who: string | null;
+      new_values: Record<string, unknown> | null;
+    }>(
+      `SELECT l.id, l.created_at, l.action, u.full_name AS who, l.new_values
+         FROM audit.log l
+         LEFT JOIN public.users u ON u.id = l.user_id
+        WHERE l.resource_type = 'design_tracker'
+        ORDER BY l.created_at DESC
+        LIMIT $1`,
+      [limit],
+    );
+    return rows.map((r) => {
+      const v = r.new_values ?? {};
+      const named = typeof v.name === "string" ? v.name : null;
+      return {
+        id: r.id,
+        at: r.created_at,
+        who: r.who ?? "somebody",
+        what: AUDIT_WORDS[r.action] ?? r.action.toLowerCase().replace(/_/g, " "),
+        project: named,
+      };
+    });
+  } catch (error) {
+    console.error("design tracker: the activity trail could not be read", error);
+    return [];
+  }
+}
+
 /** Manager check for routes outside this file (the reminders screen). */
 export async function requireDesignManager(user: SessionUser): Promise<void> {
   await requireManager(user);
@@ -325,12 +393,15 @@ export async function requireDesignManager(user: SessionUser): Promise<void> {
 export async function getDesignBoard(user: SessionUser): Promise<DesignBoard> {
   const viewer = await resolveViewer(user);
 
-  const [settings, activities, allPeople, types, inputs] = await Promise.all([
+  const [settings, activities, allPeople, types, inputs, activity] = await Promise.all([
     getDesignSettings(),
     listActivities(),
     listPeople(),
     listTypes(),
     listProjectInputs(viewer.scope === "own" ? viewer.personId : null),
+    /* Only the head is shown the trail, and only the head's page pays for the
+       query — a designer's board does not ask for it at all. */
+    viewer.scope === "all" ? listDesignActivity() : Promise.resolve([]),
   ]);
 
   const people =
@@ -348,6 +419,7 @@ export async function getDesignBoard(user: SessionUser): Promise<DesignBoard> {
     holding: holdingByDependency(projects),
     viewer,
     can: { manage: viewer.scope === "all", edit: true, export: true },
+    activity,
   };
 }
 

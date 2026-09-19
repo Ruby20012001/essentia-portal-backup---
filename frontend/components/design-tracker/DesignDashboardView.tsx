@@ -422,6 +422,37 @@ export function DesignDashboardView({
         </Panel>
       </div>
 
+      {/* ── who has been working on the board ──────────────────────── */}
+      {board.can.manage ? (
+        <div className="mb-6">
+          <Panel
+            title="Who has been working on this"
+            note="Every change to the board, newest first — who made it, and when."
+          >
+            {board.activity.length === 0 ? (
+              <Empty>Nothing has been changed yet.</Empty>
+            ) : (
+              <ul className="divide-y divide-line">
+                {board.activity.slice(0, 12).map((a) => (
+                  <li key={a.id} className="flex flex-wrap items-baseline gap-x-2 py-2">
+                    <span className="font-body text-[13px] font-bold text-ink">{a.who}</span>
+                    <span className="font-body text-[13px] font-light text-secondary">
+                      {a.what}
+                      {a.project ? (
+                        <span className="text-ink"> · {a.project}</span>
+                      ) : null}
+                    </span>
+                    <span className="ml-auto whitespace-nowrap font-body text-[11px] font-light text-muted">
+                      {whenSaid(a.at)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        </div>
+      ) : null}
+
       {/* ── the projects themselves ────────────────────────────────── */}
       <section>
         <h2 className="mb-1 font-heading text-2xl text-white">
@@ -520,6 +551,25 @@ function Panel({ title, note, children }: { title: string; note: string; childre
       {children}
     </section>
   );
+}
+
+/**
+ * "20 minutes ago" for something today, the date for anything older.
+ *
+ * A stamp reading 09:42 tells you nothing on its own — you have to work out
+ * what time it is now. The point of this list is how recent a change is, so
+ * that is what it says, until the answer stops being interesting and the date
+ * is the better fact.
+ */
+function whenSaid(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return "";
+  const mins = Math.round((Date.now() - then) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} ${hrs === 1 ? "hour" : "hours"} ago`;
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
