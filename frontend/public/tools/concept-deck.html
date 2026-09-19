@@ -5239,17 +5239,26 @@ function gates() {
   out.push({ ok: on.length > 0, msg: on.length + ' spaces marked.',
     bad: 'No spaces added. Add a picture and a space is made for it.' });
 
+  /* "Every space has a visual" beside "No spaces added" is true the way an
+     empty room is tidy, and it read as three things going right when nothing
+     had been done at all (Monica, 19 Sep). With no spaces these three say so
+     instead, and stay ticked so they do not double-report the line above. */
+  var none = on.length === 0;
+
   var unpinned = withPlan.length > 0 ? on.filter(function (s) { return typeof s.x !== 'number'; }) : [];
   out.push({ ok: unpinned.length === 0,
-    msg: withPlan.length > 0 ? 'Every space sits on the plan.' : 'No plan to pin the spaces to.',
+    msg: none ? 'No spaces to put on the plan yet.'
+      : withPlan.length > 0 ? 'Every space sits on the plan.' : 'No plan to pin the spaces to.',
     bad: unpinned.length + ' space(s) not pinned to the layout: ' + names(unpinned) + '. Every marked space must sit on the plan.' });
 
   var noImg = on.filter(function (s) { return !(s.images || []).length; });
-  out.push({ ok: noImg.length === 0, msg: 'Every space has a visual.',
+  out.push({ ok: noImg.length === 0,
+    msg: none ? 'No spaces to have visuals yet.' : 'Every space has a visual.',
     bad: noImg.length + ' space(s) have no visual: ' + names(noImg) + '. A marked space with no picture cannot be sent to a client.' });
 
   var noLine = on.filter(function (s) { return !(s.summary || '').trim(); });
-  out.push({ ok: noLine.length === 0, msg: 'Every space has its line.',
+  out.push({ ok: noLine.length === 0,
+    msg: none ? 'No spaces to describe yet.' : 'Every space has its line.',
     bad: noLine.length + ' space(s) have no description line: ' + names(noLine) + '. Every marked space opens — its size, and what it is for.' });
 
   var vHits = [];
