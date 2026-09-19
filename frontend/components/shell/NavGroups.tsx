@@ -13,17 +13,20 @@ export function NavGroups({
   onNavigate,
   canSeeDecks = true,
   decks = [],
+  team = [],
 }: {
   onNavigate?: () => void;
   /** Decided on the server, where the viewer is known — see visibleNav. */
   canSeeDecks?: boolean;
   /** Listed under Concept decks. Empty for anybody who cannot see them. */
   decks?: { id: string; name: string }[];
+  /** Listed under the tracker. Empty for anybody who is not the head. */
+  team?: { id: string; name: string }[];
 }) {
   const pathname = usePathname();
   // Filtered by launch mode: a tracker-only deployment lists the tracker and
   // nothing else, rather than six headings over screens it does not serve.
-  const groups = visibleNav(undefined, canSeeDecks, decks);
+  const groups = visibleNav(undefined, canSeeDecks, decks, team);
 
   return (
     <>

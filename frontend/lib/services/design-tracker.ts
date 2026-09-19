@@ -141,6 +141,31 @@ export async function isDesignManager(user: SessionUser | null): Promise<boolean
   }
 }
 
+/**
+ * The team, for the menu — so the tracker can list its people the way Concept
+ * decks lists its decks (Monica, 19 Sep: "jaise concept ka bana hai aise hi").
+ *
+ * Only for whoever runs the board. A designer's menu naming her colleagues
+ * would be a list of boards she cannot open.
+ *
+ * Fails quiet, like isDesignManager: a shorter menu, never a page that will
+ * not load.
+ */
+export async function listDesignTeamForNav(
+  user: SessionUser | null,
+): Promise<{ id: string; name: string }[]> {
+  if (!(await isDesignManager(user))) return [];
+  try {
+    return await query<{ id: string; name: string }>(
+      `SELECT id, name FROM ee.design_tracker_people
+        WHERE is_active ORDER BY sort_order, name`,
+    );
+  } catch (error) {
+    console.error("design tracker: the team could not be read for the menu", error);
+    return [];
+  }
+}
+
 async function requireManager(user: SessionUser): Promise<DesignViewer> {
   const viewer = await resolveViewer(user);
   if (viewer.scope !== "all") {

@@ -11,15 +11,17 @@ export function Header({
   user,
   canSeeDecks,
   decks,
+  team,
 }: {
   user: SessionUser;
   canSeeDecks: boolean;
   decks: { id: string; name: string }[];
+  team: { id: string; name: string }[];
 }) {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-brand-line bg-brand px-4 md:px-6">
       <div className="flex min-w-0 items-center gap-2">
-        <MobileNav canSeeDecks={canSeeDecks} decks={decks} />
+        <MobileNav canSeeDecks={canSeeDecks} decks={decks} team={team} />
         {/* Home is the deployment's home, not always the dashboard. */}
         <Link href={homeHref()} aria-label="essentia portal home" className="shrink-0">
           {/* Brand rule: logo always an image, header height exactly 20px.

@@ -13,7 +13,11 @@ export const dynamic = "force-dynamic";
  * design activity chart. Vishakha's page: her designers, their projects, and
  * which project is late on which activity, depending on whom.
  */
-export default async function DesignTrackerPage() {
+export default async function DesignTrackerPage({
+  searchParams,
+}: {
+  searchParams?: { person?: string };
+}) {
   const missing = missingPageEnv();
   if (missing.length > 0) {
     return (
@@ -53,7 +57,7 @@ export default async function DesignTrackerPage() {
           headName={board.people.find((p) => p.role === "head")?.name}
         />
       </div>
-      <DesignTrackerBoard initial={board} />
+      <DesignTrackerBoard initial={board} openAt={searchParams?.person ?? null} />
     </div>
   );
 }

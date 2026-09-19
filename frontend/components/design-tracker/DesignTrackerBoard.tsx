@@ -33,7 +33,14 @@ type Banner = { tone: "error" | "success"; message: string };
  * project's heat, its designer's counts and the dependency roll-up at once),
  * and every refusal is shown in the banner in the server's own words.
  */
-export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
+export function DesignTrackerBoard({
+  initial,
+  openAt = null,
+}: {
+  initial: DesignBoard;
+  /** A designer named in the address — the menu links straight to one. */
+  openAt?: string | null;
+}) {
   const [board, setBoard] = useState(initial);
   // A designer comes here to update, so that is where they land.
   /* A designer still lands where the work is, but that is Projects now that
@@ -48,7 +55,11 @@ export function DesignTrackerBoard({ initial }: { initial: DesignBoard }) {
    * them the lens is fixed to themselves.
    */
   const own = board.viewer.scope === "own";
-  const [person, setPerson] = useState<string | null>(own ? board.viewer.personId : null);
+  /* A designer only ever sees themselves, so the address cannot move them;
+     for the head it is how the menu opens one of her team directly. */
+  const [person, setPerson] = useState<string | null>(
+    own ? board.viewer.personId : openAt,
+  );
   const [printing, setPrinting] = useState(false);
 
   useEffect(() => {

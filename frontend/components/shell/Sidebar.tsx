@@ -8,13 +8,15 @@ import { NavGroups } from "@/components/shell/NavGroups";
 export function Sidebar({
   canSeeDecks,
   decks,
+  team,
 }: {
   canSeeDecks: boolean;
   decks: { id: string; name: string }[];
+  team: { id: string; name: string }[];
 }) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-brand-line bg-brand px-4 py-6 md:flex">
-      <NavGroups canSeeDecks={canSeeDecks} decks={decks} />
+      <NavGroups canSeeDecks={canSeeDecks} decks={decks} team={team} />
     </aside>
   );
 }
