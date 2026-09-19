@@ -316,6 +316,10 @@ function ProjectDetail({
   onMark: (projectId: string, activityId: string, mark: Mark) => void;
 }) {
   const manage = board.can.manage;
+  /* Whether this viewer records work. The head reads the board; the designers
+     tick it (Monica, 19 Sep). Hiding the controls is the courtesy — the server
+     refuses it either way, in requireWorkRecorder. */
+  const canRecord = board.can.edit;
   const blank = (v: string) => (v.trim() === "" ? null : v.trim());
   const today = board.settings.today;
   const phases = new Map<string, number>();
@@ -375,8 +379,17 @@ function ProjectDetail({
 
       <h3 className="mb-2 mt-6 font-heading text-lg text-white">The activity chart for {p.name}</h3>
       <p className="mb-3 font-body text-xs font-light text-muted">
-        &ldquo;Done today&rdquo; records it against {today}. For an earlier day, type the date. N/A takes an activity off
-        this project (sanction, on-site work where there is no site).
+        {canRecord ? (
+          <>
+            &ldquo;Done today&rdquo; records it against {today}. For an earlier day, type the date. N/A takes an
+            activity off this project (sanction, on-site work where there is no site).
+          </>
+        ) : (
+          <>
+            Read only — ticking work off belongs to the designer whose project this is. What they mark
+            shows here as they mark it.
+          </>
+        )}
       </p>
       <div className="overflow-x-auto rounded border border-line">
         <table className="w-full text-left font-body text-[13px]">
@@ -427,10 +440,10 @@ function ProjectDetail({
                       <DateCell
                         key={a.doneOn ?? "none"}
                         value={a.doneOn ?? ""}
-                        disabled={busy || a.notApplicable}
+                        disabled={busy || a.notApplicable || !canRecord}
                         onCommit={(v) => onMark(p.id, a.id, { doneOn: blank(v) })}
                       />
-                      {!a.doneOn && !a.notApplicable ? (
+                      {canRecord && !a.doneOn && !a.notApplicable ? (
                         <button
                           type="button"
                           disabled={busy}
@@ -446,7 +459,7 @@ function ProjectDetail({
                     <input
                       type="checkbox"
                       checked={a.notApplicable}
-                      disabled={busy}
+                      disabled={busy || !canRecord}
                       onChange={(e) => onMark(p.id, a.id, { notApplicable: e.target.checked })}
                       className="h-4 w-4 accent-amber-deep"
                       aria-label={`${a.task} not applicable`}

@@ -196,6 +196,40 @@ async function requireProjectEditor(user: SessionUser, projectId: string): Promi
   return viewer;
 }
 
+/**
+ * Recording work is the designer's, not the head's (Monica, 19 Sep: "Vishakha
+ * sirf track kregi, lekin wo changes krenge apne apne tracker me").
+ *
+ * She reads what they have done; she does not tick it off for them. A board
+ * where the head can also mark work done is a board whose numbers no longer
+ * say who did what — the whole point of the trail on her dashboard.
+ *
+ * Monica and Hardesh sir keep it, because somebody has to be able to correct a
+ * mistake when the person who made it is not there.
+ *
+ * Deliberately NOT extended to adding projects, the chart or the reminders.
+ * Those are how the board exists at all — take them from her too and no
+ * project could ever be put on it. Setting the board up is not the same act as
+ * working on it.
+ */
+async function requireWorkRecorder(user: SessionUser, projectId: string): Promise<DesignViewer> {
+  const viewer = await requireProjectEditor(user, projectId);
+  const isAdmin = user.accessLevel === "L0" || user.accessLevel === "L1";
+  if (viewer.isHead && !isAdmin) {
+    throw new DesignAccessError(
+      user,
+      "Ticking work off is the designer's — this board is for reading what they have done. Ask them to mark it, or ask Monica if it has to be corrected here.",
+    );
+  }
+  return viewer;
+}
+
+/** May this viewer record work — tick activities, mark N/A, write remarks? */
+function mayRecordWork(user: SessionUser, viewer: DesignViewer): boolean {
+  if (user.accessLevel === "L0" || user.accessLevel === "L1") return true;
+  return !viewer.isHead;
+}
+
 export async function getDesignSettings(): Promise<DesignSettings> {
   const [row] = await query<{
     team_name: string;
@@ -449,7 +483,7 @@ export async function getDesignBoard(user: SessionUser): Promise<DesignBoard> {
     team: personRows(projects, people),
     holding: holdingByDependency(projects),
     viewer,
-    can: { manage: viewer.scope === "all", edit: true, export: true },
+    can: { manage: viewer.scope === "all", edit: mayRecordWork(user, viewer), export: true },
     activity,
   };
 }
@@ -744,7 +778,7 @@ export async function markProjectActivity(
   activityId: string,
   mark: ActivityMark,
 ): Promise<void> {
-  await requireProjectEditor(user, projectId);
+  await requireWorkRecorder(user, projectId);
   const settings = await getDesignSettings();
 
   if (mark.doneOn && mark.doneOn > settings.today) {
@@ -817,7 +851,7 @@ export async function markProjectActivitiesDone(
   activityIds: string[],
   doneOn: string | null,
 ): Promise<number> {
-  await requireProjectEditor(user, projectId);
+  await requireWorkRecorder(user, projectId);
   const settings = await getDesignSettings();
   const ids = [...new Set(activityIds)];
   if (ids.length === 0) throw new BlockingRuleError("Pick at least one activity.");
