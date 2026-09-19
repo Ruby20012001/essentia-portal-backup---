@@ -15,7 +15,11 @@ const createSchema = z.object({
   name: z.string().min(1).max(200),
   client: z.string().max(200).nullable().optional(),
   location: z.string().max(200).nullable().optional(),
-  designerId: z.string().uuid(),
+  /* Optional because a designer's own portal does not ask her whose project
+     it is — createDesignProject fills in her own name. An administrator
+     adding on somebody's behalf still has to say who, and is refused there
+     if she does not. */
+  designerId: z.string().uuid().optional(),
   typeCode: z.string().min(1).max(30).nullable().optional(),
   // Optional: a project with no start date is on the board as NOT TRACKED.
   startDate: dateField.optional(),

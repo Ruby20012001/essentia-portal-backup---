@@ -547,8 +547,12 @@ function AddProjectForm({
   onCreate: (input: Record<string, unknown>) => Promise<boolean>;
 }) {
   const designers = board.people;
+  /* A designer only ever adds her own project — the server rewrites the
+     designer to her regardless, so offering her the other four would be a
+     choice that does not exist. She sees her own name instead. */
+  const mine = board.viewer.scope === "own" ? board.viewer.personId : null;
   // Defaults to the designer being looked at; never guessed when looking at everybody.
-  const [designerId, setDesignerId] = useState(person ?? "");
+  const [designerId, setDesignerId] = useState(mine ?? person ?? "");
   const [name, setName] = useState("");
   const [client, setClient] = useState("");
   const [location, setLocation] = useState("");
@@ -584,16 +588,20 @@ function AddProjectForm({
         </label>
         <label className="block">
           <span className={labelClass}>Designer *</span>
-          <select required value={designerId} onChange={(e) => setDesignerId(e.target.value)} className={inputClass}>
-            <option value="" disabled>
-              Pick whose project
-            </option>
-            {designers.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
+          {mine ? (
+            <p className={`${inputClass} text-muted`}>{board.viewer.name}</p>
+          ) : (
+            <select required value={designerId} onChange={(e) => setDesignerId(e.target.value)} className={inputClass}>
+              <option value="" disabled>
+                Pick whose project
               </option>
-            ))}
-          </select>
+              {designers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          )}
         </label>
         <label className="block">
           <span className={labelClass}>Type</span>

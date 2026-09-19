@@ -464,7 +464,8 @@ export type CreateProjectInput = {
   name: string;
   client?: string | null;
   location?: string | null;
-  designerId: string;
+  /** Omitted by a designer adding her own — filled in with her below. */
+  designerId?: string;
   /** Apartment, kothi, office… (db/051). Optional, but it shapes the chart. */
   typeCode?: string | null;
   startDate?: string | null;
@@ -504,6 +505,9 @@ export async function createDesignProject(
       throw new DesignAccessError(user, "You are not on the design team's list.");
     }
     input = { ...input, designerId: viewer.personId };
+  } else if (!input.designerId) {
+    // Only an administrator reaches this, and only by calling the API by hand.
+    throw new BlockingRuleError("Say whose project this is.");
   }
   const settings = await getDesignSettings();
 
