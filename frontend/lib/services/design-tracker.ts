@@ -482,7 +482,29 @@ export async function createDesignProject(
   user: SessionUser,
   input: CreateProjectInput,
 ): Promise<string> {
-  await requireManager(user);
+  /* Vishakha's board is for reading (Monica, 19 Sep: "Vishakha ka bs view wala
+     banega, koi add project nahi"). So a designer puts her own project on the
+     board — and has to, because otherwise nobody could: the head is now a
+     reader and only Monica and Hardesh sir are left, which would mean asking
+     an administrator every time a job starts.
+
+     A designer's project is hers by definition. Whoever it is assigned to is
+     overwritten with herself below, so this cannot be used to put work on
+     somebody else's board. */
+  const viewer = await resolveViewer(user);
+  const isAdmin = user.accessLevel === "L0" || user.accessLevel === "L1";
+  if (viewer.isHead && !isAdmin) {
+    throw new DesignAccessError(
+      user,
+      "This board is for reading. A project is put on it by the designer whose project it is.",
+    );
+  }
+  if (viewer.scope === "own") {
+    if (!viewer.personId) {
+      throw new DesignAccessError(user, "You are not on the design team's list.");
+    }
+    input = { ...input, designerId: viewer.personId };
+  }
   const settings = await getDesignSettings();
 
   const name = input.name.trim();
@@ -719,7 +741,18 @@ export async function updateDesignProject(
 }
 
 export async function deleteDesignProject(user: SessionUser, id: string): Promise<void> {
-  await requireManager(user);
+  /* Removing goes with adding: the head reads, so she does not take projects
+     off the board either. A designer may remove her own — she is the one who
+     put it there, and a project added by mistake should not need an
+     administrator to undo. */
+  const viewer = await requireProjectEditor(user, id);
+  const isAdmin = user.accessLevel === "L0" || user.accessLevel === "L1";
+  if (viewer.isHead && !isAdmin) {
+    throw new DesignAccessError(
+      user,
+      "This board is for reading. A project is taken off it by the designer whose project it is.",
+    );
+  }
   const [row] = await query<{ name: string }>(
     `DELETE FROM ee.design_projects WHERE id = $1 RETURNING name`,
     [id],

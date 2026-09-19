@@ -124,7 +124,10 @@ export function DesignProjectsView({
           className="ml-auto w-64 rounded border border-line-strong bg-card px-3 py-1.5 font-body text-sm font-light text-ink placeholder:text-muted focus:border-amber-deep focus:outline-none"
         />
 
-        {board.can.manage ? (
+        {/* Adding is the designer's — Vishakha reads the board (Monica, 19
+            Sep: "koi add project nahi"). The same flag as ticking, so one
+            answer governs every control that changes something. */}
+        {board.can.edit ? (
           <button
             type="button"
             onClick={() => setAdding((v) => !v)}
@@ -480,7 +483,8 @@ function ProjectDetail({
         </table>
       </div>
 
-      {manage ? (
+      {/* Removing goes with adding: the designer who put it there takes it off. */}
+      {canRecord ? (
         <div className="mt-4 flex border-t border-line pt-3">
           <ConfirmButton
             label="Remove from the board"
