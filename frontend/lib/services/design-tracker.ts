@@ -156,9 +156,14 @@ export async function listDesignTeamForNav(
 ): Promise<{ id: string; name: string }[]> {
   if (!(await isDesignManager(user))) return [];
   try {
+    /* The designers only. The head is not one more name to narrow the board
+       to — the board unnarrowed IS hers, and she reads it to watch the four
+       (Monica, 19 Sep: "Vishakha ka add ni krna, unka dashboard to already
+       hai"). Listing her under her own dashboard offered a smaller version of
+       the page it was sitting on. */
     return await query<{ id: string; name: string }>(
       `SELECT id, name FROM ee.design_tracker_people
-        WHERE is_active ORDER BY sort_order, name`,
+        WHERE is_active AND role = 'designer' ORDER BY sort_order, name`,
     );
   } catch (error) {
     console.error("design tracker: the team could not be read for the menu", error);
