@@ -165,10 +165,27 @@ export function DesignTrackerBoard({
     void call(id, `/api/design-tracker/projects/${id}`, { method: "PATCH", body: JSON.stringify(patch) }, message);
   };
 
+  /* The address follows the chips, so the two can never say different things.
+     replaceState rather than a router push: this is the same page looking at a
+     different person, and it must not cost a round trip to the server or put a
+     step in the back button for every chip pressed. */
   const showPerson = (id: string | null) => {
     setPerson(id);
+    if (!own && typeof window !== "undefined") {
+      const url = id ? `/design-tracker?person=${encodeURIComponent(id)}` : "/design-tracker";
+      window.history.replaceState(null, "", url);
+    }
     if (tab === "setup" || tab === "reminders") setTab("dashboard");
   };
+
+  /* …and the chips follow the address. Pressing Dashboard in the menu while
+     looking at one designer changed the address and nothing else: the lens had
+     been read once, at first render, so the board went on showing that person
+     under a heading that said everybody. */
+  useEffect(() => {
+    if (own) return;
+    setPerson(openAt);
+  }, [openAt, own]);
 
   /**
    * Residential, commercial, or both. Applied once, here, to the projects every
