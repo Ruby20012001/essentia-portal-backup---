@@ -17,3 +17,6 @@ next-env.d.ts
 # Misc
 *.tsbuildinfo
 .DS_Store
+
+# Holds working sign-in links for the design team (db/mint-design-links.mjs --html).
+design-links.html
