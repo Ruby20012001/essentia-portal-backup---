@@ -17,3 +17,6 @@ next-env.d.ts
 # Misc
 *.tsbuildinfo
 .DS_Store
+
+# The local dev database, now kept on disk so restarts do not lose uploads.
+db/.dev-data/

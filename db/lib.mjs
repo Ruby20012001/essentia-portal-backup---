@@ -78,8 +78,21 @@ export function resolveFiles(requested = []) {
   });
 }
 
-export function createDb() {
-  return new PGlite({ extensions: { uuid_ossp, vector } });
+/**
+ * In memory by default — validate.mjs wants a clean database every run and
+ * throws it away when it is done.
+ *
+ * `dir` puts it on disk instead, which is what dev-db.mjs does. Monica, 21
+ * Sep: "Vishakha ke deck me phir se photos nahi aa rahe, baar baar ye sab mat
+ * karo." Pictures are rows in ee.concept_deck_images, and a database that
+ * lives in memory loses them every time the server is restarted — which this
+ * week has been most hours. Uploading them again after each restart is not
+ * something to ask anybody to do.
+ */
+export function createDb(dir) {
+  return dir
+    ? new PGlite(dir, { extensions: { uuid_ossp, vector } })
+    : new PGlite({ extensions: { uuid_ossp, vector } });
 }
 
 // pgcrypto is core contrib on real PostgreSQL but is not compiled into
