@@ -42,11 +42,10 @@ export function DesignTrackerBoard({
   openAt?: string | null;
 }) {
   const [board, setBoard] = useState(initial);
-  // A designer comes here to update, so that is where they land.
-  /* A designer opens on ✓ Update — the card per project with one Done, which
-     is what she came to do. Vishakha opens on the Dashboard, which is what she
-     came to read. */
-  const [tab, setTab] = useState<Tab>(initial.viewer.scope === "own" ? "update" : "dashboard");
+  /* A designer opens on Projects, which since 21 Sep is the only page she
+     has: her jobs, and inside one of them the chart she ticks. Vishakha opens
+     on the Dashboard, which is what she came to read. */
+  const [tab, setTab] = useState<Tab>(initial.viewer.scope === "own" ? "projects" : "dashboard");
   const [banner, setBanner] = useState<Banner | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   /**
@@ -206,7 +205,20 @@ export function DesignTrackerBoard({
      again from the nav beside the ☰, so a tab for it was a second door into the
      room you were already standing in (Monica, 18 Sep). It is still a Tab — the
      view, the print header and the escape from Setup all go on naming it. */
-  const tabs: { key: Tab; label: string; badge?: number }[] = [
+  /* A designer's board is one page: Projects (Monica, 21 Sep — "Lavika Ritu
+     Akansha Jiya ke me se team perf, delay, reminder sab hatado, sirf project
+     rehne chahiye jisme wo upload kar sake aur edit bhi").
+
+     Everything else was the head's way of reading a team: What's new says what
+     moved across four people, Delays sorts a queue, Team performance measures
+     one against another. A designer has her own two or three jobs in front of
+     her and does not need a summary of them — she needs the page where she
+     opens one and records what she did. So the four get that page, and only
+     that page. Nothing is taken from them: opening a project on it still
+     carries every activity, the dates and the uploads. */
+  const tabs: { key: Tab; label: string; badge?: number }[] = own
+    ? [{ key: "projects", label: "Projects", badge: mine.filter((p) => p.heat !== "DONE").length }]
+    : [
     /* "What's new", not "Today" (Monica, 18 Sep). The page was never a diary of
        the day — it is where the board says what has moved and what is stuck,
        which is what somebody opening it is actually after. The Tab key stays
