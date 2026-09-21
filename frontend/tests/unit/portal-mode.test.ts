@@ -129,6 +129,19 @@ describe("tracker mode — the nav", () => {
     expect(hrefs).not.toContain("/my-tracker");
   });
 
+  it("serves the names page, and never lists it either", () => {
+    // Monica, 21 Sep: one address that does not change, with the five names
+    // on it. Serving the route is not the same as opening it — every page
+    // under it 404s unless DESIGN_TEAM_NAME_SIGNIN is "true", which is
+    // checked in the route itself, not here.
+    expect(isRouteAllowed("/design-team", TRACKER)).toBe(true);
+    expect(isRouteAllowed("/design-team/some-person-id", TRACKER)).toBe(true);
+
+    // It is where people arrive, not somewhere to go from inside.
+    const hrefs = groups.flatMap((g) => g.items.map((i) => i.href));
+    expect(hrefs).not.toContain("/design-team");
+  });
+
   it("lists the design team under the tracker, each opening their own", () => {
     // Monica, 19 Sep: "jaise concept ka bana hai aise hi" — the team under the
     // board the way the decks sit under theirs.
