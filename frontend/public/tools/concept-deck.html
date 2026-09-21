@@ -5845,6 +5845,14 @@ function picturesIntoSpaces(fileList, btn) {
   var files = Array.prototype.slice.call(fileList || [])
     .filter(function (f) { return /^image\//.test(f.type); });
   if (!files.length) return;
+  /* In the order their names read, so which picture lands on which card is
+     something you decide when you name them rather than something the file
+     dialog decides for you (Monica, 21 Sep: "mujhe ye no. 1 pe rakhna hai,
+     2 me wo"). Numeric, so 2 comes before 10 — "10" sorting above "2" is
+     exactly how a set of renders ends up shuffled. */
+  files.sort(function (a, b) {
+    return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  });
   fillSpacesWith(files, btn);
 }
 
