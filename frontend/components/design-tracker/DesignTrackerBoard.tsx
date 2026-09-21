@@ -249,9 +249,31 @@ export function DesignTrackerBoard({
   // Dashboard has no tab, so the printed sheet names it from here instead.
   const label = tabs.find((t) => t.key === tab)?.label ?? (tab === "dashboard" ? "Dashboard" : "");
 
+  /* Whose board is being read — the thing the title says, and the reason the
+     title lives in here rather than on the page around it. Monica, 21 Sep:
+     "jab main kisi aur ke dashboard par jaun to upar usi ka naam hona
+     chahiye." Narrowing to a designer does not reload the page (it is a
+     replaceState, see showPerson), so a title rendered on the server would go
+     on saying Vishakha while the board underneath showed Ritu. */
+  const whose =
+    (own ? board.viewer.name : selected?.name) ??
+    board.people.find((p) => p.role === "head")?.name ??
+    null;
+
   return (
     <div id="print-area" data-mode="view">
       <div data-print="board">
+        <div className="mb-6" data-print="hide">
+          <h1 className="mb-1 font-heading text-5xl leading-tight text-white md:text-6xl">
+            {whose ? `${whose}'s Dashboard` : "Design Activity Tracker"}
+          </h1>
+          <p className="font-body text-sm font-light text-label">
+            S4c · Design Activity Tracker — every project against the activity chart, what is
+            late, and whom it depends on
+            {board.settings.teamName ? ` · ${board.settings.teamName}` : ""}
+          </p>
+        </div>
+
         <div className="hidden" data-print="only">
           <h1 className="font-body text-base font-bold">
             {board.settings.teamName} — Design Activity Tracker · {label}

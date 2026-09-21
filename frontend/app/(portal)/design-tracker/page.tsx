@@ -50,13 +50,11 @@ export default async function DesignTrackerPage({
   }
 
   return (
+    /* The title is the board's own, not the page's: whose board is being read
+       changes when a designer is picked, and that does not reload the page.
+       PageTitle stays for the paths below, which render before there is a
+       board to ask. */
     <div>
-      <div className="mb-6">
-        <PageTitle
-          teamName={board.settings.teamName}
-          headName={board.people.find((p) => p.role === "head")?.name}
-        />
-      </div>
       <DesignTrackerBoard initial={board} openAt={searchParams?.person ?? null} />
     </div>
   );
@@ -68,8 +66,9 @@ export default async function DesignTrackerPage({
  * bada bada"). The screen code and what it measures drop to the line beneath,
  * where they are still available but no longer the headline.
  *
- * `headName` is absent on the error paths, which render before the board is
- * known; the tracker's own name stands in then.
+ * Only the paths that have no board use this — no access, or the database
+ * unreachable. Where there IS a board, the board titles itself, because the
+ * name in the title changes without the page being rendered again.
  */
 function PageTitle({ teamName, headName }: { teamName?: string; headName?: string }) {
   return (
