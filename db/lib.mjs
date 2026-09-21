@@ -65,6 +65,7 @@ export const DEFAULT_FILES = [
   "051_design_project_types.sql",
   "052_design_reminders.sql",
   "053_design_tracker_links.sql",
+  "054_decks_head_reads.sql",
   "900_dev_fixtures.sql",
   "901_design_tracker_fixtures.sql",
 ];

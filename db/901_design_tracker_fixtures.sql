@@ -102,3 +102,55 @@ BEGIN
     ON CONFLICT (project_id, activity_id) DO NOTHING;
   END LOOP;
 END $$;
+
+-- ── one link per person that survives a rebuild ───────────────────────
+--
+--   The links themselves are minted by db/mint-design-links.mjs, and a
+--   minted secret is shown once and never again — right for a real link,
+--   miserable for testing, where the database is thrown away and rebuilt
+--   several times an hour. Monica clicked an old one and got a 404 for the
+--   third time in a day, which is what this fixes.
+--
+--   So the test database is given a KNOWN link for each of the five. They
+--   are written here in the open, which is safe for exactly one reason:
+--   this file is loaded by db/dev-db.mjs and by nothing else, so these
+--   links only ever exist in a database that lives in memory on somebody's
+--   laptop. They are not secrets and are not treated as any.
+--
+--   Minting still works and still wins: --rotate revokes whatever is live,
+--   including these, and issues a real one.
+--
+--     Vishakha       /my-tracker/dev-vishakha-2f8a41c6b95d4e07
+--     Lavika         /my-tracker/dev-lavika-7b3e19d4a6c28f50
+--     Akansha Malik  /my-tracker/dev-akansha-5c1f8ab30e97d264
+--     Ritu           /my-tracker/dev-ritu-9d64b2e7c05a8f13
+--     Jiya           /my-tracker/dev-jiya-3a7c05e9b18d6f42
+--
+INSERT INTO ee.design_tracker_links (person_id, token_hash)
+SELECT p.id, v.hash
+  FROM (VALUES
+    ('Vishakha',      'a1761526fba9a78d60d8128b581a4963a89c661420581e5b24529989464c3678'),
+    ('Lavika',        '70f14be9b16d6a3513185fa99539c2ecd8f6b819c24fc3c0880656dd6ccc54b6'),
+    ('Akansha Malik', 'aa585cb8c14b5118296a47d980f7f304e320492283589aa606548507c6b4c15d'),
+    ('Ritu',          '5e88b44c1939d5bd62718eb0856d84bca5bcc2029f7629cc5b8922773c151dad'),
+    ('Jiya',          '121600f5788a2d3d839abf679e92bc8c6fefab40de778975a8c514c7ebd0dfa6')
+  ) AS v(name, hash)
+  JOIN ee.design_tracker_people p ON p.name = v.name AND p.is_active
+ON CONFLICT (token_hash) DO NOTHING;
+
+-- ── the four decks, at ids that survive a rebuild ─────────────────────
+--
+--   Same reason as the links above: a deck made through the API gets a
+--   fresh uuid every time, so /deck/<id> changed under Monica on every
+--   rebuild and whatever link she had been sent stopped working. Fixed
+--   ids here mean the four deck links are the same tomorrow as today.
+--
+--   Blank decks — no project, no spaces, no plan. The plan is a 650 KB
+--   image and has no business in a SQL file; it is attached with the tool.
+--
+INSERT INTO ee.concept_decks (id, name, state) VALUES
+  ('d1000000-0000-4000-8000-000000000001', 'Lavika — concept deck', '{"v":1,"type":"Residence","logo":"","project":{"name":"Lavika — concept deck","client":"","contact":"","address":"","code":"","eyebrow":"CONCEPT DECK · PRIVATE RESIDENCE","headline":"A house you can read before you can walk it.","slogan":"different by design","closing":"Everything here is a beginning, not a conclusion. Tell us where it is wrong, and it changes — that is what a concept is for.","kind":"Interior Concept Deck","dateLabel":"September 2026","confidentiality":"Confidential","rate":"1200","estimateBasis":"Indicative only — at essentia published rate of ₹ 1,200 / sq.ft. Not a quotation.","autoSeconds":"2","designer":"Lavika","firm":"essentia environments","firmLine":"essentia Design & Project Partners · Sector 34, Gurugram · Since 1999","site":"essentiaenvironments.com"},"plates":[{"label":"Ground floor","src":"","w":0,"h":0}],"documents":[],"spaces":[],"narrative":{"lead":"A drawing is a language. Nobody should have to learn it to see their own home.","quote":"Touch a number, and the room answers for itself.","body":"A plan records where the walls fall. It does not say which window the morning arrives through, or what it will feel like to set a bag down at the end of a long day.\n\nSo every space on this plan carries a number. Touch it and the room opens — how large it is, where it sits, what it holds, and why it sits there rather than anywhere else.","disclaimer":"All the 3Ds in this deck are for representational purpose for design intent only, and are subject to changes according to the site conditions."}}'::jsonb),
+  ('d1000000-0000-4000-8000-000000000002', 'Akansha Malik — concept deck', '{"v":1,"type":"Residence","logo":"","project":{"name":"Akansha Malik — concept deck","client":"","contact":"","address":"","code":"","eyebrow":"CONCEPT DECK · PRIVATE RESIDENCE","headline":"A house you can read before you can walk it.","slogan":"different by design","closing":"Everything here is a beginning, not a conclusion. Tell us where it is wrong, and it changes — that is what a concept is for.","kind":"Interior Concept Deck","dateLabel":"September 2026","confidentiality":"Confidential","rate":"1200","estimateBasis":"Indicative only — at essentia published rate of ₹ 1,200 / sq.ft. Not a quotation.","autoSeconds":"2","designer":"Akansha Malik","firm":"essentia environments","firmLine":"essentia Design & Project Partners · Sector 34, Gurugram · Since 1999","site":"essentiaenvironments.com"},"plates":[{"label":"Ground floor","src":"","w":0,"h":0}],"documents":[],"spaces":[],"narrative":{"lead":"A drawing is a language. Nobody should have to learn it to see their own home.","quote":"Touch a number, and the room answers for itself.","body":"A plan records where the walls fall. It does not say which window the morning arrives through, or what it will feel like to set a bag down at the end of a long day.\n\nSo every space on this plan carries a number. Touch it and the room opens — how large it is, where it sits, what it holds, and why it sits there rather than anywhere else.","disclaimer":"All the 3Ds in this deck are for representational purpose for design intent only, and are subject to changes according to the site conditions."}}'::jsonb),
+  ('d1000000-0000-4000-8000-000000000003', 'Ritu — concept deck', '{"v":1,"type":"Residence","logo":"","project":{"name":"Ritu — concept deck","client":"","contact":"","address":"","code":"","eyebrow":"CONCEPT DECK · PRIVATE RESIDENCE","headline":"A house you can read before you can walk it.","slogan":"different by design","closing":"Everything here is a beginning, not a conclusion. Tell us where it is wrong, and it changes — that is what a concept is for.","kind":"Interior Concept Deck","dateLabel":"September 2026","confidentiality":"Confidential","rate":"1200","estimateBasis":"Indicative only — at essentia published rate of ₹ 1,200 / sq.ft. Not a quotation.","autoSeconds":"2","designer":"Ritu","firm":"essentia environments","firmLine":"essentia Design & Project Partners · Sector 34, Gurugram · Since 1999","site":"essentiaenvironments.com"},"plates":[{"label":"Ground floor","src":"","w":0,"h":0}],"documents":[],"spaces":[],"narrative":{"lead":"A drawing is a language. Nobody should have to learn it to see their own home.","quote":"Touch a number, and the room answers for itself.","body":"A plan records where the walls fall. It does not say which window the morning arrives through, or what it will feel like to set a bag down at the end of a long day.\n\nSo every space on this plan carries a number. Touch it and the room opens — how large it is, where it sits, what it holds, and why it sits there rather than anywhere else.","disclaimer":"All the 3Ds in this deck are for representational purpose for design intent only, and are subject to changes according to the site conditions."}}'::jsonb),
+  ('d1000000-0000-4000-8000-000000000004', 'Jiya — concept deck', '{"v":1,"type":"Residence","logo":"","project":{"name":"Jiya — concept deck","client":"","contact":"","address":"","code":"","eyebrow":"CONCEPT DECK · PRIVATE RESIDENCE","headline":"A house you can read before you can walk it.","slogan":"different by design","closing":"Everything here is a beginning, not a conclusion. Tell us where it is wrong, and it changes — that is what a concept is for.","kind":"Interior Concept Deck","dateLabel":"September 2026","confidentiality":"Confidential","rate":"1200","estimateBasis":"Indicative only — at essentia published rate of ₹ 1,200 / sq.ft. Not a quotation.","autoSeconds":"2","designer":"Jiya","firm":"essentia environments","firmLine":"essentia Design & Project Partners · Sector 34, Gurugram · Since 1999","site":"essentiaenvironments.com"},"plates":[{"label":"Ground floor","src":"","w":0,"h":0}],"documents":[],"spaces":[],"narrative":{"lead":"A drawing is a language. Nobody should have to learn it to see their own home.","quote":"Touch a number, and the room answers for itself.","body":"A plan records where the walls fall. It does not say which window the morning arrives through, or what it will feel like to set a bag down at the end of a long day.\n\nSo every space on this plan carries a number. Touch it and the room opens — how large it is, where it sits, what it holds, and why it sits there rather than anywhere else.","disclaimer":"All the 3Ds in this deck are for representational purpose for design intent only, and are subject to changes according to the site conditions."}}'::jsonb)
+ON CONFLICT (id) DO NOTHING;
