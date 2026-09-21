@@ -75,6 +75,10 @@ const TRACKER_MODE_PREFIXES = [
   // to nothing else, and a password between a designer and her own board is
   // why the board went untouched (Monica, 19 Sep).
   "/my-tracker",
+  // The five names on one page, at an address that does not change (Monica,
+  // 21 Sep). Serving it is not the same as opening it: every route under
+  // /design-team 404s unless DESIGN_TEAM_NAME_SIGNIN is "true".
+  "/design-team",
   // Its 09:00 morning reminders, called by Vercel Cron (vercel.json).
   "/api/jobs/design-reminders",
   "/login",
