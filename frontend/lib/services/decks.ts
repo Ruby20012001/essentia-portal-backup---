@@ -99,10 +99,41 @@ async function requireReader(user: SessionUser): Promise<void> {
   }
 }
 
-async function requireEditor(user: SessionUser): Promise<void> {
-  if (!(await canEditDecks(user))) {
-    throw new PermissionError(user, "edit", "concept_deck");
-  }
+/**
+ * Whether this deck is this person's own.
+ *
+ * Matched on the name the decks are made under — "<person> — concept deck" —
+ * which is the rule db/901 seeds by and /design-team reads by. One naming
+ * rule, in the places that have to agree about it.
+ */
+export async function ownsDeck(user: SessionUser, deckId: string): Promise<boolean> {
+  const rows = await query<{ one: number }>(
+    `SELECT 1 AS one
+       FROM ee.concept_decks d
+       JOIN ee.design_tracker_people p
+              ON lower(d.name) = lower(p.name) || ' — concept deck'
+      WHERE d.id = $1 AND p.user_id = $2 AND p.is_active`,
+    [deckId, user.id],
+  );
+  return rows.length > 0;
+}
+
+/**
+ * Editing is the named list, or your own deck.
+ *
+ * db/054 took the head off the editors' list, because the four draw and she
+ * reads — and that is still true of their decks. But she has a deck of her
+ * own (IREO Corridors), and on 21 Sep she spent an afternoon putting pictures
+ * into it that were silently refused, because "she does not edit decks" had
+ * been read as "including hers". Your own deck is yours.
+ *
+ * deckId is absent when there is no deck yet — making a new one is the list
+ * and nothing else, or anybody could create a deck and then own it.
+ */
+async function requireEditor(user: SessionUser, deckId?: string): Promise<void> {
+  if (await canEditDecks(user)) return;
+  if (deckId && (await ownsDeck(user, deckId))) return;
+  throw new PermissionError(user, "edit", "concept_deck");
 }
 
 function countSpaces(state: unknown): number {
@@ -163,7 +194,7 @@ export async function getDeck(
       [id],
     ),
     listDeckActivity(id),
-    canEditDecks(user),
+    canEditDecks(user).then((yes) => yes || ownsDeck(user, id)),
   ]);
 
   return {
@@ -285,7 +316,7 @@ export async function saveDeck(
     what?: string;
   },
 ): Promise<{ version: number; updatedAt: string; by: string }> {
-  await requireEditor(user);
+  await requireEditor(user, id);
   /* refused before anything is written: a deck too heavy to open is worse
      than the save that would have made it */
   const stateJson = deckStateJson(input.state);
@@ -355,7 +386,7 @@ export async function archiveDeck(
   user: SessionUser,
   id: string,
 ): Promise<void> {
-  await requireEditor(user);
+  await requireEditor(user, id);
   await withUserContext(user, (q) =>
     q(
       `UPDATE ee.concept_decks SET is_archived = TRUE, updated_by = $2, updated_at = NOW()
@@ -378,7 +409,7 @@ export async function addDeckPicture(
   deckId: string,
   src: unknown,
 ): Promise<{ slot: string; url: string }> {
-  await requireEditor(user);
+  await requireEditor(user, deckId);
   const picture = readPicture(src);
   const [deck] = await query<{ id: string }>(
     "SELECT id FROM ee.concept_decks WHERE id = $1 AND is_archived = FALSE",
@@ -398,7 +429,7 @@ export async function putDeckImage(
   slot: string,
   image: { bytes: Buffer; mime: string; width?: number; height?: number },
 ): Promise<void> {
-  await requireEditor(user);
+  await requireEditor(user, deckId);
   if (!slot || slot.length > 120) {
     throw new BlockingRuleError("A picture needs a slot to belong to.");
   }
