@@ -29,6 +29,7 @@
  * one deck's plan would be three broken plans the day that deck is tidied.
  */
 import { readFileSync } from "node:fs";
+import { createInterface } from "node:readline";
 
 const SOURCE =
   process.env.IREO_DECK_FILE ??
@@ -41,9 +42,20 @@ const HEAD = "Vishakha";
 const TEAM = ["Lavika", "Akansha Malik", "Ritu", "Jiya"];
 const deckName = (person) => `${person} — concept deck`;
 
-if (!PASSWORD) {
-  console.error("Set DECK_PASSWORD (and DECK_EMAIL, if not Lavika).");
-  process.exit(1);
+/**
+ * Asked for rather than put in the command, because a password typed into a
+ * command line is a password that ends up in the shell's history — and
+ * because the placeholder in the instructions kept being run as if it were
+ * the password itself, which is nobody's fault but the instructions'.
+ */
+function askPassword(forWhom) {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(`Password for ${forWhom}: `, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
 }
 
 let cookie = "";
@@ -53,13 +65,19 @@ const send = (path, opts = {}) =>
     headers: { "Content-Type": "application/json", Cookie: cookie, ...(opts.headers ?? {}) },
   });
 
-async function signIn() {
+async function signIn(password) {
   const res = await fetch(`${BASE}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: EMAIL, password: PASSWORD }),
+    body: JSON.stringify({ email: EMAIL, password }),
   });
-  if (!res.ok) throw new Error(`Could not sign in as ${EMAIL} (${res.status}).`);
+  if (!res.ok) {
+    throw new Error(
+      res.status === 401
+        ? `That password is not ${EMAIL}'s. Try again, or set a new one with db/set-design-passwords.mjs.`
+        : `Could not sign in as ${EMAIL} (${res.status}).`,
+    );
+  }
   cookie = (res.headers.get("set-cookie") ?? "").split(";")[0];
   if (!cookie) throw new Error("Signed in, but no session cookie came back.");
 }
@@ -116,7 +134,9 @@ const run = async () => {
   const source = JSON.parse(match[1]);
   const clone = () => JSON.parse(JSON.stringify(source));
 
-  await signIn();
+  const password = PASSWORD || (await askPassword(EMAIL));
+  if (!password) throw new Error("No password given.");
+  await signIn(password);
   console.log(`signed in as ${EMAIL} on ${BASE}`);
 
   /* The head's deck, whole. A deck is made empty and then filled, because the
