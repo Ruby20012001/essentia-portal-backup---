@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { query } from "@/lib/db";
 
@@ -99,12 +98,21 @@ export default async function DesignTeamPage() {
 
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                   {p.has_account ? (
-                    <Link
+                    /* A plain <a>, not next/link, and this matters. The href
+                       is a route handler that answers with a redirect and a
+                       Set-Cookie; asking the client router to "navigate" to
+                       that is asking it to follow a redirect it cannot see
+                       and to notice a cookie it does not read. It worked on
+                       one machine and did nothing on Monica's, which is the
+                       worst way for it to behave. A full page load has no
+                       such opinion — the browser follows the redirect, keeps
+                       the cookie, and lands on the board. */
+                    <a
                       href={`/design-team/${p.id}`}
                       className="rounded border border-line-strong bg-canvas px-3 py-2 font-body text-[13px] font-light text-ink transition-colors hover:border-amber-deep"
                     >
                       {head ? "Dashboard kholo" : "Tracker kholo"}
-                    </Link>
+                    </a>
                   ) : (
                     <span className="font-body text-[13px] font-light text-muted">
                       Portal account abhi nahi bana
@@ -112,12 +120,14 @@ export default async function DesignTeamPage() {
                   )}
 
                   {p.deck_id ? (
-                    <Link
+                    /* The deck is served outside the portal shell and opens
+                       the tool, not a React page — the same full load. */
+                    <a
                       href={`/deck/${p.deck_id}`}
                       className="rounded border border-line-strong bg-canvas px-3 py-2 font-body text-[13px] font-light text-ink transition-colors hover:border-amber-deep"
                     >
                       Concept deck
-                    </Link>
+                    </a>
                   ) : null}
                 </div>
               </li>
