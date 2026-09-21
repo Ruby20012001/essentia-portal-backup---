@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Design team · essentia",
-  description: "Apna naam chuniye.",
+  description: "Pick your name.",
   robots: { index: false, follow: false },
 };
 
@@ -63,7 +63,7 @@ export default async function DesignTeamPage() {
           <Image src="/brand/logo-dark.png" alt="essentia" height={20} width={102} priority />
           <h1 className="mt-6 font-heading text-2xl font-light text-primary">Design team</h1>
           <p className="mt-3 font-body text-sm font-light leading-relaxed text-secondary">
-            Abhi khul nahi raha. Kuch minute baad dobara try kijiye.
+            This cannot be reached at the moment. Try again in a few minutes.
           </p>
         </div>
       </main>
@@ -76,7 +76,7 @@ export default async function DesignTeamPage() {
         <Image src="/brand/logo-dark.png" alt="essentia" height={20} width={102} priority />
         <h1 className="mt-6 font-heading text-2xl font-light text-primary">Design team</h1>
         <p className="mt-2 font-body text-sm font-light text-secondary">
-          Apna naam chuniye — seedha aapka board khul jayega.
+          Pick your name — your board opens straight away.
         </p>
 
         <ul className="mt-8 space-y-2.5">
@@ -92,7 +92,7 @@ export default async function DesignTeamPage() {
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="font-heading text-lg text-primary">{p.name}</span>
                   <span className="font-body text-xs font-light text-muted">
-                    {head ? "poora board · sirf dekhne ke liye" : "apna tracker · edit kar sakti hai"}
+                    {head ? "the whole board · read only" : "her own tracker · she can edit it"}
                   </span>
                 </div>
 
@@ -111,11 +111,11 @@ export default async function DesignTeamPage() {
                       href={`/design-team/${p.id}`}
                       className="rounded border border-line-strong bg-canvas px-3 py-2 font-body text-[13px] font-light text-ink transition-colors hover:border-amber-deep"
                     >
-                      {head ? "Dashboard kholo" : "Tracker kholo"}
+                      {head ? "Open the dashboard" : "Open the tracker"}
                     </a>
                   ) : (
                     <span className="font-body text-[13px] font-light text-muted">
-                      Portal account abhi nahi bana
+                      No portal account yet
                     </span>
                   )}
 
@@ -136,8 +136,8 @@ export default async function DesignTeamPage() {
         </ul>
 
         <p className="mt-8 font-body text-xs font-light leading-relaxed text-muted">
-          Yeh page sirf design team ke liye hai. Jo bhi ise khole, wo in paanch naamon me se kisi
-          bhi naam se andar ja sakta hai — isliye iska pata bahar mat dijiye.
+          This page is for the design team. Anyone who opens it can go in under any of these
+          five names, so keep the address inside the team.
         </p>
       </div>
     </main>
