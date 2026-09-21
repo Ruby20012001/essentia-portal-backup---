@@ -66,6 +66,7 @@ export const DEFAULT_FILES = [
   "052_design_reminders.sql",
   "053_design_tracker_links.sql",
   "900_dev_fixtures.sql",
+  "901_design_tracker_fixtures.sql",
 ];
 
 export function resolveFiles(requested = []) {
