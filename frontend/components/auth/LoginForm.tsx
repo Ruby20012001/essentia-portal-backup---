@@ -7,13 +7,16 @@ import { homeHref, isRouteAllowed } from "@/lib/portal-mode";
 
 export function LoginForm({
   next,
+  email: known,
   showDevHint,
 }: {
   next?: string;
+  /** Already known when somebody picked their name on /design-team. */
+  email?: string;
   showDevHint: boolean;
 }) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(known ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

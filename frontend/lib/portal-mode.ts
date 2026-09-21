@@ -71,13 +71,9 @@ const TRACKER_MODE_PREFIXES = [
   // activity chart. Vishakha and her designers sign in at /deck-login.
   "/design-tracker",
   "/api/design-tracker",
-  // One link per designer, in place of a password (db/053). The four sign in
-  // to nothing else, and a password between a designer and her own board is
-  // why the board went untouched (Monica, 19 Sep).
-  "/my-tracker",
   // The five names on one page, at an address that does not change (Monica,
-  // 21 Sep). Serving it is not the same as opening it: every route under
-  // /design-team 404s unless DESIGN_TEAM_NAME_SIGNIN is "true".
+  // 21 Sep). It signs nobody in — each name is a link to /login with that
+  // person's address filled in, and she still types her own password.
   "/design-team",
   // Its 09:00 morning reminders, called by Vercel Cron (vercel.json).
   "/api/jobs/design-reminders",

@@ -117,29 +117,19 @@ describe("tracker mode — the nav", () => {
     expect(forDesigner).toEqual(forHead.filter((h) => h !== "/decks"));
   });
 
-  it("serves the designers' own links, and never lists them", () => {
-    // Monica, 19 Sep: the four reach their board by a link instead of a
-    // password (db/053). The route has to be served or every link 404s...
-    expect(isRouteAllowed("/my-tracker", TRACKER)).toBe(true);
-    expect(isRouteAllowed("/my-tracker/abc123", TRACKER)).toBe(true);
-
-    // ...and it must never appear in the menu. A link is one person's way in;
-    // a menu entry would offer it to whoever is already looking at the board.
-    const hrefs = groups.flatMap((g) => g.items.map((i) => i.href));
-    expect(hrefs).not.toContain("/my-tracker");
-  });
-
-  it("serves the names page, and never lists it either", () => {
+  it("serves the names page, and never lists it", () => {
     // Monica, 21 Sep: one address that does not change, with the five names
-    // on it. Serving the route is not the same as opening it — every page
-    // under it 404s unless DESIGN_TEAM_NAME_SIGNIN is "true", which is
-    // checked in the route itself, not here.
+    // on it. It hands nobody a session — each name links to /login with that
+    // person's address filled in, and she types her own password there.
     expect(isRouteAllowed("/design-team", TRACKER)).toBe(true);
-    expect(isRouteAllowed("/design-team/some-person-id", TRACKER)).toBe(true);
+    expect(isRouteAllowed("/login", TRACKER)).toBe(true);
 
     // It is where people arrive, not somewhere to go from inside.
     const hrefs = groups.flatMap((g) => g.items.map((i) => i.href));
     expect(hrefs).not.toContain("/design-team");
+
+    // And the password-less door is gone, not merely unlinked.
+    expect(isRouteAllowed("/my-tracker", TRACKER)).toBe(false);
   });
 
   it("lists the design team under the tracker, each opening their own", () => {

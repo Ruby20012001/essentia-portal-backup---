@@ -39,6 +39,7 @@ export function LoginStage({
   devLogin,
   next,
   error,
+  email,
   eyebrow = "sign in page",
   caption = "Sign in with your email",
 }: {
@@ -46,6 +47,10 @@ export function LoginStage({
   devLogin: boolean;
   next?: string;
   error?: string;
+  /* Filled in for somebody who arrived from a page that already knew who
+     they were — the design team's, where they pick their name first. They
+     still type their password; this only saves them their own address. */
+  email?: string;
   /* The same door, named for the room behind it. The decks have their own
      sign-in page so the design team is not handed the tracker's — the
      accounts, the form and the session underneath are one and the same. */
@@ -151,7 +156,7 @@ export function LoginStage({
             Sign in with Microsoft
           </a>
         ) : (
-          <LoginForm next={next} showDevHint={devLogin} />
+          <LoginForm next={next} email={email} showDevHint={devLogin} />
         )}
         {/* Sign-in codes are gone from this page, 2026-09-07. They were never
             delivered: essentia.in publishes a DMARC policy and Brevo was not

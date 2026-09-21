@@ -15,6 +15,7 @@ type Person = {
   id: string;
   name: string;
   role: "head" | "designer";
+  email: string | null;
   deck_id: string | null;
   has_account: boolean;
 };
@@ -38,13 +39,11 @@ type Person = {
  * a designer opens and she should not have to be told where the other one is.
  */
 export default async function DesignTeamPage() {
-  if (process.env.DESIGN_TEAM_NAME_SIGNIN !== "true") notFound();
-
   /* The deck is matched by the name the decks are made under, the same way
      db/mint-design-links.mjs matches it — one naming rule, in two places that
      must agree. A designer with no deck simply has one link instead of two. */
   const people = await query<Person>(
-    `SELECT p.id, p.name, p.role,
+    `SELECT p.id, p.name, p.role, u.email,
             d.id AS deck_id,
             (u.id IS NOT NULL AND u.is_active) AS has_account
        FROM ee.design_tracker_people p
@@ -76,7 +75,7 @@ export default async function DesignTeamPage() {
         <Image src="/brand/logo-dark.png" alt="essentia" height={20} width={102} priority />
         <h1 className="mt-6 font-heading text-2xl font-light text-primary">Design team</h1>
         <p className="mt-2 font-body text-sm font-light text-secondary">
-          Pick your name — your board opens straight away.
+          Pick your name, then sign in with your password.
         </p>
 
         <ul className="mt-8 space-y-2.5">
@@ -108,7 +107,7 @@ export default async function DesignTeamPage() {
                        such opinion — the browser follows the redirect, keeps
                        the cookie, and lands on the board. */
                     <a
-                      href={`/design-team/${p.id}`}
+                      href={`/login?email=${encodeURIComponent(p.email ?? "")}&next=%2Fdesign-tracker`}
                       className="rounded border border-line-strong bg-canvas px-3 py-2 font-body text-[13px] font-light text-ink transition-colors hover:border-amber-deep"
                     >
                       {head ? "Open the dashboard" : "Open the tracker"}
@@ -136,8 +135,7 @@ export default async function DesignTeamPage() {
         </ul>
 
         <p className="mt-8 font-body text-xs font-light leading-relaxed text-muted">
-          This page is for the design team. Anyone who opens it can go in under any of these
-          five names, so keep the address inside the team.
+Each of you can only open your own. Ask Monica if you have forgotten your password.
         </p>
       </div>
     </main>

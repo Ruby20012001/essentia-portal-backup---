@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { next?: string; error?: string };
+  searchParams: { next?: string; error?: string; email?: string };
 }) {
   return (
     <LoginStage
@@ -21,6 +21,7 @@ export default function LoginPage({
       devLogin={process.env.AUTH_ALLOW_DEV_LOGIN === "true"}
       next={searchParams.next}
       error={searchParams.error}
+      email={searchParams.email}
     />
   );
 }
