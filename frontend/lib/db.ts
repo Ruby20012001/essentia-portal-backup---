@@ -110,3 +110,57 @@ export async function withUserContext<T>(
     client.release();
   }
 }
+
+/**
+ * The same thing for somebody who does not work here.
+ *
+ * A candidate holding an interview link has no account, so `withUserContext`
+ * has nothing to give it. This sets `app.candidate_id` instead, which db/056's
+ * policies open for — their own row, their own rounds, and nothing else.
+ *
+ * WHY IT IS A SEPARATE FUNCTION AND NOT AN ARGUMENT. The two contexts must
+ * never be held at once. A transaction that set both would be one where the
+ * candidate's fence and the staff fence are OR'd together, because RLS
+ * policies are OR'd and the widest one wins. Two functions means there is no
+ * call site where somebody can pass both by accident.
+ *
+ * `app.user_id` and `app.user_access_level` are cleared rather than left
+ * alone: the connection is pooled, and an empty string is already what
+ * `hr.acting_user()` and `hr.may_see_hiring()` read as nobody.
+ *
+ * The caller resolves the token to a candidate id BEFORE calling this. That
+ * lookup is the one query that cannot be fenced by the thing it is looking
+ * up, so it runs as the owner in `lib/services/candidate-portal.ts` and reads
+ * one column off one table.
+ */
+export async function withCandidateContext<T>(
+  candidateId: string,
+  fn: (q: typeof query) => Promise<T>,
+): Promise<T> {
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SET LOCAL ROLE essentia_app");
+    await client.query(
+      `SELECT set_config('app.user_id', '', TRUE),
+              set_config('app.user_access_level', '', TRUE),
+              set_config('app.candidate_id', $1, TRUE)`,
+      [candidateId],
+    );
+    const scopedQuery = async <R extends QueryResultRow>(
+      text: string,
+      params?: unknown[],
+    ): Promise<R[]> => {
+      const result = await client.query<R>(text, params);
+      return result.rows;
+    };
+    const value = await fn(scopedQuery as typeof query);
+    await client.query("COMMIT");
+    return value;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}

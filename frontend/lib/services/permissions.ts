@@ -27,7 +27,12 @@ export type PermissionAction =
   | "export"
   | "ai_access"
   | "financial_access"
-  | "hr_access";
+  | "hr_access"
+  /* Put something in front of somebody who does not work here (db/056). The
+     twelve above are all about what a member of staff may do to a record;
+     this is the only one that reaches outside the company, which is why it is
+     its own action rather than a stretched reading of `create`. */
+  | "invite";
 
 export type PermissionScope = "all" | "own_dept" | "own_records";
 
@@ -45,6 +50,10 @@ const SENSITIVE_ACTIONS: ReadonlySet<PermissionAction> = new Set([
   "ai_access",
   "financial_access",
   "hr_access",
+  // Every check is logged, allowed or not: this is the action that puts a
+  // page in front of somebody outside the company, and "who sent that link"
+  // is a question worth being able to answer a year later.
+  "invite",
 ]);
 
 export class PermissionError extends Error {

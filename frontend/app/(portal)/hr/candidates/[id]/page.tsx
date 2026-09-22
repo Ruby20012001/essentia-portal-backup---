@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CandidateFile } from "@/components/hiring/CandidateFile";
+import { InvitePanel } from "@/components/hiring/InvitePanel";
 import { getCurrentUser } from "@/lib/auth/session";
 import { NotFoundError } from "@/lib/services/blocking";
-import { PermissionError } from "@/lib/services/permissions";
+import { can, PermissionError } from "@/lib/services/permissions";
 import {
   getCandidate,
   hiringRights,
   listQuestionSets,
   listStages,
 } from "@/lib/services/hiring";
+import { inviteStatus, listDocuments } from "@/lib/services/candidate-portal";
 
 export const dynamic = "force-dynamic";
 
@@ -36,11 +38,15 @@ export default async function CandidatePage({
   }
 
   try {
-    const [candidate, stages, questionSets] = await Promise.all([
-      getCandidate(user, params.id),
-      listStages(),
-      listQuestionSets(user),
-    ]);
+    const [candidate, stages, questionSets, invite, documents, mayInvite] =
+      await Promise.all([
+        getCandidate(user, params.id),
+        listStages(),
+        listQuestionSets(user),
+        inviteStatus(user, params.id),
+        listDocuments(user, params.id),
+        can(user, "invite", "hiring"),
+      ]);
     return (
       <div>
         <Link
@@ -49,6 +55,18 @@ export default async function CandidatePage({
         >
           ← Hiring
         </Link>
+        {/* Above the file rather than inside it. Sending somebody their own
+            page is the one action on this screen that leaves the company, and
+            it should not be found three sections down among the stage moves. */}
+        <div className="mt-6">
+          <InvitePanel
+            candidateId={params.id}
+            candidateEmail={candidate.email}
+            canInvite={mayInvite.allowed}
+            initial={invite}
+            documents={documents}
+          />
+        </div>
         <CandidateFile
           candidate={candidate}
           stages={stages}

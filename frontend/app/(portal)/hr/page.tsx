@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { HiringBoard } from "@/components/hiring/HiringBoard";
+import { RepliesList } from "@/components/hiring/RepliesList";
 import { RoundsList } from "@/components/hiring/RoundsList";
+import { listReplies } from "@/lib/services/candidate-portal";
 import { getCurrentUser, type SessionUser } from "@/lib/auth/session";
 import { getDepartments } from "@/lib/services/departments";
 import {
@@ -79,13 +81,15 @@ async function Board({
   user: SessionUser;
   rights: HiringRights;
 }) {
-  const [roles, candidates, upcoming, stages, departments] = await Promise.all([
-    listOpenRoles(user),
-    listCandidates(user, {}),
-    listInterviews(user, { upcomingOnly: true }),
-    listStages(),
-    getDepartments(),
-  ]);
+  const [roles, candidates, upcoming, stages, departments, replies] =
+    await Promise.all([
+      listOpenRoles(user),
+      listCandidates(user, {}),
+      listInterviews(user, { upcomingOnly: true }),
+      listStages(),
+      getDepartments(),
+      listReplies(user),
+    ]);
 
   const seatsOpen = roles.filter((r) => r.status === "open");
   const headcount = seatsOpen.reduce((n, r) => n + r.headcount, 0);
@@ -103,6 +107,11 @@ async function Board({
           sub={owed === 0 ? "nothing outstanding" : "rounds held, nothing written"}
         />
       </div>
+
+      {/* Above the board. A candidate who cannot make Thursday is the most
+          time-sensitive thing on this screen — the room is booked and three
+          people have it in their diary. */}
+      <RepliesList replies={replies} />
 
       <HiringBoard
         roles={roles}

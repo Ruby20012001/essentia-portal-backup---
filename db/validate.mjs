@@ -1825,6 +1825,87 @@ if (!failed) {
       ok: (v) => v === "true",
     },
     {
+      // The candidate's own door (db/056). No account and no app.user_id —
+      // the only thing set is the token's candidate, and it opens their row
+      // and their round. What it must not open is everybody else's: a link
+      // that leaks is a link to one interview, not to the hiring board.
+      name: "hiring: the candidate's link opens their own round and nothing else",
+      setupSql: `
+        SELECT set_config('app.user_id', '', FALSE),
+               set_config('app.user_access_level', '', FALSE),
+               set_config('app.candidate_id',
+                          '00000000-0000-4000-8000-00000000c201', FALSE)`,
+      asRestrictedRole: true,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM hr.candidates) = 1
+              AND (SELECT COUNT(*) FROM hr.candidates
+                    WHERE id='00000000-0000-4000-8000-00000000c201') = 1
+              AND (SELECT COUNT(*) FROM hr.interviews) = 1
+              AND (SELECT COUNT(*) FROM hr.interviews
+                    WHERE id='00000000-0000-4000-8000-00000000c301') = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // What the room thought is the room's, and the trail is HR's. Neither
+      // needed a line in db/056: the policies db/049 already wrote refuse
+      // anybody who is not HR and not the card's own author, and a candidate
+      // is neither. That is an argument, and an argument is worth less than
+      // a check that fails when somebody widens a policy.
+      name: "hiring: the candidate never reads a scorecard about themselves",
+      setupSql: `
+        SELECT set_config('app.user_id', '', FALSE),
+               set_config('app.user_access_level', '', FALSE),
+               set_config('app.candidate_id',
+                          '00000000-0000-4000-8000-00000000c201', FALSE)`,
+      asRestrictedRole: true,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM hr.scorecards) = 0
+              AND (SELECT COUNT(*) FROM hr.scorecard_answers) = 0
+              AND (SELECT COUNT(*) FROM hr.candidate_activity) = 0
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // Two live links for one person is two things to withdraw, and one of
+      // them gets forgotten. The index says so rather than the service.
+      name: "hiring: a candidate cannot hold two live invites",
+      setupSql: `
+        INSERT INTO hr.candidate_invites (candidate_id, token_hash, expires_at)
+        VALUES ('00000000-0000-4000-8000-00000000c201',
+                repeat('a', 64), NOW() + INTERVAL '7 days')`,
+      sql: `INSERT INTO hr.candidate_invites (candidate_id, token_hash, expires_at)
+            VALUES ('00000000-0000-4000-8000-00000000c201',
+                    repeat('b', 64), NOW() + INTERVAL '7 days')
+            RETURNING id AS v`,
+      expectError: true,
+      ok: () => true,
+    },
+    {
+      // db/057. A call is HR's to read. The agent never reaches Postgres as
+      // itself — it authenticates as a machine and the service then uses
+      // db/056's candidate context — so a stranger seeing call rows would
+      // mean the fence had been widened by somebody adding a policy.
+      name: "hiring: a stranger sees no voice calls",
+      setupSql: `
+        SELECT set_config('app.user_id', '00000000-0000-4000-8000-000000000004', FALSE),
+               set_config('app.user_access_level', 'L3', FALSE),
+               set_config('app.candidate_id', '', FALSE)`,
+      asRestrictedRole: true,
+      sql: `SELECT (SELECT COUNT(*) FROM hr.voice_calls) = 0 AS v`,
+      ok: (v) => v === true || v === "true",
+    },
+    {
+      // A call with nobody's name on it is a call nobody can be asked about
+      // afterwards. The column is NOT NULL and this is that, stated.
+      name: "hiring: a voice call must name the member of staff it is for",
+      sql: `INSERT INTO hr.voice_calls (phone, direction)
+            VALUES ('9810011122', 'outbound')
+            RETURNING id AS v`,
+      expectError: true,
+      ok: () => true,
+    },
+    {
       name: "design tracker: the activity chart is seeded, day 1 to day 238",
       sql: `SELECT (
               (SELECT COUNT(*) FROM ee.design_activities) = 36
