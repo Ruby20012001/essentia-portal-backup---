@@ -68,6 +68,7 @@ export const DEFAULT_FILES = [
   "055_design_chart_subpoints.sql",
   "056_hr_candidate_portal.sql",
   "057_hr_voice_agent.sql",
+  "058_hr_team_accounts.sql",
   "900_dev_fixtures.sql",
   "901_design_tracker_fixtures.sql",
 ];

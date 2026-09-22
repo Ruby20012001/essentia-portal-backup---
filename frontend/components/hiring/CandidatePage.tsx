@@ -6,6 +6,7 @@ import type {
   CandidateView,
   RoundResponse,
 } from "@/lib/services/candidate-portal";
+import { CandidateVoice } from "@/components/hiring/CandidateVoice";
 
 /**
  * What a candidate sees. The only page in the portal written for somebody who
@@ -266,7 +267,18 @@ export function CandidatePage({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
+                    <div>
+                      {/* Above the buttons, never instead of them. It renders
+                          only where the browser can hear, and where it cannot
+                          the page is exactly what it was. */}
+                      <CandidateVoice
+                        token={token}
+                        round={round}
+                        onReplied={(id, response) =>
+                          setReplied({ ...replied, [id]: response })
+                        }
+                      />
+                      <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
                         disabled={busy}
@@ -283,6 +295,7 @@ export function CandidatePage({
                       >
                         I cannot make this time
                       </button>
+                      </div>
                     </div>
                   )}
                 </li>

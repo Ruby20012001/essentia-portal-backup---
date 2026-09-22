@@ -33,7 +33,7 @@ function hrReturn(next: string | undefined): string {
 export default function HrLoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string; next?: string };
+  searchParams: { error?: string; next?: string; email?: string };
 }) {
   return (
     <LoginStage
@@ -41,6 +41,13 @@ export default function HrLoginPage({
       devLogin={process.env.AUTH_ALLOW_DEV_LOGIN === "true"}
       next={hrReturn(searchParams.next)}
       error={searchParams.error}
+      /* Filled in for somebody who arrived from /hr-team, where they picked
+         their name. It saves them their own address and nothing else — the
+         password is still theirs to type, which is the whole difference
+         between this door and the design team's. Candidate data is fenced at
+         L2/L3 by db/049 on purpose, and a page that signed you in by name
+         would walk straight through that. */
+      email={searchParams.email}
       eyebrow="hiring"
       caption="Sign in with your essentia email"
     />
