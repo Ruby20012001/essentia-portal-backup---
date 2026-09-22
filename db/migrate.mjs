@@ -14,9 +14,25 @@
  * Re-runnable: every migration is written to be idempotent, so running this
  * again against a loaded database is a no-op rather than a duplicate.
  *
- * 900_dev_fixtures.sql is SKIPPED unless --with-fixtures is passed. It seeds
- * accounts that share one published password; they have no business in a
- * database real people will use.
+ * THE 900-SERIES IS SKIPPED unless --with-fixtures is passed. Those files seed
+ * invented rows and accounts sharing one published password; they have no
+ * business in a database real people will use.
+ *
+ * It is a NUMBER RANGE and not a list of filenames, and that is the fix for a
+ * real bug rather than tidiness. This used to name `900_dev_fixtures.sql` and
+ * only that, while `901_design_tracker_fixtures.sql` sat in DEFAULT_FILES and
+ * ran. 901's own header says it is "loaded by db/dev-db.mjs and never by a
+ * real deployment" and that "the real accounts are untouched" — both untrue
+ * through this script, which is exactly how a file can look safe while not
+ * being it.
+ *
+ * What that would have done to a production database: inserted four invented
+ * concept decks and a board of invented projects, and — the serious half —
+ * overwritten five real designers' passwords with a shared hash whose
+ * plaintext is written in the open in that file, on GitHub.
+ *
+ * So: anything matching 9NN_ is a fixture, and a 902 written next year is
+ * covered without anybody having to remember this.
  */
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -44,13 +60,27 @@ const url = readEnv();
 // Never print the credential; the host is enough to confirm the target.
 const target = url.replace(/\/\/[^@]+@/, "//****@");
 
+/** Anything numbered 9NN is a dev fixture, by convention and now by rule. */
+const isFixture = (f) => /^9\d\d_/.test(f);
+
+const skipped = DEFAULT_FILES.filter(isFixture);
 const files = DEFAULT_FILES.filter((f) => {
-  if (f === "900_dev_fixtures.sql" && !WITH_FIXTURES) return false;
+  if (isFixture(f) && !WITH_FIXTURES) return false;
   return existsSync(join(HERE, f));
 });
 
 console.log(`\n  target : ${target}`);
-console.log(`  files  : ${files.length}${WITH_FIXTURES ? " (including dev fixtures)" : " (dev fixtures skipped)"}\n`);
+console.log(`  files  : ${files.length}`);
+/* Naming them, rather than the word "fixtures". The old message said "(dev
+   fixtures skipped)" while one of the two was running — a line that told you
+   the opposite of what was happening is worse than no line. */
+if (WITH_FIXTURES) {
+  console.log(`  ALSO LOADING FIXTURES: ${skipped.join(", ")}`);
+  console.log("  These carry invented rows and shared published passwords.");
+} else {
+  console.log(`  skipped: ${skipped.join(", ")}`);
+}
+console.log("");
 
 const client = new pg.Client({ connectionString: url });
 await client.connect();

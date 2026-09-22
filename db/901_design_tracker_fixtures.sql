@@ -3,6 +3,14 @@
 --
 --   DEV ONLY. Loaded by db/dev-db.mjs and never by a real deployment.
 --
+--   THAT SENTENCE IS TRUE ONLY BECAUSE SOMETHING ENFORCES IT, and for a while
+--   nothing did. db/migrate.mjs named `900_dev_fixtures.sql` and skipped only
+--   that, so this file ran against every real database it was pointed at —
+--   inserting four invented decks and overwriting five real designers'
+--   passwords with the shared hash below, whose plaintext is written in the
+--   open a few lines down. migrate.mjs now skips the whole 9NN range. If you
+--   are changing that filter, this is what it is holding back.
+--
 --   Monica, 21 Sep 2026: "mujhe data nahi dikh raha, kyun". Because there
 --   was none. db/050 seeds the chart, the five people and the activities,
 --   but a project is something somebody enters — so a rebuilt test database
