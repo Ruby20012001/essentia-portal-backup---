@@ -54,9 +54,30 @@ live database use `db/apply-hr-portal.mjs`, which applies 056/057/058 and
 nothing else. On a *fresh* database `migrate.mjs` alone is enough — those three
 are already in `DEFAULT_FILES`.
 
-**`PRODUCTION_READINESS.md` goes stale.** Its TD-01 said "all platform code
-uncommitted" long after the repo had full history. Verify anything you take
-from it before acting on it.
+**`SET LOCAL ROLE essentia_app` fails on a real database until the connecting
+user holds the membership *with `SET`*.** `withUserContext` (`lib/db.ts`) runs
+it in every fenced transaction; without the membership PostgreSQL answers
+`42501 permission denied to set role` and every page that reads fenced data
+returns a server-side exception. From PostgreSQL 16 the membership carries a
+separate `SET` option that grants do not give by default — Neon creates the
+membership with `SET false`. `db/007_app_role.sql` now grants it.
+
+**PGlite hides that whole class of bug.** Its connecting user is a superuser,
+so it never needs the membership — and superusers skip RLS entirely, which is
+the exact hole `007` exists to close. Anything about roles, grants or fencing
+that passes locally has not been tested. Neon is where it gets tested.
+
+**The documents are wrong about the PostgreSQL version.** They said 15 until
+2026-09-23; the real minimum is 16, for the `SET` option above. Neon is 18.6
+and PGlite is 18.3, so **no PostgreSQL 15 exists anywhere in this project** —
+`007`'s pre-16 branch is written but has never been run.
+
+**Documents here go stale, repeatedly.** Four found in one week: TD-01's "all
+platform code uncommitted" (the repo had full history), the baseline-branch
+line, the PostgreSQL 15 minimum, and `(portal)/layout.tsx:11`'s claim that
+"middleware only does the Edge cookie-presence gate" — there is no middleware
+file in this repo at all. Verify anything you take from a document, or from a
+comment, before acting on it.
 
 ## The rules the hiring module is built to
 
