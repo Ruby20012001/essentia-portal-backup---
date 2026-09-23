@@ -113,9 +113,26 @@ to make a screen easier.
 - Do not push without being asked.
 - Never print a secret, password or connection string — name the variable.
 
-## Not part of this repo
+## There are two hiring builds, and this is only one of them
 
-`C:\hr portal` is a separate, abandoned Node/Express build of the same idea,
-started 21 Sep 2026 and dropped once it was clear this repo already had the
-module. Nothing was ever entered into it. Do not copy from it, and do not
-touch it.
+`C:\hr portal` is a second, separate build of the same idea — Node/Express,
+EJS templates, a JSON file for storage, started 21 Sep 2026. It was written
+before it was clear this repo already had a hiring module, set aside once that
+became clear, and then picked back up on 23 Sep. **Both are live work.**
+
+| | this repo | `C:\hr portal` |
+|---|---|---|
+| stack | Next.js, PostgreSQL, RLS | Express, EJS, `data/db.json` |
+| stages | 6 rows, `hr.interview_stages` | 5 rows in the JSON |
+| accounts | `hr.*@essentia.in`, scrypt, HR department | four accounts, bcrypt |
+| database | Neon (test) + PGlite (dev) | one JSON file |
+
+The same board has now been built in both — `527f6a5` here, and separately
+there. **Which one survives has not been decided.** Until it is, neither is the
+abandoned one, and work in one does not imply anything about the other.
+
+Still true, and the part that matters: **do not copy code between them.** They
+share no stack, no schema and no auth. Anything moved across has to be rewritten
+rather than pasted, and a half-ported file is worse than either original. Real
+candidate data belongs in neither until the decision is made — see the Neon note
+above for why.
