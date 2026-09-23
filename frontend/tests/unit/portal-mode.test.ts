@@ -73,6 +73,35 @@ describe("tracker mode — one screen", () => {
     }
   });
 
+  it("serves hiring, so signing in at /hr-login does not land on the tracker", () => {
+    // The bug this covers: LoginForm falls back to homeHref() when
+    // isRouteAllowed() refuses the ?next=, so HR signing in at their own door
+    // arrived on the WIO board — the one thing they have nothing to do with.
+    // It had already happened once to the design team at /deck-login.
+    for (const p of [
+      "/hr",
+      "/hr-login",
+      "/hr/contact",
+      "/hr/questions",
+      "/hr/candidates/00000000-0000-4000-8000-00000000c201",
+      "/api/hiring/candidates",
+    ]) {
+      expect(isRouteAllowed(p, TRACKER), p).toBe(true);
+    }
+  });
+
+  it("serves the candidate's own page and the endpoints it calls", () => {
+    // Opened by somebody outside the company with no account. A deployment
+    // running hiring at all has to serve it, or the link in their email 404s.
+    for (const p of [
+      "/interview/some-token",
+      "/api/interview/some-token/reply",
+      "/api/voice/calls",
+    ]) {
+      expect(isRouteAllowed(p, TRACKER), p).toBe(true);
+    }
+  });
+
   it("does not let a prefix match leak a neighbouring route", () => {
     // "/wio-tracker" must not open "/wio-tracker-admin", and the S4 hub
     // (/wio-pio) must stay closed even though it shares the "/wio" stem.

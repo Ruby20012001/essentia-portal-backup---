@@ -77,6 +77,23 @@ const TRACKER_MODE_PREFIXES = [
   "/design-team",
   // Its 09:00 morning reminders, called by Vercel Cron (vercel.json).
   "/api/jobs/design-reminders",
+  // Hiring, and HR's own door onto it. Same lesson as /deck-login above, in
+  // the same place: a route missing from this list is not merely unlinked.
+  // Signing in at /hr-login with /hr closed sends HR to the WIO tracker —
+  // the one board they have nothing to do with — because LoginForm falls back
+  // to homeHref() when isRouteAllowed() refuses the ?next=.
+  "/hr",
+  "/hr-login",
+  "/api/hiring",
+  // The candidate's own page, and the two endpoints it calls. Opened by
+  // somebody outside the company with no account, so it is reachable on any
+  // deployment that runs hiring at all.
+  "/interview",
+  "/api/interview",
+  // The voice agent's call endpoints. Off unless VOICE_AGENT_API_KEY is set,
+  // and refusing everything when it is not — but a route that 404s on the
+  // deployment the agent is pointed at is a confusing way to find that out.
+  "/api/voice",
   "/login",
   "/api/auth",
   "/api/me",
