@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MetricCard } from "@/components/dashboard/MetricCard";
+import { BoardPulse } from "@/components/hiring/BoardPulse";
 import { HiringBoard } from "@/components/hiring/HiringBoard";
 import { RepliesList } from "@/components/hiring/RepliesList";
 import { RoundsList } from "@/components/hiring/RoundsList";
@@ -89,11 +89,15 @@ async function Board({
   user: SessionUser;
   rights: HiringRights;
 }) {
-  const [roles, candidates, upcoming, stages, departments, replies] =
+  /* `allRounds` is the same listInterviews with its filter left off, which
+     answers past rounds too — that is the only way to say how long a write-up
+     has been outstanding, and it needs no new read model to do it. */
+  const [roles, candidates, upcoming, allRounds, stages, departments, replies] =
     await Promise.all([
       listOpenRoles(user),
       listCandidates(user, {}),
       listInterviews(user, { upcomingOnly: true }),
+      listInterviews(user, {}),
       listStages(),
       getDepartments(),
       listReplies(user),
@@ -101,20 +105,58 @@ async function Board({
 
   const seatsOpen = roles.filter((r) => r.status === "open");
   const headcount = seatsOpen.reduce((n, r) => n + r.headcount, 0);
-  const owed = candidates.reduce((n, c) => n + c.feedbackOutstanding, 0);
+  const owedCount = candidates.reduce((n, c) => n + c.feedbackOutstanding, 0);
+
+  const now = Date.now();
+  const weekOut = now + 7 * 24 * 60 * 60 * 1000;
+  const roundsThisWeek = upcoming.filter(
+    (i) => new Date(i.scheduledAt).getTime() <= weekOut,
+  ).length;
+
+  /* Stage counts come from the candidates already fetched. Stages are rows in
+     hr.interview_stages, so the shape of this follows the data rather than a
+     list written here. */
+  const byStage = stages.map((s) => ({
+    code: s.code,
+    label: s.label,
+    count: candidates.filter((c) => c.stage === s.code).length,
+  }));
+
+  /* A round that has been sat in and not fully written up. Oldest first,
+     because the one that has been waiting longest is the one holding somebody
+     still. */
+  const waiting = allRounds
+    .filter((i) => {
+      const held = new Date(i.scheduledAt).getTime() < now;
+      return held && i.status !== "cancelled" && i.scorecardsIn < i.panel.length;
+    })
+    .map((i) => ({
+      interviewId: i.id,
+      candidateId: i.candidateId,
+      candidateName: i.candidateName,
+      stageLabel: i.stageLabel,
+      written: i.scorecardsIn,
+      panelSize: i.panel.length,
+      daysWaiting: Math.max(
+        0,
+        Math.floor((now - new Date(i.scheduledAt).getTime()) / 86_400_000),
+      ),
+    }))
+    .sort((a, b) => b.daysWaiting - a.daysWaiting);
 
   return (
     <>
-      <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <MetricCard label="Seats open" value={String(seatsOpen.length)} sub={`${headcount} to fill`} />
-        <MetricCard label="People moving" value={String(candidates.length)} />
-        <MetricCard label="Rounds ahead" value={String(upcoming.length)} sub="scheduled" />
-        <MetricCard
-          label="Feedback owed"
-          value={String(owed)}
-          sub={owed === 0 ? "nothing outstanding" : "rounds held, nothing written"}
-        />
-      </div>
+      <BoardPulse
+        seatsOpen={seatsOpen.length}
+        headcount={headcount}
+        peopleMoving={candidates.length}
+        roundsThisWeek={roundsThisWeek}
+        roundsAhead={upcoming.length}
+        feedbackOwed={owedCount}
+        stages={byStage}
+        owed={waiting}
+        canOpenSeat={rights.add}
+      />
 
       {/* Above the board. A candidate who cannot make Thursday is the most
           time-sensitive thing on this screen — the room is booked and three
