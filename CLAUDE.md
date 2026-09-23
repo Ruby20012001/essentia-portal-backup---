@@ -12,8 +12,20 @@ The portal is **not deployed anywhere**. `RUNBOOK.md` §8 says so plainly:
 runs on one Windows laptop, against a PGlite dev database kept on disk at
 `db/.dev-data` and served on `127.0.0.1:55432`.
 
-So there is no production database, and no row anywhere is a real candidate's.
-Anything that looks like live data is this machine's dev database.
+Since 2026-09-23 there is also a **Neon** database (managed Postgres, `vector`
+available). `frontend/.env.local` points at it; the PGlite line is kept beside
+it, commented, to go back to.
+
+**Neon is a test database. It is not production.** It exists so the portal
+could be run in production mode against real PostgreSQL — extensions,
+migrations and sign-in — before anyone picks where this is hosted. Nothing
+about it is production: no backup, no point-in-time recovery, nobody watching
+it, and a connection string that has been pasted into a chat transcript.
+
+So **no real candidate's name, phone, CV or salary goes into it.** Not one, not
+as a trial. When real hiring starts, where it lives is a separate decision that
+has not been taken yet. Until then every row in `hr.*` — here and on the dev
+database — is something somebody typed to prove a screen worked.
 
 ## Traps that have already cost time
 
