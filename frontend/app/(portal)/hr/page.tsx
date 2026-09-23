@@ -45,12 +45,20 @@ export default async function HrPage() {
           </p>
         </div>
         {rights.see ? (
-          <Link
-            href="/hr/questions"
-            className="rounded-lg border border-line px-4 py-2 font-body text-sm font-bold text-white hover:bg-hover"
-          >
-            Question bank
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/hr/contact"
+              className="rounded-lg border border-line px-4 py-2 font-body text-sm font-bold text-white hover:bg-hover"
+            >
+              Reach them
+            </Link>
+            <Link
+              href="/hr/questions"
+              className="rounded-lg border border-line px-4 py-2 font-body text-sm font-bold text-white hover:bg-hover"
+            >
+              Question bank
+            </Link>
+          </div>
         ) : null}
       </div>
 
