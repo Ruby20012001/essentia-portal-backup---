@@ -44,6 +44,12 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
    * the page — printing in the click handler would print the previous frame.
    */
   const [printing, setPrinting] = useState<"view" | "summary" | null>(null);
+  /**
+   * True only while the summary's picture is being taken. Held as state for
+   * the same reason `printing` is: html2canvas reads the page as it stands,
+   * so the sheet has to have been rendered visible BEFORE the capture runs.
+   */
+  const [shooting, setShooting] = useState(false);
 
   /**
    * Saving the view as a picture, for WhatsApp — where a PDF is an attachment
@@ -85,6 +91,56 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
     // The dialog is modal, so this runs once the user has saved or cancelled.
     setPrinting(null);
   }, [printing]);
+
+  /**
+   * The one-page summary as a picture rather than a PDF.
+   *
+   * Same document, second delivery. "Save 1-page summary" hands it to the
+   * print dialog, which is right for a file that gets attached to an email;
+   * this is for the thread where it gets forwarded on a phone, and where a
+   * PDF is one more thing to open.
+   *
+   * It cannot reuse `saveImage`. That captures #print-area, and the summary
+   * lives inside it hidden — html2canvas paints the screen's styles and never
+   * the print stylesheet, so a capture taken now would come back as the board.
+   * Setting `shooting` parks the sheet off-canvas in its paper colours (see
+   * globals.css) so the thing photographed is the thing that would print.
+   */
+  useEffect(() => {
+    if (!shooting) return;
+    let cancelled = false;
+    setBanner(null);
+    void (async () => {
+      const sheet = document.querySelector<HTMLElement>('[data-print="summary"]');
+      try {
+        if (!sheet) throw new Error("no summary sheet");
+        const { default: html2canvas } = await import("html2canvas");
+        const canvas = await html2canvas(sheet, {
+          backgroundColor: "#ffffff",
+          scale: 2,
+          useCORS: true,
+        });
+        if (cancelled) return;
+        const a = document.createElement("a");
+        a.href = canvas.toDataURL("image/jpeg", 0.92);
+        a.download = `wio-tracker-summary-${board.settings.today}.jpg`;
+        a.click();
+      } catch {
+        if (!cancelled) {
+          setBanner({
+            tone: "error",
+            message:
+              "Could not make the picture. Save 1-page summary works on any browser.",
+          });
+        }
+      } finally {
+        if (!cancelled) setShooting(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [shooting, board.settings.today]);
 
   const refresh = useCallback(async () => {
     const response = await fetch("/api/wio-tracker");
@@ -162,7 +218,11 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
   const label = tabs.find((t) => t.key === tab)?.label ?? "";
 
   return (
-    <div id="print-area" data-mode={printing ?? "view"}>
+    <div
+      id="print-area"
+      data-mode={printing ?? "view"}
+      data-shot={shooting ? "summary" : undefined}
+    >
       <div data-print="board">
       {/* Paper needs the heading the screen gets from the shell around it:
           on a printed page there is no header, no nav and no tab strip, so a
@@ -244,6 +304,14 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
               className="rounded border border-line-strong bg-canvas px-3 py-1.5 font-body text-xs font-bold text-secondary transition-colors hover:bg-hover hover:text-ink"
             >
               Save 1-page summary
+            </button>
+            <button
+              type="button"
+              onClick={() => setShooting(true)}
+              disabled={shooting}
+              className="rounded border border-line-strong bg-canvas px-3 py-1.5 font-body text-xs font-light text-muted transition-colors hover:bg-hover hover:text-ink disabled:opacity-50"
+            >
+              {shooting ? "Making the picture…" : "Summary as JPG"}
             </button>
             <button
               type="button"

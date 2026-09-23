@@ -219,6 +219,28 @@
   }
 }
 
+/* The same sheet as a picture ("Summary as JPG").
+
+   html2canvas paints what is on the screen and never reads the print
+   stylesheet, so for the length of the capture the summary has to be really
+   rendered and really black-on-white — parked off to the left, where nobody
+   watches it happen. 1123px is A4 landscape at 96dpi, the width the @page
+   rule gives it, so the picture and the PDF break their lines in the same
+   places. Nothing here is inside @media print: this is the screen's job. */
+#print-area[data-shot="summary"] [data-print="summary"] {
+  display: block !important;
+  position: fixed;
+  top: 0;
+  left: -12000px;
+  width: 1123px;
+  padding: 28px;
+  background: #ffffff;
+  /* The sheet sets no colour of its own — it is written for paper — so black
+     here is what every heading, cell and note inherits. */
+  color: #000000;
+  font-size: 8pt;
+}
+
 /* =====================================================================
    SIGN-IN — the wordmark, a wipe, then the form.
 
