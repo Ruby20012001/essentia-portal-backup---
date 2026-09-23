@@ -38,9 +38,10 @@ INSERT INTO public.users
 SELECT v.email, v.name, v.name, v.level::access_level, d.id, v.title,
        'local', v.hash
   FROM (VALUES
-  ('hr.shivani@essentia.in', 'Shivani', 'L3', 'essentia — HR', '051e2dd24aeb2a15aa1104fb5009cb54:213a1b5a41b4f920f846a1e35e62ac73f95fcd5b9fb0417d8111c41bcdd9bd51fda20ce73fc3dc95f9f832e2472723f75790d8577685319374ad5ef6d0583ec8'),
-  ('hr.saurabh@essentia.in', 'Saurabh', 'L3', 'essentia — HR', '99c113807eedc80aafcbd1dba9a25d7b:7d13d4e86a70e2e050710fb603087c323a6cf5d23c89fd31a207cd5a952188022c0c5e0b01ef5e26f373f9d7373d830eda61083e8c73330e42cc4da31022aa6b'),
-  ('hr.akash@essentia.in', 'Akash', 'L3', 'essentia — HR', 'ab38ed90031a90e1e445835d61498a88:c2e98e29b3c8ab9f3f86cc3aecf5404cafc0e5973af0223f790ca98da7e09e51cd666d1f6d8eabd05c0a898cd36f1dc7dd5efcc88bf3ce69eb0faa5b50086db5')
+  ('hr.nandy@essentia.in', 'Nandy', 'L3', 'essentia — HR', '8d6763b8c9d954f59ef289393cc16148:b2326ded24d5ae38113952e2f9e81586a7e3098822e892695a1fd2d1be3b1cdc0866f92612a69227a4666e97da8de2548aca58679ce5e1c626b32ee926d4ab3d'),
+  ('hr.shivani@essentia.in', 'Shivani', 'L3', 'essentia — HR', '88ec8c5a8501946c3cb277d10bc3cd6d:cc1a669d7382627b914b524ce8241915e209097add13cf6623c17c0b3712cf1ec7edbcd762fa9348e74d2df77276845deaf549721e8eb2f5f1f1fb814d4769a6'),
+  ('hr.saurabh@essentia.in', 'Saurabh', 'L3', 'essentia — HR', '935b50bb06f62f689d8ff76841da655f:1c7092935b30cc5fa6ecb129957a35e34d48567b1a7c85ef4207811babf61775b8b2105f9120d72f48c025396a8cb6e684deffcc6cf5650136032e37d70fbb43'),
+  ('hr.akash@essentia.in', 'Akash', 'L3', 'essentia — HR', '2aa091ddbb8cf9f29beb26d5b48e169e:294985edaeaf14fdf2929fb03dc6a85609bbe80fcbded0adb6f3dc27a8e2d4c93221039c8519db612c93da4d0cbd3829e69bba108c373fccd829a7ba7fd1dc1c')
   ) AS v(email, name, level, title, hash)
   LEFT JOIN public.departments d ON d.code = 'HR'
 ON CONFLICT (email) DO UPDATE
@@ -67,7 +68,7 @@ BEGIN
   SELECT count(*) INTO homeless
     FROM public.users u
     LEFT JOIN public.departments d ON d.id = u.department_id
-   WHERE u.email IN ('hr.shivani@essentia.in', 'hr.saurabh@essentia.in', 'hr.akash@essentia.in')
+   WHERE u.email IN ('hr.nandy@essentia.in', 'hr.shivani@essentia.in', 'hr.saurabh@essentia.in', 'hr.akash@essentia.in')
      AND (d.code IS DISTINCT FROM 'HR');
   IF homeless > 0 THEN
     RAISE EXCEPTION
