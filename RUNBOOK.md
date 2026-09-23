@@ -12,7 +12,8 @@ recovering the Essentia Portal. Pair with [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.m
 
 ## 1. First-time setup
 
-Prerequisites: **Node 20+**, npm, git. (PostgreSQL 15 + pgvector only for **[prod]**.)
+Prerequisites: **Node 20+**, npm, git. (PostgreSQL **16 or newer** with pgvector
+only for **[prod]** — see §8 for why 15 is not enough.)
 
 ```bash
 git clone <repo> && cd essentia-portal
@@ -149,7 +150,17 @@ harness instead.
 Not yet stood up — this is the gate list, not a runbook of live steps. Full detail
 and scores: [PRODUCTION_READINESS.md](docs/architecture/PRODUCTION_READINESS.md).
 
-- [ ] Real PostgreSQL 15 + pgvector (RDS); migrations `001`–`010` applied; `essentia_app` role configured
+- [ ] Real PostgreSQL **16+** with pgvector; migrations `001`–`010` applied; `essentia_app` role configured
+
+      **Why 16 and not 15.** `withUserContext` runs `SET LOCAL ROLE essentia_app`
+      in every fenced transaction, and from 16 a role membership carries a
+      separate `SET` option that grants do not give by default. A managed
+      provider that creates the membership without it — Neon does — refuses the
+      switch with `42501 permission denied to set role`, and every page that
+      reads fenced data returns a server error. `db/007_app_role.sql` now grants
+      it, using `WITH SET TRUE` on 16+ and the plain form below that. That older
+      branch has never been run: Neon is 18.6 and PGlite is 18.3, so there is no
+      PostgreSQL 15 anywhere in this project to test it against.
 - [ ] Secrets in a manager (not `.env`); `AUTH_ALLOW_DEV_LOGIN` unset; `NODE_ENV=production`
 - [ ] TLS termination; rate limiting backed by Redis (in-memory today, TD-07)
 - [ ] CI/CD: typecheck + lint + harness + vitest + build on PR; deploy on merge (TD-05)

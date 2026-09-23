@@ -43,7 +43,10 @@ Legend: ✅ done · 🟡 partial/dev-only · ⬜ not started.
 - ⬜ WAF / DDoS posture (note Next.js DoS advisories, TD-03)
 
 **Data**
-- ⬜ Real PostgreSQL 15 + pgvector (RDS) — **blocks everything below**
+- ⬜ Real PostgreSQL **16+** with pgvector — **blocks everything below**. Not 15:
+  `SET LOCAL ROLE essentia_app`, which is what makes the RLS fencing real, needs
+  a membership carrying the `SET` option that 16 introduced and that managed
+  providers do not grant by default (see `RUNBOOK.md` §8)
 - ⬜ Automated backups + PITR; tested restore runbook
 - ✅ Schema migrations ordered & idempotent; proven to load (36 harness checks)
 - ✅ RLS fencing enforced via non-owner role
