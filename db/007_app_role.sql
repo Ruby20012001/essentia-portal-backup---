@@ -15,6 +15,28 @@ BEGIN
   END IF;
 END $$;
 
+-- Creating the role is not the same as being allowed to become it. SET LOCAL
+-- ROLE needs the connecting user to be a MEMBER of essentia_app, and from
+-- PostgreSQL 16 the membership carries a separate SET option that grants are
+-- not given by default. Neon hands neondb_owner a membership with SET false,
+-- so withUserContext died on "permission denied to set role" against a real
+-- managed database while working perfectly on PGlite — where the connecting
+-- user is a superuser and never needs the membership at all.
+--
+-- EXECUTE format() rather than a plain GRANT because "WITH SET TRUE" is a
+-- syntax error before 16: inside a string that branch is never parsed there.
+-- NOTE: no PostgreSQL 15 is available anywhere in this project (Neon is 18.6,
+-- PGlite is 18.3), so the 15 branch below has never been run. Treat it as
+-- untested if you ever point this at one.
+DO $$
+BEGIN
+  IF current_setting('server_version_num')::int >= 160000 THEN
+    EXECUTE format('GRANT essentia_app TO %I WITH SET TRUE', current_user);
+  ELSE
+    EXECUTE format('GRANT essentia_app TO %I', current_user);
+  END IF;
+END $$;
+
 GRANT USAGE ON SCHEMA public, ee, eh, factory, proc, portal, audit TO essentia_app;
 
 GRANT SELECT, INSERT, UPDATE, DELETE
