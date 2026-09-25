@@ -56,28 +56,25 @@ export default async function DesignBoardPage() {
       <header className="flex h-14 shrink-0 items-center justify-between gap-3 bg-espresso px-4 md:px-6">
         <div className="flex items-center gap-6">
           <Image src="/brand/logo-dark.png" alt="essentia" height={20} width={102} priority />
-          {/* What there is to go to, said in three words rather than hidden
-              behind a menu: this page, the board on it, and the decks. A
-              designer has no team dashboard to read, so hers says Projects. */}
-          <nav aria-label="Design" className="hidden items-center gap-5 sm:flex">
-            <span className="font-body text-[10px] font-bold uppercase tracking-[0.14em] text-cream">
-              {own ? "Projects" : "Dashboard"}
-            </span>
-            {own ? null : (
+          {/* Monica, 25 Sep: "Vishakha ke dashboard se Tracker aur Concept
+              deck hata do." On the head's reading there is nowhere else to
+              go — the board is the page — so a row of links only offered two
+              detours from the thing somebody came to read. A designer keeps
+              hers: Projects is where she works and the deck is the other half
+              of her job, and neither is on her screen otherwise. */}
+          {own ? (
+            <nav aria-label="Design" className="hidden items-center gap-5 sm:flex">
+              <span className="font-body text-[10px] font-bold uppercase tracking-[0.14em] text-cream">
+                Projects
+              </span>
               <a
-                href="#board"
+                href={deckHref}
                 className="font-body text-[10px] font-bold uppercase tracking-[0.14em] text-cream/50 transition-colors hover:text-cream"
               >
-                Tracker
+                Concept deck
               </a>
-            )}
-            <a
-              href={deckHref}
-              className="font-body text-[10px] font-bold uppercase tracking-[0.14em] text-cream/50 transition-colors hover:text-cream"
-            >
-              Concept deck
-            </a>
-          </nav>
+            </nav>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-4">
