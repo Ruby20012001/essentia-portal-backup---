@@ -71,6 +71,10 @@ const TRACKER_MODE_PREFIXES = [
   // activity chart. Vishakha and her designers sign in at /deck-login.
   "/design-tracker",
   "/api/design-tracker",
+  // The open design board — one link, read-only until somebody signs in on
+  // it, the way /board has worked since 7 Sep (Monica, 25 Sep: "jaise WIO me
+  // tha"). Closed here would mean the link 404s for the people it is for.
+  "/design-board",
   // The five names on one page, at an address that does not change (Monica,
   // 21 Sep). It signs nobody in — each name is a link to /login with that
   // person's address filled in, and she still types her own password.

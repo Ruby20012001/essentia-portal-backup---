@@ -15,14 +15,21 @@ import { useRouter } from "next/navigation";
  * the same URL re-renders as the open board. Nobody is thrown to a login screen
  * they did not ask for.
  */
-export function BoardAccount({ name }: { name: string | null }) {
+export function BoardAccount({
+  name,
+  next = "/board",
+}: {
+  name: string | null;
+  /** Where to come back to after signing in — the design board reuses this. */
+  next?: string;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   if (!name) {
     return (
       <a
-        href="/login?next=/board"
+        href={`/login?next=${encodeURIComponent(next)}`}
         className="rounded border border-cream/20 px-3 py-1.5 font-body text-[10px] font-bold uppercase tracking-[0.14em] text-cream/70 transition-colors hover:bg-cream/10 hover:text-cream"
       >
         Sign in to edit

@@ -146,6 +146,21 @@ describe("tracker mode — the nav", () => {
     expect(forDesigner).toEqual(forHead.filter((h) => h !== "/decks"));
   });
 
+  it("serves the open design board, and never lists it", () => {
+    // Monica, 25 Sep: one link, read-only until somebody signs in on it —
+    // /board's shape, asked for by that name. Closed here and the link 404s
+    // for the people it was made for.
+    expect(isRouteAllowed("/design-board", TRACKER)).toBe(true);
+
+    // The open deck list is where a signed-out reader is sent for the decks,
+    // so it has to be served too. /decks is the signed-in one.
+    expect(isRouteAllowed("/deck", TRACKER)).toBe(true);
+
+    // It is where people arrive, not somewhere to go from inside the portal.
+    const hrefs = groups.flatMap((g) => g.items.map((i) => i.href));
+    expect(hrefs).not.toContain("/design-board");
+  });
+
   it("serves the names page, and never lists it", () => {
     // Monica, 21 Sep: one address that does not change, with the five names
     // on it. It hands nobody a session — each name links to /login with that
