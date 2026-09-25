@@ -113,12 +113,17 @@ export function LoginStage({
         }`}
       >
         <div className="mb-7 flex flex-col items-center">
+          {/* The card follows the theme, so in light mode a white wordmark
+              sits on a pale card and disappears. .brand-mark turns it black
+              there. The intro behind this, and the board's bar, are espresso
+              whatever the theme is — they keep the white one. */}
           <Image
             src="/brand/logo-dark.png"
             alt="essentia"
             height={22}
             width={112}
             priority
+            className="brand-mark"
           />
           <p className="mt-3 font-body text-[10px] font-light uppercase tracking-[0.3em] text-label">
             {eyebrow}

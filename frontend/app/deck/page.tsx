@@ -45,7 +45,14 @@ export default async function PublicDecksPage() {
     return (
       <main className="min-h-screen bg-canvas px-4 py-10 sm:px-8 md:px-12">
         <div className="mx-auto max-w-4xl">
-          <Image src="/brand/logo-dark.png" alt="essentia" height={20} width={102} priority />
+          <Image
+            src="/brand/logo-dark.png"
+            alt="essentia"
+            height={20}
+            width={102}
+            priority
+            className="brand-mark"
+          />
           <h1 className="mt-6 text-2xl font-light text-primary">Concept decks</h1>
           <p className="mt-3 text-sm leading-relaxed text-secondary">
             The decks cannot be reached at the moment. Nothing is lost — try
@@ -61,12 +68,14 @@ export default async function PublicDecksPage() {
       <div className="mx-auto max-w-4xl">
         <header className="flex flex-wrap items-start justify-between gap-6">
           <div>
+            {/* White wordmark; .brand-mark turns it black in light mode. */}
             <Image
               src="/brand/logo-dark.png"
               alt="essentia"
               height={20}
               width={102}
               priority
+              className="brand-mark"
             />
             <h1 className="mt-6 text-2xl font-light text-primary">
               Concept decks

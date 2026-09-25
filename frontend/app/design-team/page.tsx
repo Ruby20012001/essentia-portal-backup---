@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +60,14 @@ export default async function DesignTeamPage() {
     return (
       <main className="min-h-screen bg-canvas px-4 py-10 sm:px-8">
         <div className="mx-auto max-w-2xl">
-          <Image src="/brand/logo-dark.png" alt="essentia" height={20} width={102} priority />
+          <Image
+            src="/brand/logo-dark.png"
+            alt="essentia"
+            height={20}
+            width={102}
+            priority
+            className="brand-mark"
+          />
           <h1 className="mt-6 font-heading text-2xl font-light text-primary">Design team</h1>
           <p className="mt-3 font-body text-sm font-light leading-relaxed text-secondary">
             This cannot be reached at the moment. Try again in a few minutes.
@@ -72,7 +80,22 @@ export default async function DesignTeamPage() {
   return (
     <main className="min-h-screen bg-canvas px-4 py-10 sm:px-8">
       <div className="mx-auto max-w-2xl">
-        <Image src="/brand/logo-dark.png" alt="essentia" height={20} width={102} priority />
+        {/* The wordmark file is white, so on this page's light background it
+            was invisible until now: .brand-mark is what turns it black in
+            light mode, and the header has always had it. The switch sits
+            beside it — this page is outside the portal shell, so it does not
+            inherit the shell's own toggle. */}
+        <div className="flex items-start justify-between gap-4">
+          <Image
+            src="/brand/logo-dark.png"
+            alt="essentia"
+            height={20}
+            width={102}
+            priority
+            className="brand-mark"
+          />
+          <ThemeToggle />
+        </div>
         <h1 className="mt-6 font-heading text-2xl font-light text-primary">Design team</h1>
         <p className="mt-2 font-body text-sm font-light text-secondary">
           Pick your name, then sign in with your password.
