@@ -1906,12 +1906,31 @@ if (!failed) {
       ok: () => true,
     },
     {
+      // Counts the DATED activities, not the row count. Since 055 the table
+      // also holds the chart's sub-points, which carry no due day on purpose —
+      // "= 36" here was right until they arrived and would now read as damage.
       name: "design tracker: the activity chart is seeded, day 1 to day 238",
       sql: `SELECT (
-              (SELECT COUNT(*) FROM ee.design_activities) = 36
+              (SELECT COUNT(*) FROM ee.design_activities WHERE due_day IS NOT NULL) = 36
               AND (SELECT MIN(due_day) FROM ee.design_activities) = 1
               AND (SELECT MAX(due_day) FROM ee.design_activities) = 238
               AND (SELECT COUNT(*) FROM ee.design_activities WHERE depends_on IS NULL) = 0
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // The sub-points (055): the chart's "– – –" lines, which hang under an
+      // activity and are ticked inside it. None may carry a day — a sub-point
+      // with one would start counting as late, which the chart never said it
+      // could be. Positions are the parent's × 100 plus an offset, so every
+      // one of them sorts directly after its parent.
+      name: "design tracker: 93 sub-points, none of them dated",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM ee.design_activities WHERE due_day IS NULL) = 93
+              AND (SELECT COUNT(*) FROM ee.design_activities
+                    WHERE due_day IS NULL AND NOT optional) = 0
+              AND (SELECT COUNT(*) FROM ee.design_activities
+                    WHERE due_day IS NULL AND position % 100 = 0) = 0
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
@@ -1932,7 +1951,7 @@ if (!failed) {
               AND (SELECT own_plot FROM ee.design_project_types WHERE code = 'farmhouse')
               AND NOT (SELECT own_plot FROM ee.design_project_types WHERE code = 'penthouse')
               AND (SELECT string_agg(position::TEXT, ',' ORDER BY position)
-                     FROM ee.design_activities WHERE needs_own_plot) = '9,17'
+                     FROM ee.design_activities WHERE needs_own_plot) = '900,1700'
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
