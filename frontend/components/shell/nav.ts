@@ -15,17 +15,6 @@ export type NavItem = {
 };
 export type NavGroup = { label: string; items: NavItem[] };
 
-/**
- * "Lavika — concept deck" is "Lavika" in a 256px column.
- *
- * The decks are named for whoever keeps them, and in the sidebar the words
- * after the dash are the same on every line — so they cost width and say
- * nothing. The full name stays on the /decks page, and on the deck itself.
- */
-function deckShortName(name: string): string {
-  const cut = name.split(/\s+[—–-]\s+/)[0]?.trim();
-  return cut && cut.length > 1 ? cut : name;
-}
 
 export const NAV: NavGroup[] = [
   {
@@ -125,23 +114,11 @@ export function visibleNav(
     items: group.items
       .filter((item) => isRouteAllowed(item.href, mode))
       .filter((item) => item.href !== "/decks" || canSeeDecks)
-      /* The decks themselves, under the entry that leads to them (Monica,
-         18 Sep: "ek ke neeche ek — Lavika, Ritu, aise"). One per designer, so
-         the board she opens every morning is also the way into each of them,
-         without a list page in between. Read from the decks that exist rather
-         than a written-out list of names: a deck renamed, added or archived
-         then shows here on its own. */
-      .map((item) =>
-        item.href === "/decks" && decks.length > 0
-          ? {
-              ...item,
-              children: decks.map((d) => ({
-                label: deckShortName(d.name),
-                href: `/deck/${d.id}`,
-              })),
-            }
-          : item,
-      )
+      /* The decks are NOT listed one by one under the entry any more
+         (Monica, 25 Sep, looking at the menu after clicking Tracker: "ye
+         charo ka tracker or 4 ka concept deck nhi chahiye — sirf Vishakha
+         ka"). The entry still opens the list page; what the menu stopped
+         doing is naming four other people's work down the side of hers. */
       // The WIO → PIO Tracker is not the design team's board and does not
       // belong in their menu (Monica, 18 Sep: "mere link me wio tracker nhi
       // ana chahiye"). Hidden from the nav only — /wio-tracker stays a live
@@ -156,18 +133,10 @@ export function visibleNav(
           ? {
               ...item,
               label: "Dashboard",
-              /* The team under the board, the way the decks sit under theirs.
-                 Each opens the tracker already narrowed to that person, so
-                 "what is Ritu on" is one click rather than a board, a tab and
-                 a chip (Monica, 19 Sep). */
-              ...(team.length > 0
-                ? {
-                    children: team.map((p) => ({
-                      label: p.name,
-                      href: `/design-tracker?person=${encodeURIComponent(p.id)}`,
-                    })),
-                  }
-                : {}),
+              /* And no names under it either, for the same reason. ?person=
+                 still works — the chips on the board write it — so narrowing
+                 to one designer is a click on her ring, not a permanent list
+                 of four in the corner of the head's own menu. */
             }
           : item,
       ),

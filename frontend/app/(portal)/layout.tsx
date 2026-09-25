@@ -3,8 +3,7 @@ import { Header } from "@/components/shell/Header";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { getSession } from "@/lib/auth/session";
 import { portalMode } from "@/lib/portal-mode";
-import { isDesignManager, listDesignTeamForNav } from "@/lib/services/design-tracker";
-import { listDecks } from "@/lib/services/decks";
+import { isDesignManager } from "@/lib/services/design-tracker";
 
 /**
  * Every portal page requires a session. This server-side check is the real
@@ -26,32 +25,16 @@ export default async function PortalLayout({
   const canSeeDecks =
     portalMode() === "tracker" ? await isDesignManager(session.user) : true;
 
-  /* The decks go under the entry in the nav, one per line. Fetched only for
-     somebody who is offered them at all, and only on this deployment — and a
-     failure is a shorter menu, never a page that will not load. */
-  const decks = canSeeDecks && portalMode() === "tracker"
-    ? await listDecks(session.user)
-        .then((rows) =>
-          rows
-            .map((d) => ({ id: d.id, name: d.name }))
-            /* By name, not by when it was last touched. listDecks answers
-               newest-first, which is right for the decks page and wrong for a
-               menu: the order would rearrange itself every time somebody saved,
-               and a menu you have to re-read is worse than a long one. */
-            .sort((a, b) => a.name.localeCompare(b.name)),
-        )
-        .catch(() => [])
-    : [];
-
-  /* The design team under the tracker, the way the decks sit under theirs.
-     Head only, and only on this deployment — same reasons as the decks above. */
-  const team = portalMode() === "tracker" ? await listDesignTeamForNav(session.user) : [];
+  /* Neither the decks nor the design team are fetched for the menu any more
+     (Monica, 25 Sep: "sirf Vishakha ka"). The entries are still there; what
+     the menu stopped doing is naming four other people's work down the side
+     of hers, which is also two queries this layout no longer makes. */
 
   return (
     <div className="flex h-screen flex-col">
-      <Header user={session.user} canSeeDecks={canSeeDecks} decks={decks} team={team} />
+      <Header user={session.user} canSeeDecks={canSeeDecks} />
       <div className="flex min-h-0 flex-1">
-        <Sidebar canSeeDecks={canSeeDecks} decks={decks} team={team} />
+        <Sidebar canSeeDecks={canSeeDecks} />
         <main className="min-w-0 flex-1 overflow-y-auto bg-canvas px-4 py-6 sm:px-6 md:px-10 md:py-8">
           {children}
         </main>

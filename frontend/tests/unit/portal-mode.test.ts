@@ -179,27 +179,14 @@ describe("tracker mode — the nav", () => {
     expect(isRouteAllowed("/my-tracker", TRACKER)).toBe(false);
   });
 
-  it("lists the design team under the tracker, each opening their own", () => {
-    // Monica, 19 Sep: "jaise concept ka bana hai aise hi" — the team under the
-    // board the way the decks sit under theirs.
-    const team = [
-      { id: "p1", name: "Lavika" },
-      { id: "p2", name: "Ritu" },
-    ];
-    const dash = visibleNav(TRACKER, true, [], team)
-      .flatMap((g) => g.items)
-      .find((i) => i.href === "/design-tracker");
-    expect(dash?.children).toEqual([
-      { label: "Lavika", href: "/design-tracker?person=p1" },
-      { label: "Ritu", href: "/design-tracker?person=p2" },
-    ]);
-
-    // A designer is given no team list — it would be a row of boards she
-    // cannot open — and the entry is then a plain link, not a heading.
-    const plain = visibleNav(TRACKER, true, [], [])
-      .flatMap((g) => g.items)
-      .find((i) => i.href === "/design-tracker");
-    expect(plain?.children).toBeUndefined();
+  it("names nobody else's work in the head's own menu", () => {
+    // Monica, 25 Sep, looking at the menu after clicking Tracker: "ye charo
+    // ka tracker or 4 ka concept deck nhi chahiye — sirf Vishakha ka." The
+    // entries stay; the lists of four names under each of them do not.
+    const items = visibleNav(TRACKER, true).flatMap((g) => g.items);
+    for (const item of items) {
+      expect(item.children, item.href).toBeUndefined();
+    }
   });
 
   it("keeps the WIO → PIO Tracker out of the menu but still serves it", () => {

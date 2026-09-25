@@ -11,12 +11,8 @@ import { NavGroups } from "@/components/shell/NavGroups";
  */
 export function MobileNav({
   canSeeDecks,
-  decks,
-  team,
 }: {
   canSeeDecks: boolean;
-  decks: { id: string; name: string }[];
-  team: { id: string; name: string }[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -74,7 +70,7 @@ export function MobileNav({
                 </svg>
               </button>
             </div>
-            <NavGroups onNavigate={() => setOpen(false)} canSeeDecks={canSeeDecks} decks={decks} team={team} />
+            <NavGroups onNavigate={() => setOpen(false)} canSeeDecks={canSeeDecks} />
           </div>
         </div>
       ) : null}
