@@ -4,9 +4,8 @@ import { BoardAccount } from "@/components/wio-tracker/BoardAccount";
 import { DesignBoardMenu } from "@/components/design-tracker/DesignBoardMenu";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { DesignTrackerBoard } from "@/components/design-tracker/DesignTrackerBoard";
-import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
-import { getDesignBoard } from "@/lib/services/design-tracker";
+import { getDesignBoard, getPublicDesignBoard } from "@/lib/services/design-tracker";
 
 export const dynamic = "force-dynamic";
 
@@ -16,52 +15,60 @@ export const metadata: Metadata = {
 };
 
 /**
- * The design board — one link, and it asks who you are first.
+ * The design board — one link, for everybody. The WIO board's shape, which is
+ * the shape Monica asked for by name on 25 Sep: "jaise WIO me tha."
  *
- * Monica, 25 Sep: "sabse pehle login chahiye, uske andar jaakar Vishakha ka."
- * I had built the other thing first — the board open to anybody, with a sign-in
- * in the corner, because that is how /board works and she had said "jaise WIO
- * me tha". The shape is the same; where the door sits is not. The WIO board is
- * read by most of essentia, so it opens and offers a sign-in. This one is read
- * by five people, so it asks at the door.
+ *   nobody signed in     →  the head's board, read only
+ *   signed in, the head  →  the same, plus Team performance, Setup, reminders
+ *   signed in, a designer →  her own projects, and a pen
  *
- *   the head       →  the whole team's board, to read
- *   a designer     →  her own projects, and a pen
- *
- * WHAT DECIDES IS THE ACCOUNT, NOT THE ADDRESS. getDesignBoard resolves what
+ * WHAT DECIDES IS THE ACCOUNT, NOT THE URL. getDesignBoard resolves what
  * somebody may do from the design team's own list, exactly as /design-tracker
- * does, and hands the same board to the same component.
+ * does, and hands the same board to the same component. Signing in here gets
+ * you what you would get anywhere.
  *
- * AND THE PAGE IS NOT THE GUARD. Every write goes through
- * /api/design-tracker/*, which reads a session of its own. This redirect is
- * how somebody is greeted, not what stops them.
+ * AND THE CONTROLS ARE NOT THE GUARANTEE. Every write goes through
+ * /api/design-tracker/*, which reads a session. Somebody opening this page
+ * signed out cannot change the board by calling those endpoints by hand,
+ * because there is no session here that could authorise them.
+ *
+ * WHAT IS ON THE PAGE. Client names, what is late and whom it waits on. That
+ * is the same judgement already made for /board — internal working
+ * information rather than anything confidential — and the same two things
+ * follow from it: noindex, and a link that is given rather than published.
  */
 export default async function DesignBoardPage() {
   const session = await getSession().catch(() => null);
-  if (!session) redirect("/login?next=%2Fdesign-board");
 
-  /* Somebody signed in who is not on the design team's list lands here too —
-     sending them to the portal's own page is better than an error, because
-     that page says in words that the board is not theirs. */
-  const board = await getDesignBoard(session.user).catch(() => null);
-  if (!board) redirect("/design-tracker");
+  /* A signed-in account gets its own board; anything that goes wrong getting
+     it — no access, an expired session, a database hiccup — falls back to the
+     open one rather than an error page. The link has to keep working. */
+  let board = session ? await getDesignBoard(session.user).catch(() => null) : null;
+  const signedIn = board !== null;
+  if (!board) board = await getPublicDesignBoard();
 
-  /* The same three for everyone. Dashboard is this page, and this page is
-     whosever board it is — the head's reading of the team, or a designer's of
-     her own projects. */
-  const menu = [
-    { label: "Dashboard", href: "/design-board", here: true },
-    { label: "Tracker", href: "/design-tracker" },
-    { label: "Concept deck", href: "/decks" },
-  ];
+  /* The same three for everyone (Monica, 25 Sep: "inke par bhi dashboard,
+     inka khud ka"). Dashboard is this page, and this page is whosever board
+     it is — the head's reading of the team, or a designer's of her own
+     projects. There was no reason for a designer's card to be shorter.
+
+     Empty when signed out, which is what stops the menu offering a refusal:
+     everywhere it leads asks for an account. */
+  const menu = signedIn
+    ? [
+        { label: "Dashboard", href: "/design-board", here: true },
+        { label: "Tracker", href: "/design-tracker" },
+        { label: "Concept deck", href: "/decks" },
+      ]
+    : [];
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
       <header className="flex h-14 shrink-0 items-center justify-between gap-3 bg-espresso px-4 md:px-6">
         <div className="flex items-center gap-4">
           {/* Behind ☰, in a card from the side — not a row of words across
-              the top (Monica, 25 Sep). The board is a wide table, and a
-              column standing beside it would cost the width people read. */}
+              the top (Monica, 25 Sep). Signed out it is not there at all:
+              everywhere it leads asks for an account. */}
           <DesignBoardMenu items={menu} />
           <Image src="/brand/logo-dark.png" alt="essentia" height={20} width={102} priority />
         </div>
@@ -70,11 +77,11 @@ export default async function DesignBoardPage() {
           <p className="hidden font-body text-[10px] font-light uppercase tracking-[0.22em] text-cream/50 md:block">
             Design Activity Tracker{board.can.edit ? "" : " · view only"}
           </p>
-          {/* Who you are and the way out. Everybody here is signed in, so
-              this is always the name and Sign out — signing out lands on the
-              sign-in page, which is where this link starts. */}
+          {/* Becoming somebody who can edit belongs on the page you are
+              already looking at — otherwise it means hunting for a second
+              URL, which is the thing one link exists to avoid. */}
           <ThemeToggle />
-          <BoardAccount name={session.user.name} next="/design-board" />
+          <BoardAccount name={session?.user.name ?? null} next="/design-board" />
         </div>
       </header>
 

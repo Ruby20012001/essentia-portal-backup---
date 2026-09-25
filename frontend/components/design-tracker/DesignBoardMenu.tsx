@@ -15,11 +15,9 @@ import { useEffect, useState } from "react";
  * At every width, not only on a phone. The board is a wide table people read
  * across; a permanent column beside it would cost the thing they came for.
  *
- * IT IS THERE SIGNED OUT TOO. What the links point at changes instead: the
- * tracker is this page, and the open deck list stands in for the one that
- * wants an account. A menu that offers a refusal is worse than no menu — and
- * a menu that appears only after signing in is worse than both, because the
- * page people are given is the one without it.
+ * SIGNED OUT THERE IS NO BUTTON. Everywhere it would lead — the portal's
+ * tracker, the deck list — asks for an account, so offering them to somebody
+ * with no session is offering a refusal.
  */
 export function DesignBoardMenu({
   items,
