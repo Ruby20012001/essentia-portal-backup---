@@ -36,16 +36,25 @@ type Banner = { tone: "error" | "success"; message: string };
 export function DesignTrackerBoard({
   initial,
   openAt = null,
+  openTab = null,
 }: {
   initial: DesignBoard;
   /** A designer named in the address — the menu links straight to one. */
   openAt?: string | null;
+  /** A tab named in the address — the menu links straight to one. */
+  openTab?: Tab | null;
 }) {
   const [board, setBoard] = useState(initial);
   /* A designer opens on Projects, which since 21 Sep is the only page she
      has: her jobs, and inside one of them the chart she ticks. Vishakha opens
      on the Dashboard, which is what she came to read. */
-  const [tab, setTab] = useState<Tab>(initial.viewer.scope === "own" ? "projects" : "dashboard");
+  /* Where the board opens. A tab named in the address wins — that is how
+     the menu links to Team performance without it being a page of its own.
+     Otherwise a designer opens on Projects, which since 21 Sep is the only
+     page she has, and the head opens on the dashboard she came to read. */
+  const [tab, setTab] = useState<Tab>(
+    openTab ?? (initial.viewer.scope === "own" ? "projects" : "dashboard"),
+  );
   const [banner, setBanner] = useState<Banner | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   /**

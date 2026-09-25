@@ -37,7 +37,11 @@ export const metadata: Metadata = {
  * information rather than anything confidential — and the same two things
  * follow from it: noindex, and a link that is given rather than published.
  */
-export default async function DesignBoardPage() {
+export default async function DesignBoardPage({
+  searchParams,
+}: {
+  searchParams: { tab?: string };
+}) {
   const session = await getSession().catch(() => null);
 
   /* A signed-in account gets its own board; anything that goes wrong getting
@@ -63,7 +67,20 @@ export default async function DesignBoardPage() {
      own page and will have you. A card that offers a refusal would be worse
      than no card. */
   const menu = [
-    { label: "Dashboard", href: "/design-board", here: true },
+    { label: "Dashboard", href: "/design-board", here: !searchParams?.tab },
+    /* Team performance is a tab, not a page, so the card links to the board
+       with the tab named — which is why the board reads ?tab= at all. Only
+       for whoever is sent the whole team: a designer's card stays at three,
+       because for her that page would be one card measured against nobody. */
+    ...(board.viewer.scope === "all"
+      ? [
+          {
+            label: "Team performance",
+            href: "/design-board?tab=team",
+            here: searchParams?.tab === "team",
+          },
+        ]
+      : []),
     { label: "Tracker", href: signedIn ? "/design-tracker" : "/design-board" },
     { label: "Concept deck", href: signedIn ? "/decks" : "/deck" },
   ];
@@ -94,7 +111,10 @@ export default async function DesignBoardPage() {
       <main id="board" className="min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 md:px-10 md:py-8">
         {/* The same board the team works, from the same computation — so this
             page and the portal can never disagree about what is late. */}
-        <DesignTrackerBoard initial={board} />
+        <DesignTrackerBoard
+          initial={board}
+          openTab={searchParams?.tab === "team" ? "team" : null}
+        />
 
         <p className="mt-10 border-t border-line pt-4 font-body text-[11px] font-light text-muted">
           {board.can.edit ? (
