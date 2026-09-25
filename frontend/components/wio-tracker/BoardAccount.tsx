@@ -18,10 +18,20 @@ import { useRouter } from "next/navigation";
 export function BoardAccount({
   name,
   next = "/board",
+  solid = false,
 }: {
   name: string | null;
   /** Where to come back to after signing in — the design board reuses this. */
   next?: string;
+  /**
+   * Draw the sign-in as a filled button rather than an outline. The design
+   * board asked for it (Monica, 25 Sep: "sign ka button lagado Vishakha
+   * par"): that page is read by four people who have to sign in to do their
+   * work, so the way in should look like the thing to press. The WIO board
+   * is read by most of essentia and edited by six, so an outline is right
+   * there — it stays the default.
+   */
+  solid?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -30,7 +40,11 @@ export function BoardAccount({
     return (
       <a
         href={`/login?next=${encodeURIComponent(next)}`}
-        className="rounded border border-cream/20 px-3 py-1.5 font-body text-[10px] font-bold uppercase tracking-[0.14em] text-cream/70 transition-colors hover:bg-cream/10 hover:text-cream"
+        className={
+          solid
+            ? "rounded bg-cream px-4 py-1.5 font-body text-[10px] font-bold uppercase tracking-[0.14em] text-espresso transition-colors hover:bg-white"
+            : "rounded border border-cream/20 px-3 py-1.5 font-body text-[10px] font-bold uppercase tracking-[0.14em] text-cream/70 transition-colors hover:bg-cream/10 hover:text-cream"
+        }
       >
         Sign in to edit
       </a>

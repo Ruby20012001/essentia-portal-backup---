@@ -87,7 +87,7 @@ export default async function DesignBoardPage() {
               already looking at — otherwise it means hunting for a second
               URL, which is the thing one link exists to avoid. */}
           <ThemeToggle />
-          <BoardAccount name={session?.user.name ?? null} next="/design-board" />
+          <BoardAccount name={session?.user.name ?? null} next="/design-board" solid />
         </div>
       </header>
 

@@ -124,6 +124,12 @@ export function visibleNav(
       // ana chahiye"). Hidden from the nav only — /wio-tracker stays a live
       // route, so anybody holding the link, and /board, are untouched.
       .filter((item) => item.href !== "/wio-tracker")
+      // Hiring is not the design team's either (Monica, 25 Sep: "hiring
+      // remove kardo"). Same treatment, and for the same reason it matters:
+      // /hr stays a live route, so the HR accounts' own links keep working —
+      // what changes is that four designers stop being offered a door into
+      // candidates' files.
+      .filter((item) => item.href !== "/hr")
       // On the design deployment the tracker IS the whole portal, so the one
       // entry behind the ☰ is read as "the dashboard", not as one tracker
       // among several (Monica, 18 Sep: "3 lines me to dashboard likha ho").
