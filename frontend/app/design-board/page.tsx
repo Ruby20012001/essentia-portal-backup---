@@ -47,25 +47,20 @@ export default async function DesignBoardPage() {
   const signedIn = board !== null;
   if (!board) board = await getPublicDesignBoard();
 
-  const own = board.viewer.scope === "own";
+  /* The same three for everyone (Monica, 25 Sep: "inke par bhi dashboard,
+     inka khud ka"). Dashboard is this page, and this page is whosever board
+     it is — the head's reading of the team, or a designer's of her own
+     projects. There was no reason for a designer's card to be shorter.
 
-  /* The same card for everyone, with what each of them actually has in it.
-     The head reads a team, so hers opens on the dashboard and the tracker is
-     a place to go; a designer has no team dashboard, so hers says Projects,
-     which is the one page she works on. Empty when signed out, which is what
-     stops the menu offering a refusal. */
-  const menu = !signedIn
-    ? []
-    : own
-      ? [
-          { label: "Projects", href: "/design-tracker" },
-          { label: "Concept deck", href: "/decks" },
-        ]
-      : [
-          { label: "Dashboard", href: "/design-board", here: true },
-          { label: "Tracker", href: "/design-tracker" },
-          { label: "Concept deck", href: "/decks" },
-        ];
+     Empty when signed out, which is what stops the menu offering a refusal:
+     everywhere it leads asks for an account. */
+  const menu = signedIn
+    ? [
+        { label: "Dashboard", href: "/design-board", here: true },
+        { label: "Tracker", href: "/design-tracker" },
+        { label: "Concept deck", href: "/decks" },
+      ]
+    : [];
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
