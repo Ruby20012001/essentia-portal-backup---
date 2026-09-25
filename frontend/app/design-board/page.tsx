@@ -54,21 +54,27 @@ export default async function DesignBoardPage() {
 
      Empty when signed out, which is what stops the menu offering a refusal:
      everywhere it leads asks for an account. */
-  const menu = signedIn
-    ? [
-        { label: "Dashboard", href: "/design-board", here: true },
-        { label: "Tracker", href: "/design-tracker" },
-        { label: "Concept deck", href: "/decks" },
-      ]
-    : [];
+  /* Three things, and nothing else in the card — Monica said it in those
+     words on 25 Sep: "uske card ke andar kuch bhi nahi ho, sirf 3 cheezein."
+     The same three whoever is looking, signed in or not.
+
+     What they point at is the only thing that moves. Signed out, the tracker
+     IS this page and /deck is the open deck list; signed in, both have their
+     own page and will have you. A card that offers a refusal would be worse
+     than no card. */
+  const menu = [
+    { label: "Dashboard", href: "/design-board", here: true },
+    { label: "Tracker", href: signedIn ? "/design-tracker" : "/design-board" },
+    { label: "Concept deck", href: signedIn ? "/decks" : "/deck" },
+  ];
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
       <header className="flex h-14 shrink-0 items-center justify-between gap-3 bg-espresso px-4 md:px-6">
         <div className="flex items-center gap-4">
           {/* Behind ☰, in a card from the side — not a row of words across
-              the top (Monica, 25 Sep). Signed out it is not there at all:
-              everywhere it leads asks for an account. */}
+              the top (Monica, 25 Sep). The board is a wide table, and a
+              column standing beside it would cost the width people read. */}
           <DesignBoardMenu items={menu} />
           <Image src="/brand/logo-dark.png" alt="essentia" height={20} width={102} priority />
         </div>
