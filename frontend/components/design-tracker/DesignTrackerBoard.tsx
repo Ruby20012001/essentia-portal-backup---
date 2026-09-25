@@ -229,7 +229,13 @@ export function DesignTrackerBoard({
        under a heading about a team she could not see (Monica, 19 Sep:
        "Vishakha ke alawa baki kisi me team performance hatana hai, wo to bas
        edit or report wale hain"). */
-    ...(board.can.manage ? [{ key: "team" as const, label: "Team performance" }] : []),
+    /* Whoever is sent the whole team's projects can read the team's page —
+       it is the same numbers, arranged by person. It used to hang off
+       can.manage, which also carries Setup and the reminders, so the board
+       read without signing in lost all three at once and Monica asked where
+       Team performance had gone (25 Sep). Those two change things; this one
+       only counts. */
+    ...(board.viewer.scope === "all" ? [{ key: "team" as const, label: "Team performance" }] : []),
     /* ✓ Update comes back, but only for whoever records work (Monica, 19 Sep:
        "un ke portal me option rakhna usi ke according, or Vishakha view wala
        hai bs").
@@ -437,7 +443,7 @@ export function DesignTrackerBoard({
         {/* Gated twice on purpose: hiding the tab stops it being pressed, this
             stops it being rendered at all if the tab is ever reached by some
             other road. */}
-        {tab === "team" && board.can.manage ? (
+        {tab === "team" && board.viewer.scope === "all" ? (
           <DesignTeamView board={lens} onPerson={showPerson} />
         ) : null}
 
