@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { BoardAccount } from "@/components/wio-tracker/BoardAccount";
+import { DesignBoardMenu } from "@/components/design-tracker/DesignBoardMenu";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { DesignTrackerBoard } from "@/components/design-tracker/DesignTrackerBoard";
 import { getSession } from "@/lib/auth/session";
@@ -47,34 +48,34 @@ export default async function DesignBoardPage() {
   if (!board) board = await getPublicDesignBoard();
 
   const own = board.viewer.scope === "own";
-  /* Signed out, /decks refuses — it opens for accounts. /deck is the open
-     list, and is where an unsigned reader should be sent. */
-  const deckHref = signedIn ? "/decks" : "/deck";
+
+  /* The same card for everyone, with what each of them actually has in it.
+     The head reads a team, so hers opens on the dashboard and the tracker is
+     a place to go; a designer has no team dashboard, so hers says Projects,
+     which is the one page she works on. Empty when signed out, which is what
+     stops the menu offering a refusal. */
+  const menu = !signedIn
+    ? []
+    : own
+      ? [
+          { label: "Projects", href: "/design-tracker" },
+          { label: "Concept deck", href: "/decks" },
+        ]
+      : [
+          { label: "Dashboard", href: "/design-board", here: true },
+          { label: "Tracker", href: "/design-tracker" },
+          { label: "Concept deck", href: "/decks" },
+        ];
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
       <header className="flex h-14 shrink-0 items-center justify-between gap-3 bg-espresso px-4 md:px-6">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
+          {/* Behind ☰, in a card from the side — not a row of words across
+              the top (Monica, 25 Sep). Signed out it is not there at all:
+              everywhere it leads asks for an account. */}
+          <DesignBoardMenu items={menu} />
           <Image src="/brand/logo-dark.png" alt="essentia" height={20} width={102} priority />
-          {/* Monica, 25 Sep: "Vishakha ke dashboard se Tracker aur Concept
-              deck hata do." On the head's reading there is nowhere else to
-              go — the board is the page — so a row of links only offered two
-              detours from the thing somebody came to read. A designer keeps
-              hers: Projects is where she works and the deck is the other half
-              of her job, and neither is on her screen otherwise. */}
-          {own ? (
-            <nav aria-label="Design" className="hidden items-center gap-5 sm:flex">
-              <span className="font-body text-[10px] font-bold uppercase tracking-[0.14em] text-cream">
-                Projects
-              </span>
-              <a
-                href={deckHref}
-                className="font-body text-[10px] font-bold uppercase tracking-[0.14em] text-cream/50 transition-colors hover:text-cream"
-              >
-                Concept deck
-              </a>
-            </nav>
-          ) : null}
         </div>
 
         <div className="flex items-center gap-4">
