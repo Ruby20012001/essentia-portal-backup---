@@ -75,10 +75,6 @@ const TRACKER_MODE_PREFIXES = [
   // it, the way /board has worked since 7 Sep (Monica, 25 Sep: "jaise WIO me
   // tha"). Closed here would mean the link 404s for the people it is for.
   "/design-board",
-  // The five names on one page, at an address that does not change (Monica,
-  // 21 Sep). It signs nobody in — each name is a link to /login with that
-  // person's address filled in, and she still types her own password.
-  "/design-team",
   // Its 09:00 morning reminders, called by Vercel Cron (vercel.json).
   "/api/jobs/design-reminders",
   // Hiring, and HR's own door onto it. Same lesson as /deck-login above, in

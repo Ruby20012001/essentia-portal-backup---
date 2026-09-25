@@ -103,7 +103,8 @@ async function requireReader(user: SessionUser): Promise<void> {
  * Whether this deck is this person's own.
  *
  * Matched on the name the decks are made under — "<person> — concept deck" —
- * which is the rule db/901 seeds by and /design-team reads by. One naming
+ * which is the rule db/901 seeds by and db/set-up-design-decks.mjs makes them
+ * by. One naming
  * rule, in the places that have to agree about it.
  */
 export async function ownsDeck(user: SessionUser, deckId: string): Promise<boolean> {

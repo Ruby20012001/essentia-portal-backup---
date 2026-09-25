@@ -161,18 +161,21 @@ describe("tracker mode — the nav", () => {
     expect(hrefs).not.toContain("/design-board");
   });
 
-  it("serves the names page, and never lists it", () => {
-    // Monica, 21 Sep: one address that does not change, with the five names
-    // on it. It hands nobody a session — each name links to /login with that
-    // person's address filled in, and she types her own password there.
-    expect(isRouteAllowed("/design-team", TRACKER)).toBe(true);
+  it("closes the names page it replaced", () => {
+    // /design-team listed the five and sent each to /login with her address
+    // filled in. Monica, 25 Sep, looking at it: "mujhe ye chahiye hi nahi
+    // format." /design-board is the one way in now — sign in, then your own
+    // board — so the old address is closed rather than left as a second door
+    // that does something else.
+    expect(isRouteAllowed("/design-team", TRACKER)).toBe(false);
+  });
+
+  it("keeps sign-in open, and the password-less door shut", () => {
+    // /design-board sends people to /login, so that has to be served.
     expect(isRouteAllowed("/login", TRACKER)).toBe(true);
 
-    // It is where people arrive, not somewhere to go from inside.
-    const hrefs = groups.flatMap((g) => g.items.map((i) => i.href));
-    expect(hrefs).not.toContain("/design-team");
-
-    // And the password-less door is gone, not merely unlinked.
+    // /my-tracker was the link-instead-of-a-password door, closed on 21 Sep
+    // when the five got passwords. Gone, not merely unlinked.
     expect(isRouteAllowed("/my-tracker", TRACKER)).toBe(false);
   });
 

@@ -11,7 +11,7 @@ export function LoginForm({
   showDevHint,
 }: {
   next?: string;
-  /** Already known when somebody picked their name on /design-team. */
+  /** Already known when the address was in the link that sent them here. */
   email?: string;
   showDevHint: boolean;
 }) {
