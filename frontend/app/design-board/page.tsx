@@ -81,6 +81,12 @@ export default async function DesignBoardPage({
       : []),
     { label: "Tracker", href: "/design-tracker" },
     { label: "Concept deck", href: "/decks" },
+    /* The same way in, in the card as well as the header (Monica, 30 Sep:
+       "card par bhi rahega, dono taraf"). Only on the head's reading — a
+       designer is already the person she needs to be. */
+    ...(board.viewer.scope === "all"
+      ? [{ label: "Sign in to edit", href: "/login?next=%2Fdesign-board", apart: true }]
+      : []),
   ];
 
   return (
@@ -102,6 +108,22 @@ export default async function DesignBoardPage({
               already looking at — otherwise it means hunting for a second
               URL, which is the thing one link exists to avoid. */}
           <ThemeToggle />
+          {/* The door is Vishakha's; this is the one inside it (Monica, 30
+              Sep: "wo sign in sirf Vishakha ka hai, uske andar ka sign in
+              aur banao, baaki sab ke liye"). She opens the board, and the
+              four sign in from the board itself rather than being sent back
+              to a link. /login takes the form from somebody already signed
+              in, so whoever uses this replaces the session and lands on her
+              own board. Only on the head's reading: a designer is already
+              the person she needs to be. */}
+          {board.viewer.scope === "all" ? (
+            <a
+              href="/login?next=%2Fdesign-board"
+              className="rounded bg-cream px-4 py-1.5 font-body text-[10px] font-bold uppercase tracking-[0.14em] text-espresso transition-colors hover:bg-white"
+            >
+              Sign in to edit
+            </a>
+          ) : null}
           <BoardAccount name={session.user.name} next="/design-board" />
         </div>
       </header>

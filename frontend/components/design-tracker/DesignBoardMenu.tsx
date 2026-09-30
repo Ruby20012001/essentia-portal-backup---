@@ -22,7 +22,7 @@ import { useEffect, useState } from "react";
 export function DesignBoardMenu({
   items,
 }: {
-  items: { label: string; href: string; here?: boolean }[];
+  items: { label: string; href: string; here?: boolean; apart?: boolean }[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -85,7 +85,12 @@ export function DesignBoardMenu({
 
             <ul className="space-y-0.5">
               {items.map((item) => (
-                <li key={item.href}>
+                /* apart: the way in, not a place to go — under a line of
+                   its own so it does not read as a fifth room. */
+                <li
+                  key={item.href}
+                  className={item.apart ? "mt-4 border-t border-brand-line pt-4" : undefined}
+                >
                   <a
                     href={item.href}
                     onClick={() => setOpen(false)}
