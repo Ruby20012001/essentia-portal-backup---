@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { redirect } from "next/navigation";
 import { BoardAccount } from "@/components/wio-tracker/BoardAccount";
 import { DesignBoardMenu } from "@/components/design-tracker/DesignBoardMenu";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { DesignTrackerBoard } from "@/components/design-tracker/DesignTrackerBoard";
 import { getSession } from "@/lib/auth/session";
-import { getDesignBoard, getPublicDesignBoard } from "@/lib/services/design-tracker";
+import { getDesignBoard } from "@/lib/services/design-tracker";
 
 export const dynamic = "force-dynamic";
 
@@ -43,29 +44,26 @@ export default async function DesignBoardPage({
   searchParams: { tab?: string };
 }) {
   const session = await getSession().catch(() => null);
+  /* Sign in first, then the board — Monica, 30 Sep: "open karte hi Vishakha
+     mam ka dashboard aa raha hai; sabse pehle sign-in ka aana chahiye, phir
+     Vishakha mam dashboard." It read open-to-anybody for a while because she
+     had said "jaise WIO me tha" and that is how /board works; the shape is
+     the same, where the door sits is not. The WIO board is read by most of
+     essentia. This one is read by five people. */
+  if (!session) redirect("/login?next=%2Fdesign-board");
 
-  /* A signed-in account gets its own board; anything that goes wrong getting
-     it — no access, an expired session, a database hiccup — falls back to the
-     open one rather than an error page. The link has to keep working. */
-  let board = session ? await getDesignBoard(session.user).catch(() => null) : null;
-  const signedIn = board !== null;
-  if (!board) board = await getPublicDesignBoard();
+  /* Somebody signed in who is not on the design team's list lands here too —
+     the portal's own page says in words that the board is not theirs, which
+     is better than an error. */
+  const board = await getDesignBoard(session.user).catch(() => null);
+  if (!board) redirect("/design-tracker");
 
-  /* The same three for everyone (Monica, 25 Sep: "inke par bhi dashboard,
-     inka khud ka"). Dashboard is this page, and this page is whosever board
-     it is — the head's reading of the team, or a designer's of her own
-     projects. There was no reason for a designer's card to be shorter.
-
-     Empty when signed out, which is what stops the menu offering a refusal:
-     everywhere it leads asks for an account. */
   /* Three things, and nothing else in the card — Monica said it in those
      words on 25 Sep: "uske card ke andar kuch bhi nahi ho, sirf 3 cheezein."
      The same three whoever is looking, signed in or not.
 
-     What they point at is the only thing that moves. Signed out, the tracker
-     IS this page and /deck is the open deck list; signed in, both have their
-     own page and will have you. A card that offers a refusal would be worse
-     than no card. */
+     Everybody reading this is signed in, so each of them goes to its own
+     page rather than standing in for one. */
   const menu = [
     { label: "Dashboard", href: "/design-board", here: !searchParams?.tab },
     /* Team performance is a tab, not a page, so the card links to the board
@@ -81,8 +79,8 @@ export default async function DesignBoardPage({
           },
         ]
       : []),
-    { label: "Tracker", href: signedIn ? "/design-tracker" : "/design-board" },
-    { label: "Concept deck", href: signedIn ? "/decks" : "/deck" },
+    { label: "Tracker", href: "/design-tracker" },
+    { label: "Concept deck", href: "/decks" },
   ];
 
   return (
@@ -104,7 +102,7 @@ export default async function DesignBoardPage({
               already looking at — otherwise it means hunting for a second
               URL, which is the thing one link exists to avoid. */}
           <ThemeToggle />
-          <BoardAccount name={session?.user.name ?? null} next="/design-board" solid />
+          <BoardAccount name={session.user.name} next="/design-board" />
         </div>
       </header>
 
@@ -120,7 +118,7 @@ export default async function DesignBoardPage({
           {board.can.edit ? (
             <>
               You are signed in as{" "}
-              <span className="text-secondary">{session?.user.name}</span> — what
+              <span className="text-secondary">{session.user.name}</span> — what
               you tick saves for everyone.
             </>
           ) : (

@@ -459,58 +459,6 @@ export async function getDesignBoard(user: SessionUser): Promise<DesignBoard> {
   };
 }
 
-/**
- * The board for somebody who has not signed in — the head's reading of it,
- * with nothing that changes anything.
- *
- * Monica, 25 Sep: "mujhe link chahiye … direct Vishakha mam ka dashboard …
- * wo bas view ka ho", and the shape she named for it was the WIO board's:
- * one link that opens for everyone, and a way to sign in on the page you are
- * already looking at. /board has worked that way since 7 Sep.
- *
- * WHAT IT SHOWS AND WHAT IT DOES NOT. Every project, as the head sees them,
- * because a board that hides half its rows is not the board. But can.manage
- * is false, which takes Setup and the reminders off a page anybody can open —
- * those change how the chart is read and who gets mail, and neither belongs
- * on the open internet. The activity trail is left out for the same reason in
- * a different direction: it names people and says what they did, and that is
- * for whoever is signed in.
- *
- * NOTHING HERE IS THE GUARD. Every write goes through the API, which reads a
- * session; a page with no session cannot authorise one whatever it renders.
- */
-export async function getPublicDesignBoard(): Promise<DesignBoard> {
-  const [settings, activities, people, types, inputs] = await Promise.all([
-    getDesignSettings(),
-    listActivities(),
-    listPeople(),
-    listTypes(),
-    listProjectInputs(null),
-  ]);
-
-  const projects = computeProjects(inputs, activities, people, settings, types);
-  const head = people.find((p) => p.role === "head") ?? null;
-
-  return {
-    settings,
-    activities,
-    people,
-    types,
-    projects,
-    counts: heatCounts(projects),
-    team: personRows(projects, people),
-    holding: holdingByDependency(projects),
-    viewer: {
-      scope: "all",
-      personId: head?.id ?? null,
-      name: head?.name ?? settings.teamName,
-      isHead: true,
-    },
-    can: { manage: false, edit: false, export: true },
-    activity: [],
-  };
-}
-
 // ── projects ────────────────────────────────────────────────────────
 
 export type CreateProjectInput = {
