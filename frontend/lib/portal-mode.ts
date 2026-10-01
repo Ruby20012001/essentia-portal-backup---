@@ -94,6 +94,11 @@ const TRACKER_MODE_PREFIXES = [
   // and refusing everything when it is not — but a route that 404s on the
   // deployment the agent is pointed at is a confusing way to find that out.
   "/api/voice",
+  // Project Desk — every live project from enquiry to handover, and its
+  // assistant. Missing here, signing in with ?next=/project-desk would land
+  // on the WIO tracker instead (see the /hr note above).
+  "/project-desk",
+  "/api/project-desk",
   "/login",
   "/api/auth",
   "/api/me",

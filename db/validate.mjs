@@ -1955,6 +1955,22 @@ if (!failed) {
             )::TEXT AS v`,
       ok: (v) => v === "true",
     },
+    {
+      name: "project desk: table exists, stage is checked, site work is an array",
+      sql: `SELECT (
+              to_regclass('desk.projects') IS NOT NULL
+              AND (SELECT column_default FROM information_schema.columns
+                    WHERE table_schema = 'desk' AND table_name = 'projects'
+                      AND column_name = 'site_work') LIKE '''[]''%'
+              AND has_table_privilege('essentia_app', 'desk.projects', 'DELETE')
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      name: "project desk: a stage outside the five is refused",
+      sql: `INSERT INTO desk.projects (name, stage) VALUES ('x', 'Snagging')`,
+      expectError: true,
+    },
   ];
 
   // RLS bypass note: PGlite runs as a superuser-ish single role, so the RLS
