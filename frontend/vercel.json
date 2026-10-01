@@ -3,6 +3,10 @@
   "regions": ["sin1"],
   "crons": [
     {
+      "path": "/api/jobs/wio-stamp",
+      "schedule": "0 3 * * *"
+    },
+    {
       "path": "/api/jobs/design-reminders",
       "schedule": "30 3 * * *"
     }

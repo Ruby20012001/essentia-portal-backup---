@@ -896,6 +896,71 @@ export type SettingsPatch = Partial<{
  * per-browser, two people would read the same board differently, which is the
  * failure the spreadsheet already had.
  */
+/**
+ * Move the board on to today, with nobody pressing anything.
+ *
+ * The stamped date was made a deliberate act so that everyone reads the same
+ * day and a screenshot taken at 11pm says what one taken at 9am said. That
+ * part was right. What was wrong was leaving the pressing to a person: by
+ * 1 Oct 2026 the board had been sitting on 5 September for twenty-six days,
+ * quietly adding twenty-six to every overdue count and telling the team
+ * things that were not true. A board nobody re-stamps is worse than a board
+ * with no date on it, because it looks current.
+ *
+ * So the stamp stays shared and stays one value; only the hand goes. The
+ * morning cron calls this, and it remains exactly as possible to stamp by
+ * hand from Setup — the two write the same column.
+ *
+ * TODAY IS ASIA/KOLKATA, COMPUTED BY THE DATABASE. The team is in Delhi and
+ * the deployment is in Singapore, and neither of those is the server's idea
+ * of midnight. Taking the date from the database with the zone named means
+ * the answer cannot drift when the app is moved.
+ *
+ * Idempotent: called twice in a morning the second call changes nothing and
+ * says so, so a retrying cron cannot fill the audit log with noise.
+ *
+ * `stamped_by` is left NULL on purpose — nobody did this, and writing a
+ * person's name against it would be a small lie on a board whose whole job is
+ * not telling them.
+ */
+export async function stampBoardToday(): Promise<{
+  changed: boolean;
+  today: string;
+  was: string;
+}> {
+  const [before] = await query<{ today: string }>(
+    `SELECT today_stamp::text AS today FROM ee.tracker_settings WHERE id = 1`,
+  );
+  if (!before) {
+    throw new NotFoundError(
+      "The tracker has no settings row — db/031 has not been loaded into this database.",
+    );
+  }
+
+  const [after] = await query<{ today: string }>(
+    `UPDATE ee.tracker_settings
+        SET today_stamp = (NOW() AT TIME ZONE 'Asia/Kolkata')::date,
+            stamped_by  = NULL,
+            stamped_at  = NOW(),
+            updated_at  = NOW()
+      WHERE id = 1
+        AND today_stamp <> (NOW() AT TIME ZONE 'Asia/Kolkata')::date
+      RETURNING today_stamp::text AS today`,
+  );
+
+  if (!after) return { changed: false, today: before.today, was: before.today };
+
+  await writeAudit({
+    action: "WIO_TRACKER_DATE_STAMPED",
+    resourceType: "wio_tracker",
+    resourceId: null,
+    oldValues: { today: before.today },
+    newValues: { today: after.today, by: "the morning cron" },
+  });
+
+  return { changed: true, today: after.today, was: before.today };
+}
+
 export async function updateSettings(
   user: SessionUser,
   patch: SettingsPatch,
