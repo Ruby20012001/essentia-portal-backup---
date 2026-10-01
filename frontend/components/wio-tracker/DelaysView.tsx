@@ -20,6 +20,18 @@ import { forTeam } from "@/lib/services/wio-tracker-logic";
 
 type Scope = "open" | "closed" | "all";
 
+/**
+ * How a WIO reads in a dropdown.
+ *
+ * The number alone is not how anyone holds these in their head — people know
+ * "Mehta Residence", not "ED/26-27/109". The number stays first because it is
+ * what gets typed and searched; the project follows so the right row can be
+ * picked without opening another tab.
+ */
+function wioLabel(w: { wio: string; project: string | null }, extra?: string): string {
+  return [w.wio, w.project, extra].filter(Boolean).join(" — ");
+}
+
 export function DelaysView({
   board,
   team,
@@ -39,6 +51,20 @@ export function DelaysView({
 
   const teamDelays = useMemo(() => forTeam(board.delays, team), [board.delays, team]);
   const teamWios = useMemo(() => forTeam(board.wios, team), [board.wios, team]);
+
+  /**
+   * The project a delay belongs to, by WIO.
+   *
+   * A delay carries its WIO number but not its project, because the project
+   * lives on the WIO and copying it onto every delay would let the two drift
+   * apart the day somebody renames a project. Looked up from the whole board
+   * rather than the team lens, so a row never loses its name just because the
+   * screen is filtered.
+   */
+  const projectByWio = useMemo(
+    () => new Map(board.wios.map((w) => [w.id, w.project])),
+    [board.wios],
+  );
 
   const rows = useMemo(
     () =>
@@ -83,7 +109,7 @@ export function DelaysView({
           <option value="">Every WIO</option>
           {teamWios.map((w) => (
             <option key={w.id} value={w.id}>
-              {w.wio}
+              {wioLabel(w)}
             </option>
           ))}
         </select>
@@ -124,6 +150,7 @@ export function DelaysView({
               <tr className="bg-surface text-[11px] uppercase tracking-[0.12em] text-secondary">
                 <th className="px-3 py-2.5 font-bold">Logged</th>
                 <th className="px-3 py-2.5 font-bold">WIO</th>
+                <th className="px-3 py-2.5 font-bold">Project</th>
                 <th className="px-3 py-2.5 font-bold">Why</th>
                 <th className="px-3 py-2.5 font-bold">Cause</th>
                 <th className="px-3 py-2.5 font-bold">Source</th>
@@ -144,6 +171,9 @@ export function DelaysView({
                 >
                   <td className="whitespace-nowrap px-3 py-2.5 font-light text-muted">{d.date}</td>
                   <td className="whitespace-nowrap px-3 py-2.5 font-bold text-ink">{d.wio}</td>
+                  <td className="px-3 py-2.5 font-light text-secondary">
+                    {projectByWio.get(d.wioId) ?? "—"}
+                  </td>
                   <td className="px-3 py-2.5 font-light text-ink">{d.why}</td>
                   <td className="px-3 py-2.5 font-light text-secondary">{d.cause}</td>
                   <td className="px-3 py-2.5">
@@ -263,7 +293,7 @@ function AddDelayForm({
           >
             {pickable.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.wio} — {w.stage}
+                {wioLabel(w, w.stage)}
               </option>
             ))}
           </select>
