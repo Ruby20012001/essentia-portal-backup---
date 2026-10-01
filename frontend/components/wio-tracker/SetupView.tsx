@@ -82,11 +82,17 @@ export function SetupView({
             </>
           ) : null}
           <p className="ml-auto font-body text-xs font-light text-muted">
+            {/* Three states, not two. A stamp with no name against it used to
+                mean only one thing — the value the workbook came with. Since
+                the morning cron it can also mean nobody did it, which is the
+                point of the cron, so the time tells them apart. */}
             {settings.stampedBy
               ? `Last stamped by ${settings.stampedBy}${
                   settings.stampedAt ? ` · ${settings.stampedAt.slice(0, 16).replace("T", " ")}` : ""
                 }`
-              : "Carried over from the original workbook — never re-stamped in the portal"}
+              : settings.stampedAt
+                ? `Stamped automatically · ${settings.stampedAt.slice(0, 16).replace("T", " ")}`
+                : "Carried over from the original workbook — never re-stamped in the portal"}
           </p>
         </div>
       </section>

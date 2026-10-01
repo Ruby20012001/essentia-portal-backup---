@@ -50,6 +50,15 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
    * so the sheet has to have been rendered visible BEFORE the capture runs.
    */
   const [shooting, setShooting] = useState(false);
+  /**
+   * How far the stamped date is behind the reader's own today.
+   *
+   * Null until the browser has mounted, and filled in an effect rather than
+   * at render, because the server and the reader do not share a clock. Render
+   * it on the server and the two disagree by a day at 05:30 IST, which is a
+   * hydration error on a board somebody is trying to read.
+   */
+  const [daysBehind, setDaysBehind] = useState<number | null>(null);
 
   /**
    * Saving the view as a picture, for WhatsApp — where a PDF is an attachment
@@ -83,6 +92,17 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
         message: "Could not make the picture. Save as PDF works on any browser.",
       });
     }
+  }, [board.settings.today]);
+
+  useEffect(() => {
+    /* Whole days between the stamp and the reader's today, both taken as
+       plain calendar dates so an hour either side of midnight cannot make it
+       read 1 when the dates are the same. */
+    const stamp = Date.parse(`${board.settings.today}T00:00:00Z`);
+    if (Number.isNaN(stamp)) return;
+    const now = new Date();
+    const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    setDaysBehind(Math.round((today - stamp) / 86_400_000));
   }, [board.settings.today]);
 
   useEffect(() => {
@@ -276,6 +296,18 @@ export function WioTrackerBoard({ initial }: { initial: TrackerBoard }) {
         <span className="ml-auto py-2.5 font-body text-xs font-light text-muted">
           Read against{" "}
           <span className="font-bold text-secondary">{board.settings.today}</span>
+          {/* The board's one real failure mode, said out loud. A stamp left
+              behind does not look wrong — it looks like a date — and every
+              number is measured from it, so an old one quietly adds its own
+              age to every overdue count. On 1 Oct 2026 it was twenty-six days
+              behind and had said nothing. Orange, not red: the rows are fine,
+              the reading of them is not. */}
+          {daysBehind !== null && daysBehind > 0 ? (
+            <span className="ml-2 font-bold text-warning">
+              · {daysBehind} {daysBehind === 1 ? "day" : "days"} behind, so
+              overdue reads high
+            </span>
+          ) : null}
           {board.can.edit ? (
             <button
               type="button"
