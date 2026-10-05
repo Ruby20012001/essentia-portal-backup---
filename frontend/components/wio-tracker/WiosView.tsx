@@ -157,9 +157,12 @@ export function WiosView({
           <table className="w-full text-left font-body text-[13.5px]">
             <thead>
               <tr className="bg-surface text-[11px] uppercase tracking-[0.12em] text-secondary">
-                <th className="px-3 py-2.5 font-bold">WIO</th>
                 {team === null ? <th className="px-3 py-2.5 font-bold">Team</th> : null}
                 <th className="px-3 py-2.5 font-bold">Project / scope</th>
+                {/* The number reads better beside the house than in front of
+                    it: people find a row by the project they are talking
+                    about, then want the number to quote. Monica, 5 Oct 2026. */}
+                <th className="px-3 py-2.5 font-bold">WIO no.</th>
                 <th className="px-3 py-2.5 font-bold">Stage — change this</th>
                 <th className="px-3 py-2.5 font-bold">Day</th>
                 <th className="px-3 py-2.5 font-bold text-right">Days here</th>
@@ -218,14 +221,6 @@ function FragmentRow({
   return (
     <>
       <tr className="border-t border-line bg-card align-top transition-colors hover:bg-hover">
-        <td className="whitespace-nowrap px-3 py-2.5 font-bold text-ink">
-          {w.wio}
-          {w.pioNo ? (
-            <span className="block font-body text-[11px] font-light text-muted">
-              PIO {w.pioNo}
-            </span>
-          ) : null}
-        </td>
         {team === null ? (
           <td className="whitespace-nowrap px-3 py-2.5 font-light text-muted">
             {board.teams.find((t) => t.code === w.teamCode)?.name ?? w.teamCode}
@@ -234,6 +229,14 @@ function FragmentRow({
         <td className="px-3 py-2.5 font-light text-ink">
           {w.project ?? <span className="text-muted">No project named</span>}
           <span className="block text-xs text-muted">{w.scope}</span>
+        </td>
+        <td className="whitespace-nowrap px-3 py-2.5 font-bold text-ink">
+          {w.wio}
+          {w.pioNo ? (
+            <span className="block font-body text-[11px] font-light text-muted">
+              PIO {w.pioNo}
+            </span>
+          ) : null}
         </td>
         <td className="px-3 py-2.5">
           {/* The one control that moves the board. Changing it re-stamps
