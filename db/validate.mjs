@@ -851,6 +851,35 @@ if (!failed) {
       ok: (v) => v === "true",
     },
     {
+      // S16 Knowledge Library: full-text search finds a session by a word in
+      // its tags, and the track filter keeps Strategic Leadership out for a
+      // viewer below L1. Mirrors searchKnowledge in frontend/lib/services/knowledge.ts.
+      name: "knowledge: word search over title/content/tags; Strategic Leadership filtered out below L1",
+      setupSql: `INSERT INTO portal.knowledge_library (title, content, track, content_type, topic_tags, year_tag)
+                 VALUES ('Module 7 — Wood behaviour', 'Teak swells when the air is wet; leave gaps in joinery.',
+                         'Site Supervision', 'craft_wednesday', '["Monsoon","Carpentry"]', 2025),
+                        ('Board pack — monsoon pricing', 'How the group prices monsoon delays into contracts.',
+                         'Strategic Leadership', 'strategic_wednesday', '["Monsoon"]', 2025)`,
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM portal.knowledge_library k
+                WHERE k.track = ANY(ARRAY['Site Supervision','PMC & Client Advisory','Design & 3D',
+                                          'Manufacturing','Experience Centre']::text[])
+                  AND to_tsvector('english',
+                        k.title || ' ' || k.content || ' ' ||
+                        COALESCE(k.role_tags::text, '') || ' ' || COALESCE(k.topic_tags::text, '') || ' ' ||
+                        COALESCE(k.project_type_tags::text, ''))
+                      @@ websearch_to_tsquery('english', 'monsoon')) = 1
+              AND (SELECT COUNT(*) FROM portal.knowledge_library k
+                WHERE k.track = ANY(ARRAY['Site Supervision','Strategic Leadership']::text[])
+                  AND to_tsvector('english',
+                        k.title || ' ' || k.content || ' ' ||
+                        COALESCE(k.role_tags::text, '') || ' ' || COALESCE(k.topic_tags::text, '') || ' ' ||
+                        COALESCE(k.project_type_tags::text, ''))
+                      @@ websearch_to_tsquery('english', 'monsoon')) = 2
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
       // 061: the five-minute pulse is registered, and its degraded alert goes
       // where a dead-lettered job's does.
       name: "061: api-health-pulse runs every 300s; integration.degraded routes to platform_admins",

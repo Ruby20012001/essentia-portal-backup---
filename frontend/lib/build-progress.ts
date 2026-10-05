@@ -39,7 +39,7 @@ export const SCREENS: Record<string, ScreenNote> = {
   "/communication": { status: "built" },
   "/client": { status: "placeholder", note: "Phase 3. Needs client sign-in (Twilio OTP)." },
   "/vendor": { status: "placeholder", note: "Needs vendor sign-in (Twilio OTP)." },
-  "/knowledge": { status: "placeholder", note: "Phase 3. Wednesday Year search." },
+  "/knowledge": { status: "built", note: "Word search. Search by meaning waits on an embedding service." },
   "/workflow-definitions": { status: "built" },
   "/workflow-delegations": { status: "built" },
   "/sla-monitor": { status: "built" },
