@@ -71,6 +71,8 @@ export const NAV: NavGroup[] = [
       { label: "Active Delegations", href: "/workflow-delegations", screen: "S21" },
       { label: "SLA Monitor", href: "/sla-monitor", screen: "S22" },
       { label: "API Health", href: "/api-health", screen: "S13" },
+      // Not one of the 18: how far the 18 (and the rest) have got.
+      { label: "Build Progress", href: "/build-progress", screen: "meta" },
     ],
   },
   {
