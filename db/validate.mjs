@@ -851,6 +851,170 @@ if (!failed) {
       ok: (v) => v === "true",
     },
     {
+      // S13 API Health: the latest check per integration wins, and failure
+      // streaks that are resolved drop out. Mirrors frontend/lib/services/api-health.ts.
+      name: "api-health: latest check per integration; resolved failure streaks are not shown",
+      setupSql: `INSERT INTO portal.api_health_log (integration, checked_at, status, response_ms)
+                 VALUES ('zakya', NOW() - INTERVAL '10 minutes', 'healthy', 90),
+                        ('zakya', NOW() - INTERVAL '1 minute', 'degraded', NULL);
+                 INSERT INTO portal.api_failure_state (integration, consecutive_failures, is_degraded)
+                 VALUES ('zakya', 3, TRUE);
+                 INSERT INTO portal.api_failure_state (integration, consecutive_failures, resolved_at)
+                 VALUES ('keka', 2, NOW())`,
+      sql: `SELECT (
+              (SELECT status FROM (
+                 SELECT DISTINCT ON (integration)
+                        integration::text AS integration, status,
+                        checked_at::text AS "checkedAt", response_ms AS "responseMs", error_msg AS error
+                   FROM portal.api_health_log
+                  ORDER BY integration, checked_at DESC) c WHERE c.integration = 'zakya') = 'degraded'
+              AND (SELECT string_agg(integration, ',') FROM (
+                 SELECT integration::text AS integration,
+                        COALESCE(consecutive_failures, 0)::int AS "consecutiveFailures",
+                        first_failure_at::text AS "firstFailureAt",
+                        COALESCE(is_degraded, FALSE) AS degraded
+                   FROM portal.api_failure_state
+                  WHERE resolved_at IS NULL) f) = 'zakya'
+              AND (SELECT COUNT(*) FROM portal.api_health_log
+                    WHERE checked_at >= date_trunc('day', NOW() AT TIME ZONE 'Asia/Kolkata') AT TIME ZONE 'Asia/Kolkata') >= 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // S10 NH8: a station's open PIO assignments and its forecast rows for the
+      // next 14 days come back; a finished assignment and a day-15 row do not.
+      // Mirrors the queue and forecast queries in frontend/lib/services/factory-floor.ts.
+      name: "factory-floor: station queue skips finished PIOs; forecast stops at 14 days",
+      setupSql: `INSERT INTO factory.pio_assignments (pio_id, dept_id, target_complete, status, notes)
+                 SELECT p.id, d.id, CURRENT_DATE + 8, 'in_production', 'harness open'
+                   FROM ee.pio p, factory.departments d WHERE d.code = 'CARP' ORDER BY p.created_at LIMIT 1;
+                 INSERT INTO factory.pio_assignments (pio_id, dept_id, target_complete, actual_complete, status, notes)
+                 SELECT p.id, d.id, CURRENT_DATE - 2, CURRENT_DATE - 3, 'complete', 'harness done'
+                   FROM ee.pio p, factory.departments d WHERE d.code = 'CARP' ORDER BY p.created_at LIMIT 1;
+                 INSERT INTO factory.capacity_forecast (dept_id, forecast_date, pios_arriving, manpower_avail)
+                 SELECT id, CURRENT_DATE + 3, 4, 3 FROM factory.departments WHERE code = 'CARP';
+                 INSERT INTO factory.capacity_forecast (dept_id, forecast_date, pios_arriving, manpower_avail)
+                 SELECT id, CURRENT_DATE + 14, 9, 1 FROM factory.departments WHERE code = 'CARP'`,
+      sql: `WITH ids AS (SELECT ARRAY_AGG(id) AS a FROM factory.departments WHERE code = 'CARP')
+            SELECT (
+              (SELECT COUNT(*) FROM (
+                 SELECT a.id, p.pio_number AS "pioNumber", pr.project_name AS project,
+                        d.name AS station, a.notes AS scope, a.status,
+                        a.target_complete::text AS target,
+                        (a.actual_complete IS NOT NULL) AS done
+                   FROM factory.pio_assignments a
+                   JOIN factory.departments d ON d.id = a.dept_id
+                   JOIN ee.pio p ON p.id = a.pio_id
+                   LEFT JOIN ee.projects pr ON pr.id = p.project_id
+                  WHERE a.dept_id = ANY((SELECT a FROM ids)::uuid[])
+                    AND a.actual_complete IS NULL) q WHERE q.scope LIKE 'harness%') = 1
+              AND (SELECT COUNT(*) FROM (
+                 SELECT forecast_date::text AS date,
+                        COALESCE(pios_arriving, 0)::int AS arriving,
+                        manpower_avail AS manpower
+                   FROM factory.capacity_forecast
+                  WHERE dept_id = ANY((SELECT a FROM ids)::uuid[])
+                    AND forecast_date >= CURRENT_DATE
+                    AND forecast_date < CURRENT_DATE + 14) f) = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // S9 Procurement: a vendor's open WOs are counted, and the vendor read
+      // never touches PAN, Aadhaar or bank columns. Mirrors the vendors and
+      // POs queries in frontend/lib/services/procurement.ts.
+      name: "procurement: vendor roll-up counts open WOs; PO read resolves vendor and delivery",
+      setupSql: `INSERT INTO proc.vendors (id, vrn_number, company_name, vrn_status, vrn_expiry_date)
+                 VALUES ('00000000-0000-4000-8000-0000000009a1'::uuid, 'VRN/CHK/001', 'Harness Vendor',
+                         'active', CURRENT_DATE + 10);
+                 INSERT INTO proc.work_orders (wo_number, legal_entity, vendor_id, wo_value, coordination_charge_pct, status)
+                 VALUES ('AIPL/CHK/001', 'AIPL', '00000000-0000-4000-8000-0000000009a1'::uuid, 100000, 20, 'approved'),
+                        ('AIPL/CHK/002', 'AIPL', '00000000-0000-4000-8000-0000000009a1'::uuid, 50000, 0, 'rejected');
+                 INSERT INTO proc.purchase_orders (po_number, vendor_id, total_amount, status, expected_delivery)
+                 VALUES ('ESS/PO/CHK/0001', '00000000-0000-4000-8000-0000000009a1'::uuid, 30000, 'approved', CURRENT_DATE)`,
+      sql: `SELECT (
+              (SELECT x."openWos" FROM (
+                 SELECT v.id, v.vrn_number AS vrn, v.company_name AS company, v.vendor_type AS type,
+                        v.vrn_status AS status, v.vrn_expiry_date::text AS expiry,
+                        v.performance_score::float8 AS score, COALESCE(v.is_preferred, FALSE) AS preferred,
+                        COUNT(w.id) FILTER (
+                          WHERE w.status IN ('draft','pending_approval','approved') AND w.actual_complete IS NULL
+                        )::int AS "openWos"
+                   FROM proc.vendors v
+                   LEFT JOIN proc.work_orders w ON w.vendor_id = v.id
+                  GROUP BY v.id) x WHERE x.vrn = 'VRN/CHK/001') = 1
+              AND (SELECT total_value FROM proc.work_orders WHERE wo_number = 'AIPL/CHK/001') = 120000
+              AND (SELECT COUNT(*) FROM (
+                 SELECT po.id, po.po_number AS "poNumber", v.company_name AS vendor, p.project_name AS project,
+                        po.total_amount::float8 AS total,
+                        COALESCE(po.three_quotes_satisfied, FALSE) AS "quotesSatisfied",
+                        COALESCE(po.three_quotes_waived, FALSE) AS "quotesWaived",
+                        po.status::text AS status,
+                        po.expected_delivery::text AS "expectedDelivery",
+                        (po.actual_delivery IS NOT NULL) AS delivered
+                   FROM proc.purchase_orders po
+                   JOIN proc.vendors v ON v.id = po.vendor_id
+                   LEFT JOIN ee.projects p ON p.id = po.project_id
+                  WHERE po.status IN ('draft','pending_approval','approved')
+                    AND po.actual_delivery IS NULL) y
+                 WHERE y."poNumber" = 'ESS/PO/CHK/0001' AND y.vendor = 'Harness Vendor'
+                   AND y."expectedDelivery" = CURRENT_DATE::text AND NOT y.delivered) = 1
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // COO morning numbers: AR ageing counts days from the invoice date and
+      // only what is still unpaid. Mirrors the invoices query in
+      // frontend/lib/services/coo-morning.ts.
+      name: "coo-morning: AR ageing reads a 61-day unpaid invoice as 61 days and its unpaid balance",
+      setupSql: `INSERT INTO ee.billing_milestones
+                   (project_id, milestone_name, amount, amount_paid, invoice_raised, invoice_date, invoice_number)
+                 SELECT id, 'coo-morning check', 100000, 40000, TRUE, CURRENT_DATE - 61, 'COO-CHK-61'
+                   FROM ee.projects ORDER BY created_at LIMIT 1`,
+      sql: `SELECT (COUNT(*) = 1)::TEXT AS v FROM (
+              SELECT p.project_name AS project,
+                     f.primary_contact AS family,
+                     b.invoice_number AS "invoiceNumber",
+                     (b.amount - b.amount_paid)::float8 AS outstanding,
+                     (CURRENT_DATE - b.invoice_date)::int AS days,
+                     tl.full_name AS tl
+                FROM ee.billing_milestones b
+                JOIN ee.projects p ON p.id = b.project_id
+                LEFT JOIN public.families f ON f.id = p.family_id
+                LEFT JOIN public.users tl ON tl.id = p.crmtl_id
+               WHERE b.invoice_raised
+                 AND b.invoice_date IS NOT NULL
+                 AND b.amount_paid < b.amount
+            ) x WHERE x."invoiceNumber" = 'COO-CHK-61' AND x.days = 61 AND x.outstanding = 60000`,
+      ok: (v) => v === "true",
+    },
+    {
+      // COO morning numbers: the clock and centre queries run against the real
+      // views. Mirrors frontend/lib/services/coo-morning.ts.
+      name: "coo-morning: WIO clock, PIO clock and centre roll-up queries run",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM (
+                 SELECT wio_number AS ref, project_name AS project,
+                        (CURRENT_DATE - initiated_date)::int AS day
+                   FROM ee.wio_clock) a) >= 0
+              AND (SELECT COUNT(*) FROM (
+                 SELECT pio_number AS ref, project_name AS project,
+                        (CURRENT_DATE - initiated_date)::int AS day
+                   FROM ee.pio_factory_clock
+                  WHERE status NOT IN ('dispatched')) b) >= 0
+              AND (SELECT COUNT(*) FROM (
+                 SELECT ec.name,
+                        COALESCE(ec.target_monthly, 0)::float8 AS target,
+                        COALESCE(SUM(s.net_amount), 0)::float8 AS mtd,
+                        COUNT(s.id) FILTER (WHERE s.discount_communicated_before_approval)::int AS violations
+                   FROM eh.experience_centres ec
+                   LEFT JOIN eh.sales s
+                     ON s.ec_id = ec.id AND s.sale_date >= date_trunc('month', CURRENT_DATE)::date
+                  GROUP BY ec.id, ec.name, ec.target_monthly) c) >= 0
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
       // Org-wide approvals oversight (COO): the LATERAL roll-up resolves one row
       // per pending instance with friendly ref, effective approver (delegate wins),
       // pending count and soonest SLA. Mirrors listApprovalsOverview in
