@@ -70,6 +70,7 @@ export const DEFAULT_FILES = [
   "057_hr_voice_agent.sql",
   "058_hr_team_accounts.sql",
   "059_project_desk.sql",
+  "061_api_health_pulse.sql",
   "900_dev_fixtures.sql",
   "901_design_tracker_fixtures.sql",
 ];

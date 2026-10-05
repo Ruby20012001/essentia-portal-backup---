@@ -851,6 +851,42 @@ if (!failed) {
       ok: (v) => v === "true",
     },
     {
+      // 061: the five-minute pulse is registered, and its degraded alert goes
+      // where a dead-lettered job's does.
+      name: "061: api-health-pulse runs every 300s; integration.degraded routes to platform_admins",
+      sql: `SELECT (
+              EXISTS (SELECT 1 FROM portal.scheduled_jobs
+                       WHERE name = 'api-health-pulse' AND schedule_kind = 'interval'
+                         AND schedule_expr = '300' AND enabled)
+              AND (SELECT recipient_strategy FROM portal.event_routes
+                    WHERE event_type = 'integration.degraded') = 'platform_admins'
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // 061: the pulse's upsert — a recovery stamps resolved_at and clears the
+      // streak. Mirrors the api_failure_state upsert in
+      // frontend/lib/services/api-health-pulse.ts.
+      name: "061: failure-state upsert clears the streak and stamps resolved_at on recovery",
+      setupSql: `INSERT INTO portal.api_failure_state (integration, consecutive_failures, first_failure_at, is_degraded)
+                 VALUES ('hubspot', 4, NOW() - INTERVAL '30 minutes', TRUE);
+                 INSERT INTO portal.api_failure_state
+                   (integration, consecutive_failures, first_failure_at, last_checked_at, is_degraded, resolved_at)
+                 VALUES ('hubspot', 0, NULL, NOW(), FALSE, NOW())
+                 ON CONFLICT (integration) DO UPDATE SET
+                   consecutive_failures = EXCLUDED.consecutive_failures,
+                   first_failure_at     = EXCLUDED.first_failure_at,
+                   last_checked_at      = EXCLUDED.last_checked_at,
+                   is_degraded          = EXCLUDED.is_degraded,
+                   resolved_at          = CASE WHEN TRUE THEN EXCLUDED.last_checked_at
+                                               WHEN EXCLUDED.consecutive_failures > 0 THEN NULL
+                                               ELSE portal.api_failure_state.resolved_at END`,
+      sql: `SELECT (consecutive_failures = 0 AND first_failure_at IS NULL AND NOT is_degraded
+                    AND resolved_at IS NOT NULL)::TEXT AS v
+              FROM portal.api_failure_state WHERE integration = 'hubspot'`,
+      ok: (v) => v === "true",
+    },
+    {
       // S13 API Health: the latest check per integration wins, and failure
       // streaks that are resolved drop out. Mirrors frontend/lib/services/api-health.ts.
       name: "api-health: latest check per integration; resolved failure streaks are not shown",

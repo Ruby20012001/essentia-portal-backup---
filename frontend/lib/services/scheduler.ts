@@ -13,6 +13,7 @@ import { draftWeeklyPulses } from "@/lib/services/weekly-pulse";
 import { fireExitProtocol } from "@/lib/services/exit-protocol";
 import { generateSuccessionPacks } from "@/lib/services/succession-pack";
 import { expireStandingDelegations } from "@/lib/services/workflow-delegations";
+import { runApiHealthPulse } from "@/lib/services/api-health-pulse";
 
 /**
  * Auto-pilot scheduler (resolves A-14 / IG-06). Cadence lives as data in
@@ -55,6 +56,7 @@ const HANDLERS: Record<string, JobHandler> = {
   "exit-protocol": (actor) => fireExitProtocol(actor),
   "succession-pack": (actor) => generateSuccessionPacks(actor),
   "delegation-expiry": (actor) => expireStandingDelegations(actor),
+  "api-health-pulse": (actor) => runApiHealthPulse(actor),
 };
 
 type JobRow = {

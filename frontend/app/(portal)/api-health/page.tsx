@@ -17,7 +17,8 @@ export const dynamic = "force-dynamic";
 /**
  * S13 · API Health (Blueprint §09) — the eleven integrations, their latest
  * logged check, and how far each is built on the portal's side. Read-only.
- * Nothing pings yet: the screen says so rather than showing quiet greens.
+ * The 'api-health-pulse' job (db/061) writes the checks; only reachable
+ * integrations are probed, and the rest say "Never checked", not green.
  */
 export default async function ApiHealthPage() {
   const user = await getCurrentUser();
@@ -56,9 +57,10 @@ async function Health({ user }: { user: Awaited<ReturnType<typeof getCurrentUser
     <>
       {neverChecked ? (
         <div role="status" className="mb-6 rounded-lg border border-warning/40 bg-warning/10 px-5 py-3 font-body text-sm text-white">
-          <span className="font-bold text-warning">Nothing is being checked yet.</span> The {PULSE_MINUTES}-minute
-          check that writes to this screen has not been built, so no integration has a result. Treat every row
-          below as unknown, not as healthy.
+          <span className="font-bold text-warning">No integration has a recorded check yet.</span> The{" "}
+          {PULSE_MINUTES}-minute check only tests integrations the portal can actually reach. Today that is
+          Anthropic, once its key is set, and only after the scheduler has run. Treat every row below as unknown,
+          not as healthy.
         </div>
       ) : null}
       {s.problems.map((p) => (

@@ -43,7 +43,7 @@ export const SCREENS: Record<string, ScreenNote> = {
   "/workflow-definitions": { status: "built" },
   "/workflow-delegations": { status: "built" },
   "/sla-monitor": { status: "built" },
-  "/api-health": { status: "built", note: "Nothing writes health checks yet." },
+  "/api-health": { status: "built", note: "The 5-minute check probes Anthropic only; the other ten have no connection to test." },
   "/hr": { status: "built", note: "Hiring is built. Keka sync is not." },
   "/exit-protocol": { status: "built", note: "Graph, WhatsApp and telephony removals are recorded as not wired." },
   "/build-progress": { status: "built" },
