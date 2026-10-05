@@ -141,7 +141,15 @@ ${values}
 ON CONFLICT (email) DO UPDATE
   SET password_hash = EXCLUDED.password_hash,
       auth_provider = 'local',
-      is_active = TRUE;
+      is_active = TRUE,
+      -- Setting a new password releases the lock. Five wrong tries lock the
+      -- account for fifteen minutes (lib/auth/providers/local-password.ts),
+      -- and without these two lines a reset left the person still locked out
+      -- holding a password that was right -- which reads as "the new one does
+      -- not work either" and sends everybody hunting the wrong thing.
+      -- change-password.ts has always cleared both; this is the same rule.
+      failed_logins = 0,
+      locked_until = NULL;
 
 INSERT INTO ee.concept_deck_editors (user_id)
 SELECT id FROM public.users WHERE lower(email) IN (${emails})

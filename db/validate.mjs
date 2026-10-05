@@ -1944,6 +1944,25 @@ if (!failed) {
       ok: (v) => v === "true",
     },
     {
+      /* 043 sets these five passwords, and is re-run every time one is
+         changed. Five wrong tries lock an account for fifteen minutes
+         (lib/auth/providers/local-password.ts), so a reset that did not also
+         clear the lock handed somebody a correct password that still would
+         not let them in — which reads as "the new password is wrong too".
+         Monica hit exactly that on 5 Oct 2026. The end state 043 must leave
+         behind is: all five present, signing in with a password, active, and
+         nobody locked. */
+      name: "design accounts: five sign in with a password, none left locked",
+      sql: `SELECT ((SELECT COUNT(*) FROM public.users
+               WHERE lower(email) LIKE 'design.%@essentia.in'
+                 AND auth_provider = 'local'
+                 AND password_hash IS NOT NULL
+                 AND is_active
+                 AND locked_until IS NULL
+                 AND failed_logins = 0) = 5)::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
       name: "design tracker: project types in both segments, two plot-only activities",
       sql: `SELECT (
               (SELECT COUNT(*) FROM ee.design_project_types WHERE segment = 'residential') >= 6
