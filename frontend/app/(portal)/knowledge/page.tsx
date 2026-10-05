@@ -91,6 +91,7 @@ export default async function KnowledgeLibraryPage({
                 key={t.name}
                 href={href({ q, track: on ? undefined : t.name, year })}
                 aria-current={on ? "page" : undefined}
+                aria-label={`${t.name} track, ${c ? `${c.sessions} session${c.sessions === 1 ? "" : "s"}` : "no sessions yet"}`}
                 className={`rounded-lg border px-5 py-4 transition-colors hover:bg-hover ${
                   on ? "border-brand bg-brand/10" : "border-line bg-card"
                 }`}

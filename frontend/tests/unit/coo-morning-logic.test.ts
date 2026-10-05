@@ -72,6 +72,17 @@ describe("COO cross-vertical health", () => {
     expect(eeHealth({ green: 10, amber: 2, red: 4 }).rag).toBe("red");
   });
 
+  it("an empty factory says so instead of 'all inside the clock'", () => {
+    expect(factoryHealth([])).toMatchObject({ rag: "green", detail: "Nothing in production" });
+    expect(pioNumber([]).value).toBe("None in production");
+  });
+
+  it("a centre is named once, without repeating the brand", () => {
+    const c = { name: "essentia home — Gurugram Flagship", target: 1, mtd: 1, violations: 0 };
+    expect(centreHealth(c, 1, 30).name).toBe("EH Gurugram Flagship");
+    expect(centreHealth({ ...c, name: "Delhi" }, 1, 30).name).toBe("EH Delhi");
+  });
+
   it("factory follows the PIO clock", () => {
     expect(factoryHealth(clock(5)).rag).toBe("green");
     expect(factoryHealth(clock(41)).rag).toBe("amber");

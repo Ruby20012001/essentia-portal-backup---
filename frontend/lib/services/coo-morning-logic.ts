@@ -69,7 +69,7 @@ export function pioNumber(rows: ClockRow[]): BriefNumber {
   return {
     n: 2,
     label: `PIOs at Day ${PIO_WATCH_DAY}+`,
-    value: `${plural(late.length, "PIO")} of ${rows.length} in production`,
+    value: rows.length ? `${plural(late.length, "PIO")} of ${rows.length} in production` : "None in production",
     detail:
       rows.length === 0
         ? "No PIOs on the factory clock."
@@ -141,7 +141,13 @@ export function factoryHealth(rows: ClockRow[]): VerticalHealth {
     name: "NH8 factory",
     rag: overdue > 0 ? "red" : late > 0 ? "amber" : "green",
     value: rows.length ? `${plural(rows.length, "PIO")} in production` : "Factory clock empty",
-    detail: overdue ? `${overdue} past Day 45` : late ? `${late} in the final stretch` : "All inside the clock",
+    detail: !rows.length
+      ? "Nothing in production"
+      : overdue
+        ? `${overdue} past Day 45`
+        : late
+          ? `${late} in the final stretch`
+          : "All inside the clock",
   };
 }
 
@@ -160,7 +166,9 @@ export function centreHealth(
   const rag: Rag =
     c.violations > 0 ? "red" : pace === null ? "amber" : pace >= 0.9 ? "green" : pace >= 0.6 ? "amber" : "red";
   return {
-    name: `EH ${c.name}`,
+    // Centre names already carry the brand ("essentia home — Gurugram
+    // Flagship"); the strip only needs which centre.
+    name: `EH ${c.name.replace(/^essentia home\s*[—–-]\s*/i, "")}`,
     rag,
     value: pct === null ? `${formatINR(c.mtd)} · no target set` : `${pct}% of month target`,
     detail: c.violations

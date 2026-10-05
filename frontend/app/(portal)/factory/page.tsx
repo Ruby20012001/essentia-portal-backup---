@@ -93,7 +93,7 @@ function Floor({
         <div role="status" className="mb-6 rounded-lg border border-error/40 bg-error/10 px-5 py-3 font-body text-sm text-white">
           <span className="font-bold text-error">Capacity breach · {runs.join(", ")}.</span>{" "}
           {worst
-            ? `${worst.arriving} PIOs arrive on ${worst.date === today ? "today" : `day ${worst.n}`} against capacity for ${worst.capacity}. Ask for more craftspeople or move a PIO before then.`
+            ? `${worst.arriving} PIOs arrive on ${worst.date === today ? "today" : `day ${worst.n}`} against capacity for ${worst.capacity}. Request additional craftspeople or reschedule a PIO before then.`
             : null}
         </div>
       ) : null}

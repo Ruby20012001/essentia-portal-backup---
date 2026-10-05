@@ -34,7 +34,7 @@ export default async function ProcurementPage() {
       <div className="mb-6">
         <h1 className="mb-1 font-heading text-4xl text-white">Procurement</h1>
         <p className="font-body text-sm font-light text-muted">
-          Vendors and their VRNs, work orders, and the purchase orders waiting on something.
+          Vendor registrations, work orders and open purchase orders, with what each one is waiting on.
         </p>
       </div>
 
@@ -85,7 +85,7 @@ async function Desk({ user }: { user: SessionUser }) {
       </div>
 
       <section className="mb-10">
-        <h2 className="mb-3 font-heading text-2xl text-white">Purchase orders that need something</h2>
+        <h2 className="mb-3 font-heading text-2xl text-white">Purchase orders requiring action</h2>
         <PurchaseOrdersTable rows={data.pos} today={today} />
       </section>
 

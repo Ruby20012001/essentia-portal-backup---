@@ -112,7 +112,7 @@ export function PurchaseOrdersTable({ rows, today }: { rows: PoRow[]; today: str
     .map((po) => ({ po, flag: poFlag(po, today) }))
     .filter((x): x is { po: PoRow; flag: NonNullable<ReturnType<typeof poFlag>> } => x.flag !== null);
   if (flagged.length === 0) {
-    return <Empty title="No purchase orders need anything" body="Nothing is late, waiting on quotes, or due for a GRN today." />;
+    return <Empty title="No purchase orders require action" body="Nothing is late, awaiting quotes, or due for a GRN today." />;
   }
   return (
     <Table
@@ -175,7 +175,11 @@ export function VrnTable({ rows, today }: { rows: VendorRow[]; today: string }) 
             <td className="px-4 py-2.5 font-bold text-white">{v.vrn}</td>
             <td className={TD}>
               <span className="text-white">{v.company}</span>
-              {v.preferred ? <span className="ml-2 text-xs text-brand">Preferred</span> : null}
+              {v.preferred ? (
+                <span className="ml-2 rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-ink">
+                  Preferred
+                </span>
+              ) : null}
               {v.type ? <span className="block text-xs capitalize text-muted">{v.type}</span> : null}
             </td>
             <td className={`${TD} text-right tabular-nums text-white`}>{v.score != null ? v.score.toFixed(1) : "—"}</td>

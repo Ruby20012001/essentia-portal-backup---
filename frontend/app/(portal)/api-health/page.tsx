@@ -29,7 +29,7 @@ export default async function ApiHealthPage() {
       <div className="mb-6">
         <h1 className="mb-1 font-heading text-4xl text-white">API Health</h1>
         <p className="font-body text-sm font-light text-muted">
-          11 integrations · meant to be checked every {PULSE_MINUTES} minutes · times in IST
+          11 integrations · checked every {PULSE_MINUTES} minutes where a connection exists · times in IST
         </p>
       </div>
       {decision.allowed ? (

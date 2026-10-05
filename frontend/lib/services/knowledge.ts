@@ -122,7 +122,7 @@ export async function addKnowledge(user: SessionUser, k: NewKnowledge): Promise<
     // Writing into a track you cannot read would hide your own entry from you.
     throw new BlockingRuleError("Strategic Leadership sessions are added by leadership (L0–L1).");
   }
-  return withUserContext(user, async (q) => {
+  const created = await withUserContext(user, async (q) => {
     const [row] = await q<{ id: string }>(
       `INSERT INTO portal.knowledge_library
          (title, content, content_type, track, role_tags, topic_tags, project_type_tags,
@@ -142,14 +142,19 @@ export async function addKnowledge(user: SessionUser, k: NewKnowledge): Promise<
         user.id,
       ],
     );
-    await writeAudit({
-      userId: user.id,
-      role: user.accessLevel,
-      action: "KNOWLEDGE_ADDED",
-      resourceType: "knowledge_library",
-      resourceId: row!.id,
-      newValues: { title: k.title, track: k.track, contentType: k.contentType },
-    });
     return row!;
   });
+
+  // After the transaction, as approveDiscount does: writeAudit takes its own
+  // pool connection, and asking for it while withUserContext still holds one
+  // deadlocks a single-connection pool and ties up two on any other.
+  await writeAudit({
+    userId: user.id,
+    role: user.accessLevel,
+    action: "KNOWLEDGE_ADDED",
+    resourceType: "knowledge_library",
+    resourceId: created.id,
+    newValues: { title: k.title, track: k.track, contentType: k.contentType },
+  });
+  return created;
 }
