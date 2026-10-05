@@ -88,13 +88,13 @@
 /* ---- stage cards ---- */
 .cards {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
 }
 
 @media (max-width: 800px) {
   .cards {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -138,6 +138,11 @@
 .cardLate .cardCount,
 .cardLate .cardLabel {
   color: var(--pd-late);
+}
+
+.cardWeek .cardCount,
+.cardWeek .cardLabel {
+  color: var(--pd-accent);
 }
 
 .cardLate.cardOn {
@@ -524,4 +529,10 @@
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* ---- search ---- */
+.search {
+  width: 100%;
+  margin: 12px 0 4px;
 }

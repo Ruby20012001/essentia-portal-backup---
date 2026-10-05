@@ -8,7 +8,9 @@ import {
   STAGES,
   TYPES,
   hasSiteWork,
+  isDueThisWeek,
   isLate,
+  matchesSearch,
   siteProgressPct,
   sortByDue,
   todayIST,
@@ -46,12 +48,13 @@ const QUICK_QUESTIONS = [
   },
 ];
 
-type Filter = Stage | "Late" | null;
+type Filter = Stage | "Late" | "This week" | null;
 
 export function ProjectDesk({ initial, userName }: { initial: DeskProject[]; userName: string }) {
   const router = useRouter();
   const [projects, setProjects] = useState<DeskProject[]>(initial);
   const [filter, setFilter] = useState<Filter>(null);
+  const [search, setSearch] = useState("");
   const [openSite, setOpenSite] = useState<number | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -139,13 +142,22 @@ export function ProjectDesk({ initial, userName }: { initial: DeskProject[]; use
   /* ---- what is shown ---- */
   const counts = Object.fromEntries(STAGES.map((st) => [st, 0])) as Record<Stage, number>;
   let lateCount = 0;
+  let weekCount = 0;
   for (const p of projects) {
     counts[p.stage] += 1;
     if (isLate(p, today)) lateCount += 1;
+    if (isDueThisWeek(p, today)) weekCount += 1;
   }
 
-  const shown = projects.filter((p) =>
-    filter === null ? true : filter === "Late" ? isLate(p, today) : p.stage === filter,
+  const shown = projects.filter(
+    (p) =>
+      (filter === null
+        ? true
+        : filter === "Late"
+          ? isLate(p, today)
+          : filter === "This week"
+            ? isDueThisWeek(p, today)
+            : p.stage === filter) && matchesSearch(p, search),
   );
 
   return (
@@ -197,6 +209,15 @@ export function ProjectDesk({ initial, userName }: { initial: DeskProject[]; use
             <span className={s.cardCount}>{lateCount}</span>
             <span className={s.cardLabel}>Late</span>
           </button>
+          <button
+            type="button"
+            className={`${s.card} ${s.cardWeek} ${filter === "This week" ? s.cardOn : ""}`}
+            aria-pressed={filter === "This week"}
+            onClick={() => setFilter(filter === "This week" ? null : "This week")}
+          >
+            <span className={s.cardCount}>{weekCount}</span>
+            <span className={s.cardLabel}>Due this week</span>
+          </button>
         </section>
 
         {/* ---------------- assistant ---------------- */}
@@ -208,15 +229,28 @@ export function ProjectDesk({ initial, userName }: { initial: DeskProject[]; use
             <h2 className={s.h2}>Projects</h2>
             {filter ? (
               <button type="button" className={s.linkButton} onClick={() => setFilter(null)}>
-                Showing {filter} · show all
+                Showing {filter === "This week" ? "due this week" : filter} · show all
               </button>
             ) : null}
           </div>
 
+          {projects.length > 0 ? (
+            <input
+              type="search"
+              className={`${s.input} ${s.search}`}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by project, client, city or owner"
+              aria-label="Search projects"
+            />
+          ) : null}
+
           {projects.length === 0 ? (
             <p className={s.empty}>No projects yet. Add your first one below.</p>
           ) : shown.length === 0 ? (
-            <p className={s.empty}>Nothing here right now.</p>
+            <p className={s.empty}>
+              {search.trim() ? `Nothing matches “${search.trim()}”.` : "Nothing here right now."}
+            </p>
           ) : (
             <div className={s.tableWrap}>
               <table className={s.table}>
@@ -353,7 +387,15 @@ function ProjectRows({
             </div>
           ) : null}
         </td>
-        <td>{p.owner ?? <span className={s.muted}>—</span>}</td>
+        <td>
+          <EditableCell
+            label={`Owner of ${p.name}`}
+            value={p.owner ?? ""}
+            onSave={(v) => onEdit({ owner: v || null })}
+          >
+            {p.owner ?? <span className={s.muted}>Add owner</span>}
+          </EditableCell>
+        </td>
         <td className={s.nextStep}>
           <EditableCell
             label={`Next step for ${p.name}`}

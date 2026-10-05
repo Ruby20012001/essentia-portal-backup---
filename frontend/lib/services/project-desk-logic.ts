@@ -82,6 +82,36 @@ export function isLate(p: Pick<DeskProject, "due_date" | "stage">, today = today
   return !!p.due_date && p.due_date < today && p.stage !== "Handover";
 }
 
+/** A YYYY-MM-DD date moved by whole days. Done in UTC so no clock change can shift it. */
+export function addDays(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+/**
+ * Due this week: today or one of the next six days, and not handed over.
+ * Never overlaps with late — a date that has passed is late, not due.
+ */
+export function isDueThisWeek(
+  p: Pick<DeskProject, "due_date" | "stage">,
+  today = todayIST(),
+): boolean {
+  return (
+    !!p.due_date && p.due_date >= today && p.due_date <= addDays(today, 6) && p.stage !== "Handover"
+  );
+}
+
+/** Every word typed must appear somewhere in the name, client, city or owner. */
+export function matchesSearch(
+  p: Pick<DeskProject, "name" | "client" | "city" | "owner">,
+  query: string,
+): boolean {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const hay = [p.name, p.client, p.city, p.owner].filter(Boolean).join(" ").toLowerCase();
+  return words.every((w) => hay.includes(w));
+}
+
 /** Soonest due first; projects with no date go to the bottom. */
 export function sortByDue<T extends Pick<DeskProject, "due_date" | "name">>(rows: T[]): T[] {
   return [...rows].sort((a, b) => {

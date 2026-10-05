@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  addDays,
   cleanSiteWork,
   forAssistant,
+  isDueThisWeek,
   isLate,
+  matchesSearch,
   siteProgressPct,
   sortByDue,
   todayIST,
@@ -57,5 +60,28 @@ describe("Project Desk rules", () => {
     expect(onSite).toMatchObject({ late: true, site_progress_pct: 9, site_work_done: ["Site measurement"] });
     const [design] = forAssistant([{ ...base, stage: "Design" }], "2026-10-01");
     expect(design).not.toHaveProperty("site_progress_pct");
+  });
+
+  it("adds days across a month and a year end", () => {
+    expect(addDays("2026-10-29", 6)).toBe("2026-11-04");
+    expect(addDays("2026-12-30", 2)).toBe("2027-01-01");
+  });
+
+  it("due this week is today to six days on, never late, never handed over", () => {
+    const today = "2026-10-05";
+    expect(isDueThisWeek({ ...base, due_date: "2026-10-05" }, today)).toBe(true);
+    expect(isDueThisWeek({ ...base, due_date: "2026-10-11" }, today)).toBe(true);
+    expect(isDueThisWeek({ ...base, due_date: "2026-10-12" }, today)).toBe(false);
+    expect(isDueThisWeek({ ...base, due_date: "2026-10-04" }, today)).toBe(false);
+    expect(isDueThisWeek({ ...base, due_date: "2026-10-06", stage: "Handover" }, today)).toBe(false);
+    expect(isDueThisWeek({ ...base, due_date: null }, today)).toBe(false);
+  });
+
+  it("search needs every word, in any of name, client, city or owner", () => {
+    expect(matchesSearch(base, "")).toBe(true);
+    expect(matchesSearch(base, "magnolias")).toBe(true);
+    expect(matchesSearch(base, "VISHAKHA gurugram")).toBe(true);
+    expect(matchesSearch(base, "vishakha mumbai")).toBe(false);
+    expect(matchesSearch({ ...base, client: null, owner: null }, "sharma")).toBe(false);
   });
 });
