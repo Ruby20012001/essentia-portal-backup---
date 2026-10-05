@@ -27,11 +27,11 @@ INSERT INTO public.users
 SELECT v.email, v.name, v.name, 'L3', d.id, 'essentia — design',
        'local', v.hash
   FROM (VALUES
-  ('design.vishakha@essentia.in', 'Vishakha', '883dff87ca9bd9a5127de47baf40aedc:10ac6191e0486fd0f45a3cabfc4981a80a1d7fa89c4fa8485ae77e1ad2a9dd940db8a0d7a0bf0da42e25e587fd6ce7e3e94b2e36f994a13e8d62d399131991b7'),
-  ('design.akanshamalik@essentia.in', 'Akansha Malik', 'b64b2966e53765b69a41c7fe111f9823:9ce6245a393d0a9ba6c92910380b276c02ac5f4872beefa5cebe6b8b5e464f15e2fc25a287fb39aae3c306ad6aceb7cb5eee514cb5731ba28ab6c2a37cb238db'),
-  ('design.ritu@essentia.in', 'Ritu', '913a1cd8252a6b57378238440478e3f1:64ab7221bcb08dde5ed9ec3574d9fe70dd4d418b6c334577beffd468f058458b10366bde3df8b84b14381843457cd16e5fe5750162df9ca62fead58f8eb913a7'),
-  ('design.lavika@essentia.in', 'Lavika', '3ee54973562d61f2fd91ed75cc7a16fe:f64e8e5a65f26362ddac5cc19385a270d12df074d1570a819803b05a4ac7d9195a38a6f942a8b6e224524088639c681533f6757c8d980b664d0241f872dc7f50'),
-  ('design.jiya@essentia.in', 'Jiya', '1115e66785249c7b8ed692c3bc9b9adc:489e201523b323ce0e9bd7ddddaa6d3b52dba5d6f97e7b71dd9823efdb39a5e242d773c758a8f4ce3925eba31bb6091bec0e8e4aae8c2aab6f5d3e71f9e3a36f')
+  ('design.vishakha@essentia.in', 'Vishakha', 'a72a216fa68f144e98cefa2b175bd01e:db0158fa8428ef763b59cc4a771451bda370111a0943e0a102033d7f534ae3e5863f3d129232c8e4231fcc577d69cb76b7238dc9c95cf634711bab4646c34221'),
+  ('design.akanshamalik@essentia.in', 'Akansha Malik', 'daa189d03759e15614943817bc388e82:8c9dad1646b4e498c4a7faf983ebc1bc09255ea94600c8a0207f63c1b4c763934b0ccd312c0572eee30c735c8a4c179ef683d2a14b23df3452f8dd431541175e'),
+  ('design.ritu@essentia.in', 'Ritu', 'c8cf8e18ca4dd55c9274956ded8ca325:4129e79bbd4c787ac51a8e063f4b4827951c823cfd25182125065faad5665f806e1e284a65f36c71564fe00e1289d68e27fbdddf23978b02da56ffe70f1c2b51'),
+  ('design.lavika@essentia.in', 'Lavika', '4d782b3e640e6a09f9c76cc6be7ee1d3:5bfe7a50969e608c1025e70177497be429d1a290980bddd731f842783132a1174072bca7fe5377bc116d8cb18db8fdbfb18cac11db8369a57ce7eff690e23335'),
+  ('design.jiya@essentia.in', 'Jiya', 'dbd04e1a1ef3294526970ec70abf161a:bac64bffb276589d9b4ea18e32c07f4e2ca41f054b49c5ce9bf67ede6fe8d4c49c75cff06de81a4daffb8b5ae2e08cc8c47c1a3f226d6295e304652ce524e729')
   ) AS v(email, name, hash)
   LEFT JOIN public.departments d ON d.code = 'INTERIOR'
 ON CONFLICT (email) DO UPDATE
