@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { cleanEmail } from "@/lib/clean-email";
 import { homeHref, isRouteAllowed } from "@/lib/portal-mode";
 
 /**
@@ -80,7 +81,7 @@ export function CodeSignIn({ next, onCancel }: { next?: string; onCancel: () => 
               autoComplete="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(cleanEmail(e.target.value))}
               className={`mt-1 ${field}`}
             />
           </div>

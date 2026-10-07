@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { cleanEmail } from "@/lib/clean-email";
 import { homeHref, isRouteAllowed } from "@/lib/portal-mode";
 
 export function LoginForm({
@@ -77,7 +78,7 @@ export function LoginForm({
           required
           autoComplete="username"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => setEmail(cleanEmail(e.target.value))}
           className={inputClass}
         />
       </label>
