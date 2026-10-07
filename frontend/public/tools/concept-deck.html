@@ -789,6 +789,13 @@ body.is-dark .pane-view{box-shadow:0 0 0 1px #1e1e1e,0 18px 60px rgba(0,0,0,.6)}
           <span class="head-backup" id="backupState" hidden></span>
           <button class="btn" id="bJpgAll">All as images</button>
           <button class="btn" id="bPrint">Print / PDF</button>
+          <!-- The materials list on its own, beside the other ways out of the page
+               (Monica, 7 Oct 2026: "saare button jo IREO me hai usi ke saath chahiye").
+               A site orders off this one table and reads nothing else in the deck, and
+               the deck is a client document — sending one to get the other is the
+               wrong errand. The page keeps the swatches; the Excel one is rows. -->
+          <button class="btn" id="bMatPage" title="The materials table on its own page, swatches and all">Materials list</button>
+          <button class="btn" id="bMatCsv" title="The same list as rows, to open in Excel">Materials / Excel</button>
           <button class="btn btn--solid" id="bExport">Export deck</button>
         </div>
       </div>
@@ -5276,6 +5283,158 @@ function renderMaterials() {
   });
   D.swatches(host, S);
 }
+
+/* ── the materials list on its own ────────────────────────────────────────
+   Monica, 7 Oct 2026: "material ki list jo di hai usko save karne ka option."
+   The list a person has just finished filling in — the codes, the sizes, the
+   makers, the sample photographs — saved by itself, without the deck wrapped
+   around it. A site orders from this table and reads nothing else on the
+   page, and the deck is a client document: sending one to get the other is
+   the wrong errand.
+
+   Two files, because they are asked for by different people. The page is for
+   reading, printing and keeping: it carries the swatches and opens with no
+   network at all. The Excel one is for ordering: no pictures, one row each.  */
+
+/* The swatch beside a material is cut out of the render at the spot the
+   material was marked, by the deck's own cutter — and the cut only exists
+   once something on a page has asked for it. So the squares are built first,
+   put on the screen where the cutter can see them (it works off an
+   IntersectionObserver, and nothing detached ever intersects), and the file
+   is written once the cuts have landed. Skipping this saved every
+   marked-only material as an empty square. */
+function materialsCut() {
+  var D = window.EssentiaDeck;
+  var rows = D.materials(S);
+  var host = document.createElement('div');
+  host.setAttribute('aria-hidden', 'true');
+  host.style.cssText =
+    'position:fixed;left:0;top:0;width:8px;height:8px;overflow:hidden;' +
+    'opacity:0;pointer-events:none;z-index:-1';
+  host.innerHTML = rows.map(function (r, i) {
+    return (r.sample || !r.swatch) ? ''
+      : '<img data-swatch="' + esc(r.swatch) + '" data-row="' + i + '">';
+  }).join('');
+  if (!host.querySelector('[data-swatch]')) return Promise.resolve(rows);
+  document.body.appendChild(host);
+  D.swatches(host, S);
+  var waited = 0;
+  return new Promise(function (done) {
+    (function look() {
+      var left = host.querySelectorAll('img[data-swatch]:not([src])').length;
+      /* eight seconds, then write it anyway: a missing swatch is a smaller
+         disappointment than a button that never answers */
+      if (!left || (waited += 120) > 8000) {
+        Array.prototype.forEach.call(
+          host.querySelectorAll('img[data-swatch][src]'),
+          function (im) { rows[+im.getAttribute('data-row')].sample = im.getAttribute('src'); },
+        );
+        host.remove();
+        done(rows);
+        return;
+      }
+      setTimeout(look, 120);
+    }());
+  });
+}
+
+function matFileName(ext) {
+  return slug((S.project.code || S.project.name) + ' materials') + '.' + ext;
+}
+
+/* The six columns the deck shows, in the deck's order, so the two never
+   disagree about what a material is called. */
+var MAT_COLS = [
+  ['name', 'Material name'],
+  ['code', 'Material code'],
+  ['material', 'Material'],
+  ['size', 'Size'],
+  ['brand', 'Brand'],
+];
+
+function saveMaterialsCsv() {
+  var rows = window.EssentiaDeck.materials(S);
+  if (!rows.length) { toast('No materials on the list yet.'); return; }
+  var cell = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+  var out = [MAT_COLS.map(function (c) { return cell(c[1]); }).concat(cell('Rooms')).join(',')];
+  rows.forEach(function (r) {
+    out.push(MAT_COLS.map(function (c) { return cell(r[c[0]]); })
+      .concat(cell((r.where || []).join(', '))).join(','));
+  });
+  /* the byte order mark: without it Excel on this laptop reads the file as
+     Windows-1252 and every — and ₹ in a material name arrives as rubbish */
+  download(matFileName('csv'),
+    new Blob(['﻿' + out.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' }));
+  toast('Materials list saved for Excel.');
+}
+
+function saveMaterialsPage() {
+  var btn = $('#bMatPage');
+  if (!window.EssentiaDeck.materials(S).length) { toast('No materials on the list yet.'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Cutting the swatches…'; }
+  materialsCut().then(function (rows) {
+    var p = S.project;
+    var title = (p.name || 'Concept deck') + ' · materials';
+    var when = new Date().toLocaleDateString('en-GB',
+      { day: '2-digit', month: 'short', year: 'numeric' });
+    var head = MAT_COLS.map(function (c) { return '<th>' + esc(c[1]) + '</th>'; }).join('');
+    var body = rows.map(function (r) {
+      var sw = r.sample
+        ? '<img class="sw" src="' + esc(r.sample) + '" alt="">'
+        : '<span class="sw"></span>';
+      return '<tr><td class="nm">' + sw + '<span class="t">' + (r.name ? esc(r.name) : '—') +
+        (r.where && r.where.length
+          ? '<em>' + esc(r.where.join(', ')) + '</em>' : '') + '</span></td>' +
+        MAT_COLS.slice(1).map(function (c) {
+          return '<td>' + (r[c[0]] ? esc(r[c[0]]) : '—') + '</td>';
+        }).join('') + '</tr>';
+    }).join('');
+
+    /* Written as a finished document: no script, no fonts fetched, no
+       pictures by address. It opens the same off a pen drive on site as it
+       does here, which is the whole point of saving it. */
+    var html = '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n' +
+      '<meta name="viewport" content="width=device-width,initial-scale=1">\n' +
+      '<title>' + esc(title) + '</title>\n<style>\n' +
+      '*{box-sizing:border-box}body{margin:0;padding:32px 24px 64px;background:#fff;color:#191919;' +
+      "font:15px/1.5 'Segoe UI',system-ui,sans-serif}" +
+      '.wrap{max-width:980px;margin:0 auto}' +
+      'h1{font-size:22px;font-weight:600;margin:0 0 4px}' +
+      '.sub{color:#6b6b6b;font-size:13px;margin:0 0 2px}' +
+      '.rule{height:1px;background:#e2e2e2;margin:22px 0}' +
+      'table{width:100%;border-collapse:collapse;font-size:14px}' +
+      'th{text-align:left;font-weight:600;font-size:11px;letter-spacing:.08em;' +
+      'text-transform:uppercase;color:#6b6b6b;padding:0 10px 8px;border-bottom:1px solid #d8d8d8}' +
+      'td{padding:12px 10px;border-bottom:1px solid #eee;vertical-align:middle}' +
+      'td.nm{display:flex;gap:12px;align-items:center}' +
+      'td.nm .t{font-weight:500}' +
+      'td.nm .t em{display:block;font-style:normal;font-size:12px;color:#8a8a8a;margin-top:2px}' +
+      '.sw{width:38px;height:38px;flex:0 0 38px;border-radius:4px;object-fit:cover;' +
+      'background:#f0efed;border:1px solid #e2e2e2;display:inline-block}' +
+      'footer{margin-top:28px;color:#8a8a8a;font-size:12px}' +
+      '@media print{body{padding:0}tr{break-inside:avoid}}\n' +
+      '</style>\n</head>\n<body>\n<div class="wrap">\n' +
+      '<h1>' + esc(p.name || 'Materials') + '</h1>\n' +
+      (p.code ? '<p class="sub">' + esc(p.code) + '</p>\n' : '') +
+      (p.address ? '<p class="sub">' + esc(p.address) + '</p>\n' : '') +
+      '<p class="sub">Materials list · ' + esc(when) + '</p>\n' +
+      '<div class="rule"></div>\n' +
+      '<table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table>\n' +
+      '<footer>' + esc(p.firm || 'essentia environments') + ' · ' + rows.length +
+      (rows.length === 1 ? ' material' : ' materials') + '</footer>\n' +
+      '</div>\n</body>\n</html>\n';
+
+    download(matFileName('html'), new Blob([html], { type: 'text/html' }));
+    toast('Materials list saved. Open it and print to PDF if you need one.');
+  }).catch(function () {
+    toast('The materials list could not be saved.');
+  }).then(function () {
+    if (btn) { btn.disabled = false; btn.textContent = 'Materials list'; }
+  });
+}
+
+$('#bMatPage').addEventListener('click', saveMaterialsPage);
+$('#bMatCsv').addEventListener('click', saveMaterialsCsv);
 
 $('#bAddMat').addEventListener('click', function () {
   S.materials = S.materials || [];
