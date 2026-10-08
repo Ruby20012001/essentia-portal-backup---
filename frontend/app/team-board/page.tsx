@@ -24,10 +24,15 @@ export const metadata: Metadata = {
  * team, and nobody else has a reason to read it.
  */
 export default async function TeamBoardPage() {
+  /* No sign-in (Monica, 8 Oct: "bina pass ke"). The link opens the board;
+     somebody signed in is still named. TEAM_BOARD_REQUIRE_LOGIN=true puts
+     the door back. */
   const session = await getSession().catch(() => null);
-  if (!session) redirect("/login?next=%2Fteam-board");
+  if (!session && process.env.TEAM_BOARD_REQUIRE_LOGIN === "true") {
+    redirect("/login?next=%2Fteam-board");
+  }
 
-  const board = await getTeamWeeklyBoard(session.user).catch((error: Error) => error);
+  const board = await getTeamWeeklyBoard(session?.user ?? null).catch((error: Error) => error);
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
@@ -38,7 +43,7 @@ export default async function TeamBoardPage() {
             Team Weekly Board
           </p>
           <ModeSwitch />
-          <BoardAccount name={session.user.name} next="/team-board" />
+          {session ? <BoardAccount name={session.user.name} next="/team-board" /> : null}
         </div>
       </header>
 
@@ -51,8 +56,12 @@ export default async function TeamBoardPage() {
           <>
             <TeamWeeklyBoard initial={board} />
             <p className="mt-10 border-t border-line pt-4 font-body text-[11px] font-light text-muted">
-              You are signed in as <span className="text-secondary">{session.user.name}</span> — what you
-              add saves for everyone. Remove takes an entry off for good; use it once the week has been read.
+              {session ? (
+                <>
+                  You are signed in as <span className="text-secondary">{session.user.name}</span> —{" "}
+                </>
+              ) : null}
+              What you add saves for everyone. Remove takes an entry off for good; use it once the week has been read.
             </p>
           </>
         )}

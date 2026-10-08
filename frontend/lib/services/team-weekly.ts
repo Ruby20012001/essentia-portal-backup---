@@ -2,7 +2,7 @@ import { query, withTransaction } from "@/lib/db";
 import { writeAudit } from "@/lib/services/audit";
 import { PermissionError } from "@/lib/services/permissions";
 import { BlockingRuleError, ConflictError, NotFoundError } from "@/lib/services/blocking";
-import type { SessionUser } from "@/lib/auth/session";
+import { getSession, type SessionUser } from "@/lib/auth/session";
 
 /**
  * Team Weekly Board — Jiya's log of what each design team did this week
@@ -66,11 +66,33 @@ export async function requireBoardUser(user: SessionUser): Promise<void> {
   }
 }
 
+/**
+ * The door for the Team Weekly and 3D boards themselves. They open without
+ * signing in (Monica, 8 Oct: "nahi chahiye, hata do pass") — the link is the
+ * way in, as it is for /board. Somebody who IS signed in is still checked
+ * against the design list, and their name goes on the audit row; a change made
+ * from the open link is audited with no name.
+ *
+ * TEAM_BOARD_REQUIRE_LOGIN=true puts the sign-in back without a code change.
+ * The Stage Tracker keeps requireBoardUser above and is not opened by this.
+ */
+export async function requireBoardAccess(user: SessionUser | null): Promise<void> {
+  if (user) return requireBoardUser(user);
+  if (process.env.TEAM_BOARD_REQUIRE_LOGIN === "true") {
+    throw new BlockingRuleError("Sign in to use the Team Weekly Board.");
+  }
+}
+
+/** Who is looking: the signed-in account, or null for somebody on the open link. */
+export async function boardVisitor(): Promise<SessionUser | null> {
+  return (await getSession().catch(() => null))?.user ?? null;
+}
+
 /** Never throws: for deciding whether to show a link. Fails closed. */
 export async function mayUseTeamWeekly(user: SessionUser | null): Promise<boolean> {
   if (!user?.id) return false;
   try {
-    await requireBoardUser(user);
+    await requireBoardAccess(user);
     return true;
   } catch {
     return false;
@@ -86,8 +108,8 @@ async function listOptions(): Promise<Record<OptionKind, string[]>> {
   return out;
 }
 
-export async function getTeamWeeklyBoard(user: SessionUser): Promise<TeamWeeklyBoard> {
-  await requireBoardUser(user);
+export async function getTeamWeeklyBoard(user: SessionUser | null): Promise<TeamWeeklyBoard> {
+  await requireBoardAccess(user);
   const [options, entries] = await Promise.all([
     listOptions(),
     query<WeeklyEntry>(
@@ -126,8 +148,8 @@ async function requireOption(kind: OptionKind, name: string, label: string): Pro
   return row.name;
 }
 
-export async function createWeeklyEntry(user: SessionUser, input: NewWeeklyEntry): Promise<string> {
-  await requireBoardUser(user);
+export async function createWeeklyEntry(user: SessionUser | null, input: NewWeeklyEntry): Promise<string> {
+  await requireBoardAccess(user);
   const team = await requireOption("team", input.team, "Team");
   const particular = await requireOption("particular", input.particular, "Particular");
   const workType = await requireOption("work_type", input.workType, "Work type");
@@ -136,11 +158,11 @@ export async function createWeeklyEntry(user: SessionUser, input: NewWeeklyEntry
        (team, particular, work_type, title, qty, work_date, status, created_by)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING id`,
-    [team, particular, workType, input.title.trim(), input.qty, input.workDate, input.status, user.id],
+    [team, particular, workType, input.title.trim(), input.qty, input.workDate, input.status, user?.id ?? null],
   );
   await writeAudit({
-    userId: user.id,
-    role: user.accessLevel,
+    userId: user?.id ?? null,
+    role: user?.accessLevel ?? null,
     action: "TEAM_WEEKLY_ENTRY_CREATED",
     resourceType: "team_weekly",
     resourceId: row.id,
@@ -149,8 +171,8 @@ export async function createWeeklyEntry(user: SessionUser, input: NewWeeklyEntry
   return row.id;
 }
 
-export async function setWeeklyStatus(user: SessionUser, id: string, status: WeeklyStatus): Promise<void> {
-  await requireBoardUser(user);
+export async function setWeeklyStatus(user: SessionUser | null, id: string, status: WeeklyStatus): Promise<void> {
+  await requireBoardAccess(user);
   const [row] = await query<{ id: string }>(
     `UPDATE ee.team_weekly_entries SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING id`,
     [id, status],
@@ -162,8 +184,8 @@ export async function setWeeklyStatus(user: SessionUser, id: string, status: Wee
  * Remove one entry or a whole week's worth in one go. All or nothing: a
  * half-cleared week reads as a week where half the work never happened.
  */
-export async function deleteWeeklyEntries(user: SessionUser, ids: string[]): Promise<number> {
-  await requireBoardUser(user);
+export async function deleteWeeklyEntries(user: SessionUser | null, ids: string[]): Promise<number> {
+  await requireBoardAccess(user);
   if (ids.length === 0) return 0;
   const removed = await withTransaction((q) =>
     q<{ id: string; team: string; particular: string; work_type: string; title: string; qty: number; work_date: string; status: string }>(
@@ -175,8 +197,8 @@ export async function deleteWeeklyEntries(user: SessionUser, ids: string[]): Pro
   if (removed.length === 0) throw new NotFoundError("Those entries are not on the board any more.");
   for (const r of removed) {
     await writeAudit({
-      userId: user.id,
-      role: user.accessLevel,
+      userId: user?.id ?? null,
+      role: user?.accessLevel ?? null,
       action: "TEAM_WEEKLY_ENTRY_DELETED",
       resourceType: "team_weekly",
       resourceId: r.id,
@@ -186,8 +208,8 @@ export async function deleteWeeklyEntries(user: SessionUser, ids: string[]): Pro
   return removed.length;
 }
 
-export async function addWeeklyOption(user: SessionUser, kind: OptionKind, name: string): Promise<void> {
-  await requireBoardUser(user);
+export async function addWeeklyOption(user: SessionUser | null, kind: OptionKind, name: string): Promise<void> {
+  await requireBoardAccess(user);
   const clean = name.trim();
   if (!clean) throw new BlockingRuleError("Give the new option a name.");
   const [exists] = await query<{ name: string }>(
@@ -201,8 +223,8 @@ export async function addWeeklyOption(user: SessionUser, kind: OptionKind, name:
     [kind, clean],
   );
   await writeAudit({
-    userId: user.id,
-    role: user.accessLevel,
+    userId: user?.id ?? null,
+    role: user?.accessLevel ?? null,
     action: "TEAM_WEEKLY_OPTION_ADDED",
     resourceType: "team_weekly",
     newValues: { kind, name: clean },
@@ -231,8 +253,8 @@ export type Team3dBoard = {
   projects: Project3d[];
 };
 
-export async function getTeam3dBoard(user: SessionUser): Promise<Team3dBoard> {
-  await requireBoardUser(user);
+export async function getTeam3dBoard(user: SessionUser | null): Promise<Team3dBoard> {
+  await requireBoardAccess(user);
   const [teams, projects] = await Promise.all([
     query<{ id: string; name: string }>(
       `SELECT id, name FROM ee.team_3d_teams ORDER BY sort_order, name`,
@@ -260,18 +282,18 @@ function blank(v: string | null | undefined): string | null {
   return t ? t : null;
 }
 
-export async function createProject3d(user: SessionUser, input: NewProject3d): Promise<string> {
-  await requireBoardUser(user);
+export async function createProject3d(user: SessionUser | null, input: NewProject3d): Promise<string> {
+  await requireBoardAccess(user);
   const [team] = await query<{ name: string }>(`SELECT name FROM ee.team_3d_teams WHERE id = $1`, [input.teamId]);
   if (!team) throw new BlockingRuleError("That team is not on the 3D board.");
   const [row] = await query<{ id: string }>(
     `INSERT INTO ee.team_3d_projects (team_id, stage, name, client, notes, created_by)
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-    [input.teamId, input.stage, input.name.trim(), blank(input.client), blank(input.notes), user.id],
+    [input.teamId, input.stage, input.name.trim(), blank(input.client), blank(input.notes), user?.id ?? null],
   );
   await writeAudit({
-    userId: user.id,
-    role: user.accessLevel,
+    userId: user?.id ?? null,
+    role: user?.accessLevel ?? null,
     action: "TEAM_3D_PROJECT_CREATED",
     resourceType: "team_weekly",
     resourceId: row.id,
@@ -287,8 +309,8 @@ export type Project3dPatch = Partial<{
   notes: string | null;
 }>;
 
-export async function updateProject3d(user: SessionUser, id: string, patch: Project3dPatch): Promise<void> {
-  await requireBoardUser(user);
+export async function updateProject3d(user: SessionUser | null, id: string, patch: Project3dPatch): Promise<void> {
+  await requireBoardAccess(user);
   const sets: string[] = [];
   const values: unknown[] = [id];
   const put = (column: string, value: unknown) => {
@@ -313,8 +335,8 @@ export async function updateProject3d(user: SessionUser, id: string, patch: Proj
     values,
   );
   await writeAudit({
-    userId: user.id,
-    role: user.accessLevel,
+    userId: user?.id ?? null,
+    role: user?.accessLevel ?? null,
     action: "TEAM_3D_PROJECT_UPDATED",
     resourceType: "team_weekly",
     resourceId: id,
@@ -323,8 +345,8 @@ export async function updateProject3d(user: SessionUser, id: string, patch: Proj
   });
 }
 
-export async function deleteProject3d(user: SessionUser, id: string): Promise<void> {
-  await requireBoardUser(user);
+export async function deleteProject3d(user: SessionUser | null, id: string): Promise<void> {
+  await requireBoardAccess(user);
   const [row] = await query<Record<string, unknown>>(
     `DELETE FROM ee.team_3d_projects WHERE id = $1
      RETURNING team_id, stage, name, client, notes`,
@@ -332,8 +354,8 @@ export async function deleteProject3d(user: SessionUser, id: string): Promise<vo
   );
   if (!row) throw new NotFoundError("That project is not on the 3D board any more.");
   await writeAudit({
-    userId: user.id,
-    role: user.accessLevel,
+    userId: user?.id ?? null,
+    role: user?.accessLevel ?? null,
     action: "TEAM_3D_PROJECT_DELETED",
     resourceType: "team_weekly",
     resourceId: id,

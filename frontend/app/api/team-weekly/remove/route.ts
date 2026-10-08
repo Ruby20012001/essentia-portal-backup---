@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/auth/session";
-import { deleteWeeklyEntries } from "@/lib/services/team-weekly";
+import { boardVisitor, deleteWeeklyEntries } from "@/lib/services/team-weekly";
 import { toErrorResponse } from "@/lib/api/errors";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +10,7 @@ const removeSchema = z.object({ ids: z.array(z.string().uuid()).min(1).max(1000)
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    const user = await boardVisitor();
     const parsed = removeSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json(

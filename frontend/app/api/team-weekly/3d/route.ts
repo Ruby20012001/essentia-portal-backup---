@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/auth/session";
-import { createProject3d, getTeam3dBoard } from "@/lib/services/team-weekly";
+import { boardVisitor, createProject3d, getTeam3dBoard } from "@/lib/services/team-weekly";
 import { toErrorResponse } from "@/lib/api/errors";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +8,7 @@ export const dynamic = "force-dynamic";
 /** The 3D page in one read — the teams and every project. */
 export async function GET() {
   try {
-    const user = await getCurrentUser();
+    const user = await boardVisitor();
     return NextResponse.json(await getTeam3dBoard(user));
   } catch (error) {
     return toErrorResponse(error);
@@ -26,7 +25,7 @@ const createSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    const user = await boardVisitor();
     const parsed = createSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json(

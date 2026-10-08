@@ -21,10 +21,13 @@ export const metadata: Metadata = {
  * at Signoff — all of it Jiya's to edit.
  */
 export default async function Team3dPage() {
+  // Open link, like /team-board — see the note there.
   const session = await getSession().catch(() => null);
-  if (!session) redirect("/login?next=%2Fteam-board%2F3d");
+  if (!session && process.env.TEAM_BOARD_REQUIRE_LOGIN === "true") {
+    redirect("/login?next=%2Fteam-board%2F3d");
+  }
 
-  const board = await getTeam3dBoard(session.user).catch((error: Error) => error);
+  const board = await getTeam3dBoard(session?.user ?? null).catch((error: Error) => error);
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
@@ -35,7 +38,7 @@ export default async function Team3dPage() {
             3D Board
           </p>
           <ModeSwitch />
-          <BoardAccount name={session.user.name} next="/team-board/3d" />
+          {session ? <BoardAccount name={session.user.name} next="/team-board/3d" /> : null}
         </div>
       </header>
 
