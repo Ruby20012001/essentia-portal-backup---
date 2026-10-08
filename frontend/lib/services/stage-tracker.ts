@@ -79,6 +79,20 @@ const SELECT_FIELDS = ALL_FIELDS.map((f) => `${COLUMN[f]} AS "${f}"`).join(", ")
 
 export async function getStageBoard(user: SessionUser): Promise<StageBoard> {
   await requireBoardUser(user);
+  return readStageBoard();
+}
+
+/**
+ * The same board for somebody not signed in — read only (Monica, 8 Oct, for
+ * a demo: "password hatado"). The /board judgement: internal working
+ * information, not confidential; noindex, and a link given rather than
+ * published. Every write still goes through a route that needs a session.
+ */
+export async function getPublicStageBoard(): Promise<StageBoard> {
+  return readStageBoard();
+}
+
+async function readStageBoard(): Promise<StageBoard> {
   const rows = await query<StageRow>(
     `SELECT id, discipline, project, ${SELECT_FIELDS},
             updated_at::text AS "updatedAt",

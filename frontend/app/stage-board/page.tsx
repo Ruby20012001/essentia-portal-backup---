@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { redirect } from "next/navigation";
 import { BoardAccount } from "@/components/wio-tracker/BoardAccount";
 import { ModeSwitch } from "@/components/team-weekly/ModeSwitch";
 import { StageTrackerBoard } from "@/components/stage-tracker/StageTrackerBoard";
 import { getSession } from "@/lib/auth/session";
-import { getStageBoard } from "@/lib/services/stage-tracker";
+import { getPublicStageBoard, getStageBoard } from "@/lib/services/stage-tracker";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +19,13 @@ export const metadata: Metadata = {
  * button honge, 3D aur Architecture". Filled and updated daily on the page;
  * what changed today is marked.
  *
- * Signed in first, like /team-board: the same people keep it.
+ * Open to read, like /board (Monica, 8 Oct, for a demo: "password hatado"):
+ *
+ *   nobody signed in        →  the whole board, read only
+ *   signed in, design team  →  the same, and every cell editable
+ *
+ * The controls are not the guarantee — every write goes through
+ * /api/stage-board/*, which needs a session on the design team's list.
  */
 export default async function StageBoardPage({
   searchParams,
@@ -28,9 +33,10 @@ export default async function StageBoardPage({
   searchParams: { tab?: string };
 }) {
   const session = await getSession().catch(() => null);
-  if (!session) redirect("/login?next=%2Fstage-board");
 
-  const board = await getStageBoard(session.user).catch((error: Error) => error);
+  const board = await (session ? getStageBoard(session.user) : getPublicStageBoard()).catch(
+    (error: Error) => error,
+  );
   const tab = searchParams.tab === "3d" || searchParams.tab === "arch" ? searchParams.tab : "id";
 
   return (
@@ -42,7 +48,7 @@ export default async function StageBoardPage({
             Stage Tracker
           </p>
           <ModeSwitch />
-          <BoardAccount name={session.user.name} next="/stage-board" />
+          <BoardAccount name={session?.user.name ?? null} next="/stage-board" />
         </div>
       </header>
 
@@ -52,7 +58,7 @@ export default async function StageBoardPage({
             <p className="font-body text-sm font-light text-secondary">{board.message}</p>
           </div>
         ) : (
-          <StageTrackerBoard initial={board} initialTab={tab} />
+          <StageTrackerBoard initial={board} initialTab={tab} readOnly={!session} />
         )}
       </main>
     </div>

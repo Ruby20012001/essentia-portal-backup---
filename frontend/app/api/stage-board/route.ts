@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/auth/session";
-import { createStageRow, getStageBoard } from "@/lib/services/stage-tracker";
+import { getCurrentUser, getSession } from "@/lib/auth/session";
+import { createStageRow, getPublicStageBoard, getStageBoard } from "@/lib/services/stage-tracker";
 import { toErrorResponse } from "@/lib/api/errors";
 
 export const dynamic = "force-dynamic";
 
-/** The Stage Tracker in one read — every row on all three tabs. */
+/** The Stage Tracker in one read — every row on all three tabs. Signed out, read only. */
 export async function GET() {
   try {
-    const user = await getCurrentUser();
-    return NextResponse.json(await getStageBoard(user));
+    const session = await getSession().catch(() => null);
+    return NextResponse.json(session ? await getStageBoard(session.user) : await getPublicStageBoard());
   } catch (error) {
     return toErrorResponse(error);
   }

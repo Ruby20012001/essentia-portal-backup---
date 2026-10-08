@@ -94,7 +94,16 @@ function indiaDate(s: string): string {
   });
 }
 
-export function StageTrackerBoard({ initial, initialTab }: { initial: StageBoard; initialTab: Discipline }) {
+export function StageTrackerBoard({
+  initial,
+  initialTab,
+  readOnly = false,
+}: {
+  initial: StageBoard;
+  initialTab: Discipline;
+  /** Nobody signed in: the board to read, no pen. */
+  readOnly?: boolean;
+}) {
   const [board, setBoard] = useState(initial);
   const [tab, setTab] = useState<Discipline>(initialTab);
   const [search, setSearch] = useState("");
@@ -262,9 +271,11 @@ export function StageTrackerBoard({ initial, initialTab }: { initial: StageBoard
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3" data-print="hide">
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => setAdding(!adding)} className={smallBtn}>
-            {adding ? "Close" : "+ Add project"}
-          </button>
+          {readOnly ? null : (
+            <button type="button" onClick={() => setAdding(!adding)} className={smallBtn}>
+              {adding ? "Close" : "+ Add project"}
+            </button>
+          )}
           <button
             type="button"
             aria-pressed={todayOnly}
@@ -320,7 +331,10 @@ export function StageTrackerBoard({ initial, initialTab }: { initial: StageBoard
       ) : null}
 
       <p className="mb-2 font-body text-xs font-light text-muted" data-print="hide">
-        Kisi bhi cell par click karke likhiye — Enter dabate hi save. Aaj badli rows par{" "}
+        {readOnly
+          ? "Sirf dekhne ke liye — badalne ke liye upar “Sign in to edit”. "
+          : "Kisi bhi cell par click karke likhiye — Enter dabate hi save. "}
+        Aaj badli rows par{" "}
         <span className="font-bold text-amber-deep">Today</span> laga hota hai. MASTER TRACKER ke badlaav khud
         aate hain — board har minute dobara padhta hai (last{" "}
         <span suppressHydrationWarning>
@@ -393,7 +407,12 @@ export function StageTrackerBoard({ initial, initialTab }: { initial: StageBoard
                     r.updatedToday ? "border-l-amber-deep" : "border-l-transparent"
                   }`}
                 >
-                  <Cell value={r.project} bold onSave={(v) => (v.trim() ? save(r, "project", v) : undefined)} />
+                  <Cell
+                    value={r.project}
+                    bold
+                    readOnly={readOnly}
+                    onSave={(v) => (v.trim() ? save(r, "project", v) : undefined)}
+                  />
                   <p className="mt-0.5 font-body text-[10px] font-light text-muted" title={`Last updated ${indiaDate(r.updatedAt)}`}>
                     {r.updatedToday ? (
                       <span className="mr-1 rounded bg-amber-deep px-1.5 py-px font-bold uppercase tracking-wider text-cream">
@@ -405,10 +424,11 @@ export function StageTrackerBoard({ initial, initialTab }: { initial: StageBoard
                 </td>
                 {columns.map((c) => (
                   <td key={c.field} className={`border-l border-line px-3 py-2 ${c.wide ? "min-w-[220px]" : "min-w-[130px]"}`}>
-                    <Cell value={r[c.field]} onSave={(v) => save(r, c.field, v)} />
+                    <Cell value={r[c.field]} readOnly={readOnly} onSave={(v) => save(r, c.field, v)} />
                   </td>
                 ))}
                 <td className="px-2 py-2" data-print="hide">
+                  {readOnly ? null : (
                   <button
                     type="button"
                     disabled={busy === r.id}
@@ -423,6 +443,7 @@ export function StageTrackerBoard({ initial, initialTab }: { initial: StageBoard
                   >
                     {armed === r.id ? "Sure?" : "Remove"}
                   </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -434,9 +455,33 @@ export function StageTrackerBoard({ initial, initialTab }: { initial: StageBoard
 }
 
 /** A cell that turns into a text box when clicked. Enter or leaving it saves; Esc cancels. */
-function Cell({ value, bold, onSave }: { value: string | null; bold?: boolean; onSave: (v: string) => void }) {
+function Cell({
+  value,
+  bold,
+  readOnly,
+  onSave,
+}: {
+  value: string | null;
+  bold?: boolean;
+  readOnly?: boolean;
+  onSave: (v: string) => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
+
+  if (readOnly) {
+    return (
+      <p
+        title={value ?? undefined}
+        className={`px-1 py-0.5 font-body text-[13px] [overflow-wrap:anywhere] ${
+          bold ? "font-bold text-ink" : "font-light text-secondary"
+        }`}
+        style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+      >
+        {value ?? <span className="text-muted/60">—</span>}
+      </p>
+    );
+  }
 
   if (editing) {
     return (
