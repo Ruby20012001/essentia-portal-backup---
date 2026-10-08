@@ -40,6 +40,10 @@ export const NAV: NavGroup[] = [
       { label: "WIO → PIO Tracker", href: "/wio-tracker", screen: "S4b" },
       // The same shape on the design activity chart — Vishakha's team.
       { label: "Design Activity Tracker", href: "/design-tracker", screen: "S4c" },
+      // Jiya's weekly log of what each design team did.
+      { label: "Team Weekly Board", href: "/team-board", screen: "S4d" },
+      // The MASTER SHEET's ID, 3D and Architecture phases, updated daily.
+      { label: "Stage Tracker", href: "/stage-board", screen: "S4e" },
       // The client-facing document, beside the work it describes. Who may
       // open it is decided by the page, against the design team's own list.
       { label: "Concept decks", href: "/decks", screen: "S5b" },

@@ -3,6 +3,7 @@ node_modules/
 
 # Next.js build output
 .next/
+.next-preview/
 out/
 
 # Environment — real secrets never enter the repo
@@ -20,3 +21,7 @@ next-env.d.ts
 
 # The local dev database, now kept on disk so restarts do not lose uploads.
 db/.dev-data/
+
+# Morning briefs written by the project-desk-brief scheduled task. Project
+# names and owners, so not committed.
+briefs/

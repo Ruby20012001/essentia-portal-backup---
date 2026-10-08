@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  /* Two dev servers on one .next folder overwrite each other's build and both
+     start answering 404. A second preview (.claude/launch.json) sets
+     NEXT_DIST_DIR so it builds somewhere else. Unset, it is .next as always. */
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   /* ONE LINK FOR A DECK. /deck/<id> is the address anybody is given: it reads
      for everybody, signs the design team in and out, and stays the same the
      whole way through. It is the deck tool itself — the one static file under

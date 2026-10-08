@@ -71,6 +71,9 @@ export const DEFAULT_FILES = [
   "058_hr_team_accounts.sql",
   "059_project_desk.sql",
   "061_api_health_pulse.sql",
+  "062_team_weekly_board.sql",
+  "063_team_3d_board.sql",
+  "064_stage_tracker.sql",
   "900_dev_fixtures.sql",
   "901_design_tracker_fixtures.sql",
 ];

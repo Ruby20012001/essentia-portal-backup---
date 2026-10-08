@@ -946,6 +946,54 @@ if (!failed) {
       ok: (v) => v === "true",
     },
     {
+      // 062: the six teams, RK/MR/JKR and Layouts/Intents/SLD are seeded; a
+      // particular is unique without regard to case; an entry refuses a status
+      // outside done/progress/pending and a quantity of zero.
+      name: "062: team weekly board seeds 6/3/3 options; RK is unique case-blind; bad status and qty 0 refused",
+      sql: `SELECT (
+              (SELECT COUNT(*) FROM ee.team_weekly_options WHERE kind = 'team') = 6
+              AND (SELECT string_agg(name, ',' ORDER BY sort_order) FROM ee.team_weekly_options
+                    WHERE kind = 'particular') = 'RK,MR,JKR'
+              AND (SELECT string_agg(name, ',' ORDER BY sort_order) FROM ee.team_weekly_options
+                    WHERE kind = 'work_type') = 'Layouts,Intents,SLD'
+              AND EXISTS (SELECT 1 FROM pg_indexes
+                           WHERE schemaname = 'ee' AND indexname = 'team_weekly_options_kind_name_uq')
+              AND EXISTS (SELECT 1 FROM pg_constraint
+                           WHERE conrelid = 'ee.team_weekly_entries'::regclass AND contype = 'c'
+                             AND pg_get_constraintdef(oid) LIKE '%progress%')
+              AND EXISTS (SELECT 1 FROM pg_constraint
+                           WHERE conrelid = 'ee.team_weekly_entries'::regclass AND contype = 'c'
+                             AND pg_get_constraintdef(oid) LIKE '%qty >= 1%')
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // 063: Team Neeru and Team Dhruv are seeded in that order; a project's
+      // stage is one of ongoing / revisions / signoff and nothing else.
+      name: "063: 3D board seeds Team Neeru, Team Dhruv; stage limited to ongoing/revisions/signoff",
+      sql: `SELECT (
+              (SELECT string_agg(name, ',' ORDER BY sort_order) FROM ee.team_3d_teams)
+                = 'Team Neeru,Team Dhruv'
+              AND EXISTS (SELECT 1 FROM pg_constraint
+                           WHERE conrelid = 'ee.team_3d_projects'::regclass AND contype = 'c'
+                             AND pg_get_constraintdef(oid) LIKE '%signoff%')
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
+      // 064: a stage-tracker row is on the id, 3d or arch tab and nothing else;
+      // the same project twice on one tab is refused, whatever its case.
+      name: "064: stage tracker limits discipline to id/3d/arch; one project name per tab, case-blind",
+      sql: `SELECT (
+              EXISTS (SELECT 1 FROM pg_constraint
+                       WHERE conrelid = 'ee.stage_tracker_rows'::regclass AND contype = 'c'
+                         AND pg_get_constraintdef(oid) LIKE '%arch%')
+              AND EXISTS (SELECT 1 FROM pg_indexes
+                           WHERE schemaname = 'ee' AND indexname = 'stage_tracker_rows_project_uq')
+            )::TEXT AS v`,
+      ok: (v) => v === "true",
+    },
+    {
       // S10 NH8: a station's open PIO assignments and its forecast rows for the
       // next 14 days come back; a finished assignment and a day-15 row do not.
       // Mirrors the queue and forecast queries in frontend/lib/services/factory-floor.ts.

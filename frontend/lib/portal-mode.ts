@@ -75,6 +75,15 @@ const TRACKER_MODE_PREFIXES = [
   // it, the way /board has worked since 7 Sep (Monica, 25 Sep: "jaise WIO me
   // tha"). Closed here would mean the link 404s for the people it is for.
   "/design-board",
+  // Jiya's Team Weekly Board — what each design team did this week. Its own
+  // page and data, in /board's shape (Monica, 7 Oct). Same lesson as /hr
+  // below: missing here, signing in with ?next=/team-board lands elsewhere.
+  "/team-board",
+  "/api/team-weekly",
+  // The Stage Tracker — ID, then 3D and Architecture beside it (Monica,
+  // 8 Oct). Same people as /team-board, same lesson about ?next=.
+  "/stage-board",
+  "/api/stage-board",
   // Its 09:00 morning reminders, called by Vercel Cron (vercel.json).
   "/api/jobs/design-reminders",
   // Hiring, and HR's own door onto it. Same lesson as /deck-login above, in
