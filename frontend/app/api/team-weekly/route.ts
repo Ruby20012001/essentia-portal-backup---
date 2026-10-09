@@ -17,7 +17,8 @@ export async function GET() {
 
 const createSchema = z.object({
   team: z.string().min(1).max(80),
-  particular: z.string().min(1).max(80),
+  // Particular is no longer asked for (9 Oct); accepted and ignored if sent.
+  particular: z.string().max(80).optional(),
   workType: z.string().min(1).max(80),
   title: z.string().trim().min(1, "Say what was done").max(2000),
   qty: z.number().int().min(1).max(999),

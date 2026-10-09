@@ -224,14 +224,13 @@ export function TeamWeeklyBoard({ initial }: { initial: Board }) {
                 `team-weekly-${week}${team ? `-${team.replace(/\s+/g, "-").toLowerCase()}` : ""}.csv`,
                 rows.map((r) => ({
                   Team: r.team,
-                  Particular: r.particular,
                   Type: r.workType,
                   "What was done": r.title,
                   Qty: r.qty,
                   Date: r.workDate,
                   Status: STATUS_LABEL[r.status],
                 })),
-                ["Team", "Particular", "Type", "What was done", "Qty", "Date", "Status"],
+                ["Team", "Type", "What was done", "Qty", "Date", "Status"],
               )
             }
           />
@@ -411,7 +410,7 @@ function WorkList({
         <div className="rounded-lg border border-dashed border-line-strong bg-card px-6 py-8 text-center">
           <p className="font-body text-sm font-light text-secondary">
             <span className="font-bold text-ink">{team ?? "This week"}</span> has nothing on the board yet.
-            Press “+ Add work”, pick the team, the particular and the work type, and say what was done.
+            Press “+ Add work”, pick the team and the work type, and say what was done.
           </p>
         </div>
       ) : (
@@ -419,7 +418,6 @@ function WorkList({
           <table className="w-full text-left font-body text-[13.5px]">
             <thead>
               <tr className="bg-surface text-[11px] uppercase tracking-[0.12em] text-secondary">
-                <th className="px-3 py-2.5 font-bold">Particular</th>
                 <th className="px-3 py-2.5 font-bold">Type</th>
                 <th className="px-3 py-2.5 font-bold">What was done</th>
                 <th className="px-3 py-2.5 text-right font-bold">Qty</th>
@@ -431,7 +429,7 @@ function WorkList({
             {groups.map(([t, items]) => (
               <tbody key={t}>
                 <tr className="border-t border-line bg-surface">
-                  <td colSpan={7} className="px-3 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-secondary">
+                  <td colSpan={6} className="px-3 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-secondary">
                     {t}
                     <span className="ml-2 font-light normal-case tracking-normal text-muted">
                       {items.length} {items.length === 1 ? "entry" : "entries"} · {qty(items)}{" "}
@@ -441,11 +439,6 @@ function WorkList({
                 </tr>
                 {items.map((e) => (
                   <tr key={e.id} className="border-t border-line bg-card align-top transition-colors hover:bg-hover">
-                    <td className="px-3 py-2.5">
-                      <span className="inline-block rounded border border-line-strong px-2 py-0.5 text-[11px] font-bold tracking-[0.06em] text-amber-deep">
-                        {e.particular}
-                      </span>
-                    </td>
                     <td className="whitespace-nowrap px-3 py-2.5 font-bold text-ink">{e.workType}</td>
                     <td className="min-w-[220px] px-3 py-2.5 font-light text-ink">{e.title}</td>
                     <td className="px-3 py-2.5 text-right font-light tabular-nums text-ink">{e.qty}</td>
@@ -509,7 +502,6 @@ function AddWorkForm({
   onAdded: (day: string) => void;
 }) {
   const [teamName, setTeamName] = useState(team ?? board.teams[0] ?? "");
-  const [particular, setParticular] = useState(board.particulars[0] ?? "");
   const [workType, setWorkType] = useState(board.workTypes[0] ?? "");
   const [title, setTitle] = useState("");
   const [count, setCount] = useState("1");
@@ -527,7 +519,6 @@ function AddWorkForm({
             method: "POST",
             body: JSON.stringify({
               team: teamName,
-              particular,
               workType,
               title: title.trim(),
               qty: Math.max(1, parseInt(count, 10) || 1),
@@ -535,7 +526,7 @@ function AddWorkForm({
               status,
             }),
           },
-          `${workType} for ${particular} added to ${teamName}.`,
+          `${workType} added to ${teamName}.`,
         );
         if (ok) {
           setTitle("");
@@ -558,15 +549,6 @@ function AddWorkForm({
             ))}
           </select>
         </label>
-        <OptionPicker
-          title="Particular *"
-          kind="particular"
-          options={board.particulars}
-          value={particular}
-          onChange={setParticular}
-          call={call}
-          placeholder="e.g. SK"
-        />
         <OptionPicker
           title="Work type *"
           kind="work_type"
@@ -628,7 +610,7 @@ function OptionPicker({
   placeholder,
 }: {
   title: string;
-  kind: "particular" | "work_type";
+  kind: "work_type";
   options: string[];
   value: string;
   onChange: (v: string) => void;
@@ -702,9 +684,6 @@ function Performance({ board, rows, team }: { board: Board; rows: WeeklyEntry[];
       total: qty(mine),
       done: qty(mine.filter((r) => r.status === "done")),
       types: board.workTypes.map((w) => [w, qty(mine.filter((r) => r.workType === w))] as const),
-      particulars: board.particulars
-        .map((p) => [p, qty(mine.filter((r) => r.particular === p))] as const)
-        .filter(([, n]) => n > 0),
     };
   });
   const max = Math.max(1, ...stats.flatMap((s) => s.types.map(([, n]) => n)));
@@ -741,15 +720,6 @@ function Performance({ board, rows, team }: { board: Board; rows: WeeklyEntry[];
                 </div>
               ))}
             </div>
-            {s.particulars.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {s.particulars.map(([p, n]) => (
-                  <span key={p} className="rounded border border-line-strong px-2 py-0.5 font-body text-[11px] font-bold text-amber-deep">
-                    {p} · {n}
-                  </span>
-                ))}
-              </div>
-            ) : null}
           </div>
         ))}
       </div>

@@ -130,7 +130,9 @@ export async function getTeamWeeklyBoard(user: SessionUser | null): Promise<Team
 
 export type NewWeeklyEntry = {
   team: string;
-  particular: string;
+  /** No longer asked for (Monica, 9 Oct: "ye particular hatado"). Kept so an
+   *  older client that still sends it is not refused; it is not stored. */
+  particular?: string;
   workType: string;
   title: string;
   qty: number;
@@ -151,8 +153,10 @@ async function requireOption(kind: OptionKind, name: string, label: string): Pro
 export async function createWeeklyEntry(user: SessionUser | null, input: NewWeeklyEntry): Promise<string> {
   await requireBoardAccess(user);
   const team = await requireOption("team", input.team, "Team");
-  const particular = await requireOption("particular", input.particular, "Particular");
   const workType = await requireOption("work_type", input.workType, "Work type");
+  // The column stays (db/062 has it NOT NULL, and old weeks carry RK / MR /
+  // JKR); a new entry simply has none.
+  const particular = "";
   const [row] = await query<{ id: string }>(
     `INSERT INTO ee.team_weekly_entries
        (team, particular, work_type, title, qty, work_date, status, created_by)
@@ -166,7 +170,7 @@ export async function createWeeklyEntry(user: SessionUser | null, input: NewWeek
     action: "TEAM_WEEKLY_ENTRY_CREATED",
     resourceType: "team_weekly",
     resourceId: row.id,
-    newValues: { team, particular, workType, title: input.title.trim(), qty: input.qty, workDate: input.workDate },
+    newValues: { team, workType, title: input.title.trim(), qty: input.qty, workDate: input.workDate },
   });
   return row.id;
 }
