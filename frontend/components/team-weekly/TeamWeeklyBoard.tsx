@@ -373,6 +373,7 @@ function WorkList({
   week: string;
   setWeek: (v: string) => void;
 }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
   const total = qty(rows);
   const done = qty(rows.filter((r) => r.status === "done"));
   const groups = board.teams
@@ -486,7 +487,31 @@ function WorkList({
                     </span>
                   </td>
                 </tr>
-                {items.map((e) => (
+                {items.map((e) =>
+                  editingId === e.id ? (
+                    <EditRow
+                      key={e.id}
+                      entry={e}
+                      board={board}
+                      onCancel={() => setEditingId(null)}
+                      onSave={(patch) => {
+                        setEditingId(null);
+                        void call(
+                          e.id,
+                          `/api/team-weekly/${e.id}`,
+                          { method: "PATCH", body: JSON.stringify(patch) },
+                          "Saved.",
+                          (b) => ({
+                            ...b,
+                            entries: b.entries.map((x) => (x.id === e.id ? { ...x, ...patch } : x)),
+                          }),
+                        );
+                        if (patch.workDate && (patch.workDate < week || patch.workDate > shiftDays(week, 6))) {
+                          setWeek(mondayOf(patch.workDate));
+                        }
+                      }}
+                    />
+                  ) : (
                   <tr key={e.id} className="border-t border-line bg-card align-top transition-colors hover:bg-hover">
                     <td className="whitespace-nowrap px-3 py-2.5 font-bold text-ink">{e.workType}</td>
                     <td className="min-w-[220px] px-3 py-2.5 font-light text-ink">{e.title}</td>
@@ -530,6 +555,14 @@ function WorkList({
                       <button
                         type="button"
                         disabled={busy === e.id}
+                        onClick={() => setEditingId(e.id)}
+                        className="rounded border border-line-strong bg-canvas px-3 py-1 text-xs font-bold text-secondary transition-colors hover:bg-hover hover:text-ink disabled:opacity-50"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy === e.id}
                         onClick={() =>
                           arm(e.id, () =>
                             void call(
@@ -554,13 +587,124 @@ function WorkList({
                       </div>
                     </td>
                   </tr>
-                ))}
+                  ),
+                )}
               </tbody>
             ))}
           </table>
         </div>
       )}
     </div>
+  );
+}
+
+type EntryPatch = Partial<Pick<WeeklyEntry, "team" | "workType" | "title" | "qty" | "workDate" | "status">>;
+
+/**
+ * One entry, opened for editing in its own row (Monica, 9 Oct: "edit pe
+ * click karke ho jaye"). Every detail can change — team, type, what was
+ * done, how many, the day, the status. Only what changed is sent.
+ */
+function EditRow({
+  entry,
+  board,
+  onCancel,
+  onSave,
+}: {
+  entry: WeeklyEntry;
+  board: Board;
+  onCancel: () => void;
+  onSave: (patch: EntryPatch) => void;
+}) {
+  const [teamName, setTeamName] = useState(entry.team);
+  const [workType, setWorkType] = useState(entry.workType);
+  const [title, setTitle] = useState(entry.title);
+  const [count, setCount] = useState(String(entry.qty));
+  const [workDate, setWorkDate] = useState(entry.workDate);
+  const [status, setStatus] = useState<WeeklyStatus>(entry.status);
+
+  return (
+    <tr className="border-t border-amber-deep/60 bg-selected align-top">
+      <td colSpan={6} className="px-3 py-3">
+        <form
+          onSubmit={(ev) => {
+            ev.preventDefault();
+            const next: Required<EntryPatch> = {
+              team: teamName,
+              workType,
+              title: title.trim(),
+              qty: Math.max(1, parseInt(count, 10) || 1),
+              workDate,
+              status,
+            };
+            const patch: EntryPatch = {};
+            for (const k of Object.keys(next) as (keyof EntryPatch)[]) {
+              if (next[k] !== entry[k]) (patch as Record<string, unknown>)[k] = next[k];
+            }
+            if (Object.keys(patch).length === 0) onCancel();
+            else onSave(patch);
+          }}
+          className="grid gap-3 md:grid-cols-6"
+        >
+          <label className="block md:col-span-1">
+            <span className={`mb-1 block ${label}`}>Team</span>
+            <select value={teamName} onChange={(ev) => setTeamName(ev.target.value)} className={input}>
+              {board.teams.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block md:col-span-1">
+            <span className={`mb-1 block ${label}`}>Type</span>
+            <select value={workType} onChange={(ev) => setWorkType(ev.target.value)} className={input}>
+              {board.workTypes.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block md:col-span-4">
+            <span className={`mb-1 block ${label}`}>What was done</span>
+            <input required value={title} onChange={(ev) => setTitle(ev.target.value)} className={input} autoFocus />
+          </label>
+          <label className="block md:col-span-1">
+            <span className={`mb-1 block ${label}`}>Qty</span>
+            <input type="number" min={1} max={999} value={count} onChange={(ev) => setCount(ev.target.value)} className={input} />
+          </label>
+          <label className="block md:col-span-2">
+            <span className={`mb-1 block ${label}`}>Date</span>
+            <input type="date" required value={workDate} onChange={(ev) => setWorkDate(ev.target.value)} className={input} />
+          </label>
+          <label className="block md:col-span-1">
+            <span className={`mb-1 block ${label}`}>Status</span>
+            <select value={status} onChange={(ev) => setStatus(ev.target.value as WeeklyStatus)} className={input}>
+              <option value="pending">Delay</option>
+              <option value="progress">In progress</option>
+              <option value="done">Done</option>
+            </select>
+          </label>
+          <div className="flex items-end gap-2 md:col-span-2">
+            <button
+              type="submit"
+              disabled={!title.trim()}
+              className="rounded bg-ink px-4 py-1.5 font-body text-xs font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded border border-line-strong bg-canvas px-3 py-1.5 font-body text-xs font-light text-muted hover:bg-hover hover:text-ink"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </td>
+    </tr>
   );
 }
 

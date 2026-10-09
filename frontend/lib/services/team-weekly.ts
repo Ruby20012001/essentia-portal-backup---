@@ -175,13 +175,63 @@ export async function createWeeklyEntry(user: SessionUser | null, input: NewWeek
   return row.id;
 }
 
-export async function setWeeklyStatus(user: SessionUser | null, id: string, status: WeeklyStatus): Promise<void> {
+export type WeeklyEntryPatch = Partial<{
+  team: string;
+  workType: string;
+  title: string;
+  qty: number;
+  workDate: string;
+  status: WeeklyStatus;
+}>;
+
+/**
+ * Change an entry — its status from the Delay / In progress / Done buttons,
+ * or any of its details from Edit (Monica, 9 Oct: "edit pe click karke ho
+ * jaye"). A team or work type must still be one on the board's list.
+ */
+export async function updateWeeklyEntry(
+  user: SessionUser | null,
+  id: string,
+  patch: WeeklyEntryPatch,
+): Promise<void> {
   await requireBoardAccess(user);
-  const [row] = await query<{ id: string }>(
-    `UPDATE ee.team_weekly_entries SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING id`,
-    [id, status],
+  const sets: string[] = [];
+  const values: unknown[] = [id];
+  const put = (column: string, value: unknown) => {
+    values.push(value);
+    sets.push(`${column} = $${values.length}`);
+  };
+  if (patch.team !== undefined) put("team", await requireOption("team", patch.team, "Team"));
+  if (patch.workType !== undefined) put("work_type", await requireOption("work_type", patch.workType, "Work type"));
+  if (patch.title !== undefined) {
+    if (!patch.title.trim()) throw new BlockingRuleError("Say what was done.");
+    put("title", patch.title.trim());
+  }
+  if (patch.qty !== undefined) put("qty", patch.qty);
+  if (patch.workDate !== undefined) put("work_date", patch.workDate);
+  if (patch.status !== undefined) put("status", patch.status);
+  if (sets.length === 0) return;
+
+  const [before] = await query<Record<string, unknown>>(
+    `SELECT team, work_type, title, qty, work_date::text AS work_date, status
+       FROM ee.team_weekly_entries WHERE id = $1`,
+    [id],
   );
-  if (!row) throw new NotFoundError("That entry is not on the board any more.");
+  if (!before) throw new NotFoundError("That entry is not on the board any more.");
+  await query(`UPDATE ee.team_weekly_entries SET ${sets.join(", ")}, updated_at = NOW() WHERE id = $1`, values);
+  await writeAudit({
+    userId: user?.id ?? null,
+    role: user?.accessLevel ?? null,
+    action: "TEAM_WEEKLY_ENTRY_UPDATED",
+    resourceType: "team_weekly",
+    resourceId: id,
+    oldValues: before,
+    newValues: patch,
+  });
+}
+
+export async function setWeeklyStatus(user: SessionUser | null, id: string, status: WeeklyStatus): Promise<void> {
+  await updateWeeklyEntry(user, id, { status });
 }
 
 /**
