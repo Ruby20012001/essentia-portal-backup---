@@ -172,6 +172,8 @@ export function StageTrackerBoard({
      jaana padta hai"). The page scrolls inside <main>; this walks it down at
      an easy reading pace, holds at the bottom, and starts again from the top.
      A wheel, a touch or a key press hands the page back to the person. */
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const toggleGroup = (label: string) => setOpenGroups((o) => ({ ...o, [label]: !o[label] }));
   const [autoScroll, setAutoScroll] = useState(false);
   /* The table is wider than a laptop screen on ID. Sideways is one view at a
      time, less the sticky Project column, so a column is never skipped. */
@@ -310,8 +312,17 @@ export function StageTrackerBoard({
   );
   const todayCount = onTab.filter((r) => r.updatedToday).length;
   const groups = GROUPS[tab];
-  const columns = groups.flatMap((g) => g.columns);
   const grouped = groups.some((g) => g.label);
+  /* Layout, Vibe and Camera angles start closed (Monica, 8 Oct: "tap kiya tab
+     iske neeche wali list khulkar aayegi, otherwise blank"). A closed section
+     is one narrow, empty column whose heading opens it; open, it is its
+     Start / End / Signoff. */
+  type Slot = { kind: "col"; col: Column; first: boolean } | { kind: "closed"; label: string };
+  const slots: Slot[] = groups.flatMap((g): Slot[] =>
+    g.label && !openGroups[g.label]
+      ? [{ kind: "closed", label: g.label }]
+      : g.columns.map((col, i) => ({ kind: "col", col, first: i === 0 })),
+  );
   const current = TABS.find((t) => t.key === tab)!;
 
   return (
@@ -477,10 +488,21 @@ export function StageTrackerBoard({
                   g.label ? (
                     <th
                       key={i}
-                      colSpan={g.columns.length}
-                      className="border-b border-l border-line px-3 py-2 text-center font-body text-xs font-bold uppercase tracking-[0.12em] text-amber-deep"
+                      colSpan={openGroups[g.label] ? g.columns.length : 1}
+                      rowSpan={openGroups[g.label] ? 1 : 2}
+                      className="border-b border-l border-line p-0"
                     >
-                      {g.label}
+                      <button
+                        type="button"
+                        aria-expanded={!!openGroups[g.label]}
+                        onClick={() => toggleGroup(g.label!)}
+                        className={`flex w-full items-center justify-center gap-1.5 px-3 py-2 font-body text-xs font-bold uppercase tracking-[0.12em] text-amber-deep transition-colors hover:bg-hover ${
+                          openGroups[g.label] ? "" : "min-h-[64px] min-w-[120px]"
+                        }`}
+                      >
+                        <span aria-hidden>{openGroups[g.label] ? "▾" : "▸"}</span>
+                        {g.label}
+                      </button>
                     </th>
                   ) : (
                     g.columns.map((c) => (
@@ -496,7 +518,7 @@ export function StageTrackerBoard({
             <tr>
               {grouped ? null : <th className={`${th} sticky left-0 z-10 bg-card`}>Project</th>}
               {groups.flatMap((g) =>
-                grouped && !g.label
+                grouped && (!g.label || !openGroups[g.label])
                   ? []
                   : g.columns.map((c, i) => (
                       <th key={c.field} className={`${th} ${i === 0 || !grouped ? "border-l" : ""}`}>
@@ -510,7 +532,7 @@ export function StageTrackerBoard({
           <tbody>
             {shown.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + 2} className="px-4 py-8 text-center font-body text-sm font-light text-muted">
+                <td colSpan={slots.length + 2} className="px-4 py-8 text-center font-body text-sm font-light text-muted">
                   {onTab.length === 0
                     ? `${current.title} par abhi koi project nahi hai. “+ Add project” se shuru kijiye.`
                     : todayOnly
@@ -544,11 +566,18 @@ export function StageTrackerBoard({
                     {indiaDate(r.updatedAt)}
                   </p>
                 </td>
-                {columns.map((c) => (
-                  <td key={c.field} className={`border-l border-line px-3 py-2 ${c.wide ? "min-w-[220px]" : "min-w-[130px]"}`}>
-                    <Cell value={r[c.field]} readOnly={readOnly} onSave={(v) => save(r, c.field, v)} />
-                  </td>
-                ))}
+                {slots.map((s) =>
+                  s.kind === "closed" ? (
+                    <td key={s.label} className="min-w-[120px] border-l border-line" />
+                  ) : (
+                    <td
+                      key={s.col.field}
+                      className={`border-l border-line px-3 py-2 ${s.col.wide ? "min-w-[220px]" : "min-w-[130px]"}`}
+                    >
+                      <Cell value={r[s.col.field]} readOnly={readOnly} onSave={(v) => save(r, s.col.field, v)} />
+                    </td>
+                  ),
+                )}
                 <td className="px-2 py-2" data-print="hide">
                   {readOnly ? null : (
                   <button
