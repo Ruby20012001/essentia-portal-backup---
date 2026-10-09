@@ -99,15 +99,38 @@ export function TeamWeeklyBoard({ initial }: { initial: Board }) {
     if (response.ok) setBoard(await response.json());
   }, []);
 
-  const call = useCallback(
-    async (key: string, path: string, init: RequestInit, success?: string): Promise<boolean> => {
-      setBusy(key);
+  const call: CallFn = useCallback(
+    async (key, path, init, success, optimistic) => {
+      const send = () =>
+        fetch(path, { ...init, headers: { "Content-Type": "application/json", ...init.headers } });
       setBanner(null);
+      setArmed(null);
+
+      /* Shown at once, saved behind (Monica, 9 Oct: "itna wait kyun, ekdum
+         kyun nahi"). The database is a long round trip away; the screen does
+         not wait for it. If the save fails, the board is read again so the
+         screen goes back to the truth, and the error says what was lost. */
+      if (optimistic) {
+        setBoard(optimistic);
+        if (success) setBanner({ tone: "success", message: success });
+        void send()
+          .then(async (response) => {
+            if (!response.ok) {
+              const data = await response.json().catch(() => ({}));
+              setBanner({
+                tone: "error",
+                message: `Not saved — ${data.error ?? `request failed (${response.status})`}`,
+              });
+            }
+          })
+          .catch(() => setBanner({ tone: "error", message: "Not saved — the connection dropped. Try again." }))
+          .finally(() => void refresh());
+        return true;
+      }
+
+      setBusy(key);
       try {
-        const response = await fetch(path, {
-          ...init,
-          headers: { "Content-Type": "application/json", ...init.headers },
-        });
+        const response = await send();
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
           setBanner({ tone: "error", message: data.error ?? `Request failed (${response.status})` });
@@ -118,7 +141,6 @@ export function TeamWeeklyBoard({ initial }: { initial: Board }) {
         return true;
       } finally {
         setBusy(null);
-        setArmed(null);
       }
     },
     [refresh],
@@ -310,7 +332,17 @@ function TeamChip({
   );
 }
 
-type CallFn = (key: string, path: string, init: RequestInit, success?: string) => Promise<boolean>;
+/** `optimistic` puts the change on screen at once and saves it behind. */
+type CallFn = (
+  key: string,
+  path: string,
+  init: RequestInit,
+  success?: string,
+  optimistic?: (board: Board) => Board,
+) => Promise<boolean>;
+
+/** An entry added on screen but not yet back from the database. */
+const isPending = (id: string) => id.startsWith("new-");
 
 function WorkList({
   board,
@@ -388,8 +420,15 @@ function WorkList({
                 void call(
                   "clear",
                   "/api/team-weekly/remove",
-                  { method: "POST", body: JSON.stringify({ ids: rows.map((r) => r.id) }) },
+                  {
+                    method: "POST",
+                    body: JSON.stringify({ ids: rows.filter((r) => !isPending(r.id)).map((r) => r.id) }),
+                  },
                   `${rows.length} ${rows.length === 1 ? "entry" : "entries"} removed${team ? ` from ${team}` : ""}.`,
+                  (b) => {
+                    const gone = new Set(rows.map((r) => r.id));
+                    return { ...b, entries: b.entries.filter((x) => !gone.has(x.id)) };
+                  },
                 ),
               )
             }
@@ -462,6 +501,10 @@ function WorkList({
                     </td>
                     <td className="px-3 py-2.5" data-print="hide">
                       <div className="flex flex-wrap items-center justify-end gap-1.5">
+                      {isPending(e.id) ? (
+                        <span className="font-body text-xs font-light text-muted">Saving…</span>
+                      ) : (
+                        <>
                       {MOVES[e.status].map((to) => (
                         <button
                           key={to}
@@ -473,6 +516,10 @@ function WorkList({
                               `/api/team-weekly/${e.id}`,
                               { method: "PATCH", body: JSON.stringify({ status: to }) },
                               `Marked ${STATUS_LABEL[to]}.`,
+                              (b) => ({
+                                ...b,
+                                entries: b.entries.map((x) => (x.id === e.id ? { ...x, status: to } : x)),
+                              }),
                             )
                           }
                           className={`whitespace-nowrap rounded border bg-canvas px-3 py-1 text-xs font-bold transition-colors disabled:opacity-50 ${MOVE_CLASS[to]}`}
@@ -485,7 +532,13 @@ function WorkList({
                         disabled={busy === e.id}
                         onClick={() =>
                           arm(e.id, () =>
-                            void call(e.id, `/api/team-weekly/${e.id}`, { method: "DELETE" }, `Removed from ${e.team}.`),
+                            void call(
+                              e.id,
+                              `/api/team-weekly/${e.id}`,
+                              { method: "DELETE" },
+                              `Removed from ${e.team}.`,
+                              (b) => ({ ...b, entries: b.entries.filter((x) => x.id !== e.id) }),
+                            ),
                           )
                         }
                         className={`rounded border px-3 py-1 text-xs transition-colors disabled:opacity-50 ${
@@ -496,6 +549,8 @@ function WorkList({
                       >
                         {armed === e.id ? "Sure?" : "Remove"}
                       </button>
+                        </>
+                      )}
                       </div>
                     </td>
                   </tr>
@@ -533,21 +588,34 @@ function AddWorkForm({
     <form
       onSubmit={async (e) => {
         e.preventDefault();
+        const entry: WeeklyEntry = {
+          id: `new-${Date.now()}`,
+          team: teamName,
+          particular: "",
+          workType,
+          title: title.trim(),
+          qty: Math.max(1, parseInt(count, 10) || 1),
+          workDate,
+          status,
+          createdAt: new Date().toISOString(),
+        };
         const ok = await call(
           "create",
           "/api/team-weekly",
           {
             method: "POST",
             body: JSON.stringify({
-              team: teamName,
-              workType,
-              title: title.trim(),
-              qty: Math.max(1, parseInt(count, 10) || 1),
-              workDate,
-              status,
+              team: entry.team,
+              workType: entry.workType,
+              title: entry.title,
+              qty: entry.qty,
+              workDate: entry.workDate,
+              status: entry.status,
             }),
           },
           `${workType} added to ${teamName}.`,
+          // On the list at once, marked "Saving…" until the database answers.
+          (b) => ({ ...b, entries: [entry, ...b.entries] }),
         );
         if (ok) {
           setTitle("");
