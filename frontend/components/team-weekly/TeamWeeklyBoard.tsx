@@ -17,19 +17,29 @@ type Tab = "work" | "performance";
 const STATUS_LABEL: Record<WeeklyStatus, string> = {
   done: "Done",
   progress: "In progress",
-  pending: "Pending",
+  // Stored as "pending"; said as "Delay", the word the team uses (9 Oct).
+  pending: "Delay",
 };
-const NEXT_STATUS: Record<WeeklyStatus, WeeklyStatus> = {
-  pending: "progress",
-  progress: "done",
-  done: "pending",
+/**
+ * Where an entry can go next, as buttons in front of Remove (Monica, 9 Oct):
+ * a Delay can move to In progress or straight to Done, In progress to Done,
+ * and Done stays done. Forward only — nothing is ever moved back by accident.
+ */
+const MOVES: Record<WeeklyStatus, WeeklyStatus[]> = {
+  pending: ["progress", "done"],
+  progress: ["done"],
+  done: [],
 };
-// The house colour rule: green done, orange in hand, neutral not started.
-// Red is kept for removing.
+// Green done, orange in hand, red for a delay — it is the one that needs a look.
 const STATUS_CLASS: Record<WeeklyStatus, string> = {
   done: "border-forest/40 bg-forest/10 text-forest",
   progress: "border-warning/40 bg-warning/10 text-warning",
-  pending: "border-line-strong bg-surface text-muted",
+  pending: "border-alert/40 bg-alert/10 text-alert",
+};
+const MOVE_CLASS: Record<WeeklyStatus, string> = {
+  done: "border-forest/50 text-forest hover:bg-forest/10",
+  progress: "border-warning/50 text-warning hover:bg-warning/10",
+  pending: "",
 };
 
 const label = "font-body text-[11px] font-light uppercase tracking-[0.14em] text-muted";
@@ -343,7 +353,7 @@ function WorkList({
         <MetricCard label="Entries this week" value={String(rows.length)} />
         <MetricCard label="Items" value={String(total)} sub="quantity added up" />
         <MetricCard label="Done" value={String(done)} sub={total ? `${pct(done, total)} of items` : undefined} />
-        <MetricCard label="Still open" value={String(total - done)} sub="in progress or pending" />
+        <MetricCard label="Still open" value={String(total - done)} sub="in progress or delayed" />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2" data-print="hide">
@@ -444,22 +454,32 @@ function WorkList({
                     <td className="px-3 py-2.5 text-right font-light tabular-nums text-ink">{e.qty}</td>
                     <td className="whitespace-nowrap px-3 py-2.5 font-light text-secondary">{short(e.workDate)}</td>
                     <td className="px-3 py-2.5">
-                      <button
-                        type="button"
-                        title="Click to change status"
-                        disabled={busy === e.id}
-                        onClick={() =>
-                          void call(e.id, `/api/team-weekly/${e.id}`, {
-                            method: "PATCH",
-                            body: JSON.stringify({ status: NEXT_STATUS[e.status] }),
-                          })
-                        }
-                        className={`whitespace-nowrap rounded border px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] disabled:opacity-50 ${STATUS_CLASS[e.status]}`}
+                      <span
+                        className={`inline-block whitespace-nowrap rounded border px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] ${STATUS_CLASS[e.status]}`}
                       >
                         {STATUS_LABEL[e.status]}
-                      </button>
+                      </span>
                     </td>
-                    <td className="px-3 py-2.5 text-right" data-print="hide">
+                    <td className="px-3 py-2.5" data-print="hide">
+                      <div className="flex flex-wrap items-center justify-end gap-1.5">
+                      {MOVES[e.status].map((to) => (
+                        <button
+                          key={to}
+                          type="button"
+                          disabled={busy === e.id}
+                          onClick={() =>
+                            void call(
+                              e.id,
+                              `/api/team-weekly/${e.id}`,
+                              { method: "PATCH", body: JSON.stringify({ status: to }) },
+                              `Marked ${STATUS_LABEL[to]}.`,
+                            )
+                          }
+                          className={`whitespace-nowrap rounded border bg-canvas px-3 py-1 text-xs font-bold transition-colors disabled:opacity-50 ${MOVE_CLASS[to]}`}
+                        >
+                          {to === "done" ? "✓ Done" : "In progress"}
+                        </button>
+                      ))}
                       <button
                         type="button"
                         disabled={busy === e.id}
@@ -476,6 +496,7 @@ function WorkList({
                       >
                         {armed === e.id ? "Sure?" : "Remove"}
                       </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -563,7 +584,7 @@ function AddWorkForm({
           <select value={status} onChange={(e) => setStatus(e.target.value as WeeklyStatus)} className={input}>
             <option value="done">Done</option>
             <option value="progress">In progress</option>
-            <option value="pending">Pending</option>
+            <option value="pending">Delay</option>
           </select>
         </label>
         <label className="block md:col-span-3 lg:col-span-4">
