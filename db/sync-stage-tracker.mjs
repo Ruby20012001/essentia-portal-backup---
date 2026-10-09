@@ -40,8 +40,14 @@
  *
  *   --if-changed   stop at once when the file's size and modified time are
  *                  the same as at the last successful sync
- *   --env-local    take DATABASE_URL from frontend/.env.local when it is not
- *                  set — so the scheduled task holds no connection string
+ *   --env-local    take the database from frontend/.env.local when
+ *                  DATABASE_URL is not set — so the scheduled task holds no
+ *                  connection string. STAGE_SYNC_DATABASE_URL there wins over
+ *                  DATABASE_URL: the live site's database is not the one the
+ *                  laptop develops against, and the board people read is live.
+ *
+ * The snapshot belongs to one database. Pointed at another, it is set aside
+ * and that first run compares against the board itself.
  */
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -61,12 +67,25 @@ const STATE_FILE = join(STATE_DIR, "state.json");
 
 if (process.argv.includes("--env-local") && !process.env.DATABASE_URL) {
   const env = join(dirname(fileURLToPath(import.meta.url)), "..", "frontend", ".env.local");
-  const line = readFileSync(env, "utf8").split(/\r?\n/).find((l) => /^DATABASE_URL=/.test(l));
-  if (line) process.env.DATABASE_URL = line.slice("DATABASE_URL=".length).trim();
+  const lines = readFileSync(env, "utf8").split(/\r?\n/);
+  const pick = (name) => lines.find((l) => l.startsWith(`${name}=`))?.slice(name.length + 1).trim();
+  const url = pick("STAGE_SYNC_DATABASE_URL") || pick("DATABASE_URL");
+  if (url) process.env.DATABASE_URL = url;
 }
+
+/* Which database, without the credential — to tell snapshots apart. */
+const TARGET = (() => {
+  try {
+    const u = new URL(process.env.DATABASE_URL ?? "");
+    return `${u.host}${u.pathname}`;
+  } catch {
+    return "";
+  }
+})();
 
 let state = null;
 try { state = JSON.parse(readFileSync(STATE_FILE, "utf8")); } catch { /* first run */ }
+if (state && state.target !== TARGET) state = null;
 let fileStat;
 try {
   const s = statSync(SOURCE);
@@ -339,7 +358,7 @@ try {
    time, not skipped as "unchanged". */
 mkdirSync(STATE_DIR, { recursive: true });
 writeFileSync(STATE_FILE, JSON.stringify({
-  ...fileStat, syncedAt: new Date().toISOString(), snapshot,
+  ...fileStat, target: TARGET, syncedAt: new Date().toISOString(), snapshot,
 }));
 
 const counts = (await db.query(

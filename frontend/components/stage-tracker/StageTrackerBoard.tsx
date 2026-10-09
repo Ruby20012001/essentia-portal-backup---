@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SaveBar } from "@/components/team-weekly/SaveBar";
 import type { Discipline, StageBoard, StageField, StageRow } from "@/lib/services/stage-tracker";
 
@@ -26,7 +26,14 @@ const TABS: { key: Discipline; button: string; title: string }[] = [
 
 const GROUPS: Record<Discipline, Group[]> = {
   id: [
-    { label: null, columns: [{ field: "member", label: "Team member" }] },
+    // Status beside the name, not at the far end (Monica, 8 Oct).
+    {
+      label: null,
+      columns: [
+        { field: "member", label: "Team member" },
+        { field: "status", label: "Status", wide: true },
+      ],
+    },
     {
       label: "Layout",
       columns: [
@@ -51,16 +58,15 @@ const GROUPS: Record<Discipline, Group[]> = {
         { field: "camSignoff", label: "Signoff" },
       ],
     },
-    { label: null, columns: [{ field: "status", label: "Status", wide: true }] },
   ],
   "3d": [
     {
       label: null,
       columns: [
         { field: "member", label: "Team member" },
+        { field: "status", label: "Status", wide: true },
         { field: "startDate", label: "Start date" },
         { field: "endDate", label: "End date" },
-        { field: "status", label: "Status", wide: true },
       ],
     },
   ],
@@ -83,6 +89,32 @@ const input =
 const smallBtn =
   "rounded border border-line-strong bg-canvas px-2.5 py-1 font-body text-xs font-light text-muted transition-colors hover:bg-hover hover:text-ink disabled:opacity-40";
 const th = "border-b border-line px-3 py-2 text-left font-body text-[11px] font-light uppercase tracking-[0.12em] text-muted";
+
+/**
+ * Where to slide the table to, one view along, landing on a column's edge so
+ * no column is left half under the sticky Project column. Right: the column
+ * cut off at the right edge becomes the first one shown. Left: the reverse.
+ */
+function nextStop(box: HTMLElement, dir: 1 | -1): number {
+  const cells = [...(box.querySelector("tbody tr")?.children ?? [])] as HTMLElement[];
+  if (cells.length < 2) return box.scrollLeft + dir * box.clientWidth;
+  const sticky = cells[0].offsetWidth;
+  const view = box.clientWidth - sticky;
+  const max = box.scrollWidth - box.clientWidth;
+  const stops = cells.slice(1).map((c) => c.offsetLeft - sticky).filter((s) => s >= 0);
+  const at = box.scrollLeft;
+  let to: number;
+  if (dir === 1) {
+    const ahead = stops.filter((s) => s > at + 1);
+    const seen = ahead.filter((s) => s <= at + view - 40);
+    to = seen.length ? Math.max(...seen) : ahead.length ? Math.min(...ahead) : max;
+  } else {
+    const behind = stops.filter((s) => s < at - 1);
+    const fits = behind.filter((s) => s >= at - view);
+    to = fits.length ? Math.min(...fits) : behind.length ? Math.max(...behind) : 0;
+  }
+  return Math.max(0, Math.min(max, to));
+}
 
 function indiaDate(s: string): string {
   return new Date(s).toLocaleString("en-IN", {
@@ -135,6 +167,72 @@ export function StageTrackerBoard({
       document.removeEventListener("visibilitychange", tick);
     };
   }, [refresh]);
+
+  /* Auto scroll (Monica, 8 Oct: "automatically slide kar de, bahut neeche
+     jaana padta hai"). The page scrolls inside <main>; this walks it down at
+     an easy reading pace, holds at the bottom, and starts again from the top.
+     A wheel, a touch or a key press hands the page back to the person. */
+  const [autoScroll, setAutoScroll] = useState(false);
+  /* The table is wider than a laptop screen on ID. Sideways is one view at a
+     time, less the sticky Project column, so a column is never skipped. */
+  const tableBox = useRef<HTMLDivElement>(null);
+  const slide = useCallback((dir: 1 | -1) => {
+    const t = tableBox.current;
+    if (!t) return;
+    t.scrollTo({ left: nextStop(t, dir), behavior: "smooth" });
+  }, []);
+  useEffect(() => {
+    if (!autoScroll) return;
+    // Whichever actually scrolls: <main> when the page is a fixed frame, else the window.
+    const main = document.querySelector("main");
+    const box =
+      main && main.scrollHeight > main.clientHeight + 2
+        ? main
+        : (document.scrollingElement as HTMLElement | null);
+    if (!box) return;
+    const PX_PER_SEC = 40;
+    const HOLD_MS = 3000;
+    let raf = 0;
+    let back = 0;
+    let last = performance.now();
+    let holdUntil = performance.now() + 1000;
+    let pos = box.scrollTop;
+    const step = (now: number) => {
+      const dt = now - last;
+      last = now;
+      if (now >= holdUntil) {
+        if (box.scrollTop + box.clientHeight >= box.scrollHeight - 2) {
+          // Hold on the last rows, jump to the top, hold on the first rows.
+          holdUntil = now + HOLD_MS * 2;
+          back = window.setTimeout(() => {
+            // Then the next columns to the right — or, after the last, the first.
+            const t = tableBox.current;
+            if (t && t.scrollWidth > t.clientWidth + 2) {
+              t.scrollLeft = t.scrollLeft + t.clientWidth >= t.scrollWidth - 2 ? 0 : nextStop(t, 1);
+            }
+            box.scrollTop = 0;
+            pos = 0;
+          }, HOLD_MS);
+        } else {
+          pos += (PX_PER_SEC * dt) / 1000;
+          box.scrollTop = pos;
+        }
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    const stop = () => setAutoScroll(false);
+    window.addEventListener("wheel", stop, { passive: true });
+    window.addEventListener("touchstart", stop, { passive: true });
+    window.addEventListener("keydown", stop);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(back);
+      window.removeEventListener("wheel", stop);
+      window.removeEventListener("touchstart", stop);
+      window.removeEventListener("keydown", stop);
+    };
+  }, [autoScroll]);
 
   const call = useCallback(
     async (key: string, path: string, init: RequestInit, success?: string) => {
@@ -288,6 +386,19 @@ export function StageTrackerBoard({
           >
             Aaj ke updates <span className="font-bold tabular-nums">{todayCount}</span>
           </button>
+          <button
+            type="button"
+            aria-pressed={autoScroll}
+            onClick={() => setAutoScroll(!autoScroll)}
+            title="List apne aap neeche chalegi — mouse wheel ya koi key dabate hi ruk jaayegi"
+            className={`rounded border px-2.5 py-1 font-body text-xs transition-colors ${
+              autoScroll
+                ? "border-forest bg-forest font-bold text-cream"
+                : "border-line-strong bg-canvas font-light text-muted hover:text-ink"
+            }`}
+          >
+            {autoScroll ? "⏸ Auto scroll rokiye" : "▶ Auto scroll"}
+          </button>
           <select
             value={member}
             onChange={(e) => setMember(e.target.value)}
@@ -343,8 +454,19 @@ export function StageTrackerBoard({
         IST).
       </p>
 
-      <div className="overflow-x-auto rounded-lg border border-line bg-card">
-        <table className="w-full min-w-[720px] border-collapse">
+      <div className="mb-2 flex justify-end gap-1.5" data-print="hide">
+        <button type="button" onClick={() => slide(-1)} className={smallBtn} aria-label="Pichhle columns">
+          ◀ Left
+        </button>
+        <button type="button" onClick={() => slide(1)} className={smallBtn} aria-label="Agle columns">
+          Right ▶
+        </button>
+      </div>
+      <div ref={tableBox} className="overflow-x-auto rounded-lg border border-line bg-card">
+        {/* Separate borders, not collapsed: a sticky cell in a collapsed table
+            does not paint its own background, and the columns slid under the
+            Project column showed through it. */}
+        <table className="w-full min-w-[720px] border-separate border-spacing-0">
           <thead>
             {grouped ? (
               <tr>
@@ -400,7 +522,7 @@ export function StageTrackerBoard({
             {shown.map((r) => (
               <tr
                 key={r.id}
-                className={`border-b border-line align-top last:border-b-0 ${busy === r.id ? "opacity-60" : ""}`}
+                className={`align-top [&>td]:border-b [&>td]:border-line last:[&>td]:border-b-0 ${busy === r.id ? "opacity-60" : ""}`}
               >
                 <td
                   className={`sticky left-0 z-10 min-w-[180px] border-l-4 bg-card px-3 py-2 ${
