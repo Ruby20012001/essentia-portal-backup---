@@ -70,17 +70,18 @@ const GROUPS: Record<Discipline, Group[]> = {
       ],
     },
   ],
+  // The three after Status open on a tap, as ID's sections do (Monica, 9 Oct).
   arch: [
     {
       label: null,
       columns: [
         { field: "member", label: "Team member" },
         { field: "status", label: "Status", wide: true },
-        { field: "techDrawings", label: "Technical drawings", wide: true },
-        { field: "boundbook", label: "Boundbook date" },
-        { field: "extGfc", label: "Ext. GFCs", wide: true },
       ],
     },
+    { label: "Technical drawings", columns: [{ field: "techDrawings", label: "Technical drawings", wide: true }] },
+    { label: "Boundbook date", columns: [{ field: "boundbook", label: "Boundbook date" }] },
+    { label: "Ext. GFCs", columns: [{ field: "extGfc", label: "Ext. GFCs", wide: true }] },
   ],
 };
 
@@ -489,7 +490,9 @@ export function StageTrackerBoard({
                     <th
                       key={i}
                       colSpan={openGroups[g.label] ? g.columns.length : 1}
-                      rowSpan={openGroups[g.label] ? 1 : 2}
+                      /* One column under it: the heading is the column's own,
+                         open or closed — no second row repeating the name. */
+                      rowSpan={openGroups[g.label] && g.columns.length > 1 ? 1 : 2}
                       className="border-b border-l border-line p-0"
                     >
                       <button
@@ -518,7 +521,7 @@ export function StageTrackerBoard({
             <tr>
               {grouped ? null : <th className={`${th} sticky left-0 z-10 bg-card`}>Project</th>}
               {groups.flatMap((g) =>
-                grouped && (!g.label || !openGroups[g.label])
+                grouped && (!g.label || !openGroups[g.label] || g.columns.length === 1)
                   ? []
                   : g.columns.map((c, i) => (
                       <th key={c.field} className={`${th} ${i === 0 || !grouped ? "border-l" : ""}`}>
